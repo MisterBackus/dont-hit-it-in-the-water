@@ -2,6 +2,22 @@
 
 **25 Aug 2026 · plan, written before any code moves**
 
+> **OWNER DECISION, same night, amending §2 and open question 1.** Asked to
+> pick the finale venue, the owner declined the premise: *"honestly I hope
+> to have 20-30-40-50 courses someday and they all get cycled. do we need
+> to pigeonhole this right now?"* So slice 2 is NOT a fixed rotation table.
+> It is a POOL MECHANISM: events draw courses from the registered pool,
+> seeded per run from the events stream (deterministic — same seed, same
+> schedule; saves and replays intact), with slot CONSTRAINTS instead of
+> assignments — majors draw major-capable courses (Salt Flats's "majors
+> only" header becomes data), the opener draws the gentle tier, check
+> weeks avoid the brutal tier. Named events pin to their venue while the
+> venue is in the pool; with four courses the output resembles §2's table,
+> and that is the point — §2 survives as the constraint-shape and the
+> validation target, not as scripture. The finale is whatever the cycle
+> serves. Every future course ships with its measured difficulty and
+> fieldShift and simply registers.
+
 The season's fourteen events promise four venues and deliver one.
 `src/sim/state.ts` line 170 says `export const COURSE = PINE_HOLLOW` and the
 whole game reads that constant — the reducer, the UI, the field model, and
