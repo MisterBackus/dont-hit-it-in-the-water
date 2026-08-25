@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState } from 'react'
+import { useMemo, useReducer, useRef, useState } from 'react'
 import {
   reduce, previewCone, scoreName, handShots, handTechs, boostsOf, sinkPrice,
   type Action,
@@ -22,8 +22,25 @@ import { HoleView } from './HoleView'
 import { Leaderboard } from './Leaderboard'
 import { standings } from '../sim/resolve/field'
 import { ShotButton, TechButton, DeckPanel } from './Cards'
+import { loadSave, persistSave } from '../platform/storage'
 
 const START_SEED = 20260824
+
+/** Resume the saved run by replaying its log through the reducer (§9);
+ * fresh season if there is no save or the current reducer can't replay it. */
+function bootstrap(): { state: GameState; seed: number; actions: Action[] } {
+  const saved = loadSave()
+  if (saved) {
+    try {
+      let st = initialState(saved.seed)
+      for (const a of saved.actions) st = reduce(st, a)
+      return { state: st, seed: saved.seed, actions: [...saved.actions] }
+    } catch {
+      // a log the reducer can no longer replay is not a save, it is a relic
+    }
+  }
+  return { state: initialState(START_SEED), seed: START_SEED, actions: [] }
+}
 
 function relStr(n: number): string {
   return n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`
@@ -36,11 +53,22 @@ function ordinal(n: number): string {
 
 export function App() {
   const [showDeck, setShowDeck] = useState(false)
-  const [s, dispatch] = useReducer(
+  const boot = useMemo(bootstrap, [])
+  const logRef = useRef({ seed: boot.seed, actions: boot.actions })
+  const [s, rawDispatch] = useReducer(
     (st: GameState, a: Action) => reduce(st, a),
-    START_SEED,
-    initialState,
+    boot.state,
   )
+  // every dispatch is also a save: append to the log and write it out.
+  // RESTART rebuilds from its own seed, so the history before it is dead
+  // weight and the log starts over at that action.
+  const dispatch = (a: Action) => {
+    rawDispatch(a)
+    const log = logRef.current
+    if (a.type === 'RESTART') { log.seed = a.seed; log.actions = [a] }
+    else log.actions.push(a)
+    persistSave(log.seed, log.actions)
+  }
   const hole = currentHole(s)
   const pv = previewCone(s)
   const techs = handTechs(s).filter(t => s.selectedTechs.includes(t.id))
