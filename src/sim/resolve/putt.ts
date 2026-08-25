@@ -16,16 +16,23 @@
  * the green is one you chose.
  */
 
+/**
+ * The tap-in band. Equipment can extend it (Boost.gimmeFeet — a gimme):
+ * callers pass the widest gimme they carry, and everything inside it is
+ * one putt for nothing. Default is the plain 4-foot tap-in.
+ */
+export const TAP_IN_FEET = 4
+
 /** Putts to get down from here, if you spend nothing. Distance in FEET. */
-export function baseputts(feet: number): number {
-  if (feet <= 4) return 1
+export function baseputts(feet: number, gimme: number = TAP_IN_FEET): number {
+  if (feet <= gimme) return 1
   if (feet <= 45) return 2
   return 3
 }
 
 /** Focus to hole it outright, or null if it is out of range. */
-export function sinkCost(feet: number): number | null {
-  if (feet <= 4) return 0          // already a tap-in
+export function sinkCost(feet: number, gimme: number = TAP_IN_FEET): number | null {
+  if (feet <= gimme) return 0      // already a tap-in
   if (feet <= 10) return 2
   if (feet <= 25) return 3
   if (feet <= 40) return 4
@@ -37,14 +44,18 @@ export interface PuttResolution {
   readonly text: string
 }
 
-export function resolvePutting(feet: number, sink: boolean): PuttResolution {
-  if (feet <= 4) {
-    return { strokes: 1, text: 'Tapped in.' }
+export function resolvePutting(
+  feet: number, sink: boolean, gimme: number = TAP_IN_FEET,
+): PuttResolution {
+  if (feet <= gimme) {
+    return feet <= TAP_IN_FEET
+      ? { strokes: 1, text: 'Tapped in.' }
+      : { strokes: 1, text: `Good from ${feet} feet. Pick it up.` }
   }
   if (sink) {
     return { strokes: 1, text: `Holed it from ${feet} feet.` }
   }
-  const n = baseputts(feet)
+  const n = baseputts(feet, gimme)
   return {
     strokes: n,
     text: n === 2

@@ -275,3 +275,52 @@ The flat `CARD_PRICE = 120_000` is the last unmeasured price in the game, in a c
 - **deckcheck and the season harness disagree on magnitude, not direction.** Round-level stroke deltas are small (inside ±0.3); the season layer amplifies them through a place-based cut and a power-law purse into millions. Both are true. The money number is the one the shop should price from, because money is what the shop takes.
 - **The temporary harness** was `src/tools/_itemcheck.tmp.ts`, deleted after this document. Recipe: copy shopcheck's `playHole`/`seasonEarningsWithDeck` (they are not exported — worth exporting), inject candidate cards into the runtime `CARD` table, run adds as `[...STARTING_DECK, id]`, swaps as splice-then-push, and proposed boosts as kit entries using existing fields. Recommend promoting this to a permanent `rewardcheck.ts` beside shopcheck — the card pool needs its prices re-derived every time the economy moves, exactly like the boosts, and today it couldn't be done without writing the tool from scratch.
 - **New mechanics proposed, in total:** four boost fields (`gimmeFeet`, `momentumSlack`, `cutBonus`, `sandRelief`, `freeRedraws` — five, counting the small one), one shot rule (`ignoreLie`, shared by two cards and one fix). Each is one optional field and one clause, per ARCHITECTURE §6.2; nothing touches the op switch except `ignoreLie`'s clause on the `pen` line, beside the `roughRelief` clause that establishes the pattern.
+
+---
+
+## Addendum, same day — what the measurements did to the proposals
+
+Everything above went to the instrument (tools/rewardcheck.ts, now permanent;
+250 seasons per row, mixed play, prices verified on independent seeds). This
+document keeps its predictions unedited, per house custom; here is where they
+were wrong.
+
+**Shipped and in band** — Stiff Shafts $1.92M → priced $1.0M (verified 1.49×);
+Inside the Leather $3.84M → $1.9M (1.88×); Lakeview Pontoon Rentals $1.17M →
+$600k (2.00×, and the analytic estimate of ~7.7 cuts was right on the money);
+High Draw swap $3.35M → $1.65M; Three-Quarter It swap $1.03M → $500k; Pick It
+Clean swap $934k → $450k; Gouge It Out swap $755k → $400k. The swap economy
+did what §1 said it would: every specialist that was a mine as an add is a
+modest, honest prize as a swap.
+
+**Wrong in a useful direction** — An Organized Bag was predicted $200–500k
+"felt, not simulated" and measured **$1.11M**: a cheaper redraw fires far more
+often than the dead-hand model suggested. Repriced $550k, verified 1.77×. The
+freeRedraws-per-round version was never built; the flat discount
+(`redrawDiscount`) was implementable without new state and measured fine.
+
+**Wrong in the other direction** — Short Memory was predicted $1.7–2.5M and
+measured **$980k / $502k / $901k** across three seed sets: bogeys are rarer
+than the design's fear of them, and the boost pays least exactly when the
+season goes well. Priced $500k on the spread; the swingiest sticker in the
+shop, which suits an insurance policy.
+
+**A wash, kept for honesty** — Rescue's `ignoreLie` rework measured +$1.02M
+added against the old Rescue's +$1.14M: within noise of each other. The
+mechanic adds no measurable power under the mixed policy, which mostly is not
+in the junk with a Rescue in hand. It ships anyway, because the blurb was
+already making the claim and the card now backs it. Watch it in playtest —
+a human in the trees may value it more than the mean does.
+
+**Measured out** — New Grooves (sandRelief) at **$3k a season**, dead zero:
+bunker visits are rare, mostly short, and the over-90 sand refusal — which the
+relief deliberately did not lift — is where the real damage lives. The boost
+is culled; the mechanism stays in the sim beside `roughRelief` for content
+that can earn it. Pick It Clean, which attacks the same problem from the card
+side and lifts the refusal, measured a real $934k swap — the card was the
+right shape for this hole and the boost was not.
+
+**And the headline:** deckcheck's new `swap` policy scores **−0.70 strokes
+against "take nothing"** — the first deckbuilding policy in this game's
+history to clear the ±0.3 noise bar. Every add-based policy still lands in
+noise. The season layer finally has a deck under it.

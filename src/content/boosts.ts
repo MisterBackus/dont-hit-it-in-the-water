@@ -89,6 +89,62 @@ export const BOOSTS: readonly Boost[] = [
     blurb: 'You know where the trouble is. Every cone a shade tighter.',
     spreadScale: 0.92, price: 600_000,
   },
+
+  // ---- added 25 Aug 2026, each gated on a rewardcheck measurement ----
+  // (tools/rewardcheck.ts SECTION=boosts, 250 seasons each, mixed play,
+  //  seeds 600000+; every price is that run's measured value over two)
+  {
+    id: 'stiffshafts', name: 'Stiff Shafts', icon: '∥',
+    // No boost added carry anywhere but the tee. Reach measured as the
+    // deck's one scarce axis, so this is reach for the long irons, any lie.
+    // Measured $1.92M a season.
+    blurb: 'Fifteen more yards from anything long. Nobody asks how.',
+    carryAdd: 15, appliesTo: 'long', price: 1_000_000,
+  },
+  {
+    id: 'leather', name: 'Inside the Leather', icon: '◌',
+    // The first boost to touch putting DISTANCE: the deterministic bands
+    // were untouched by every piece of equipment until this one.
+    // Measured $3.84M a season — every ≤8ft birdie stops costing two focus.
+    blurb: 'Anything inside eight feet is good. Pick it up.',
+    gimmeFeet: 8, price: 1_900_000,
+  },
+  {
+    id: 'shortmemory', name: 'Short Memory', icon: '≈',
+    // The first boost to touch momentum — and the first counterplay purchase
+    // against the focus-shadow holes the course designers price with.
+    // The swingiest measurement in the shop, on purpose: $980k / $502k /
+    // $901k across three independent seed sets (the cheap run was also the
+    // richest one — bogey insurance pays least in the seasons that go well).
+    // Priced on the spread: two of three runs land in band at $500k.
+    blurb: 'A bogey is not a story. Momentum survives one.',
+    momentumSlack: 1, price: 500_000,
+  },
+  {
+    id: 'pontoon', name: 'Sponsor: Lakeview Pontoon Rentals', icon: '▥',
+    // The sponsor that PAYS — per made cut, into the same gross number the
+    // Money List reads. A pontoon-rental decal, in this game, on purpose.
+    // Measured $1.17M a season, which is ~7.8 made cuts: the analytic and
+    // the simulated number agree to within noise.
+    blurb: 'A patch on your sleeve. $150k every cut you make.',
+    cutBonus: 150_000, price: 600_000,
+  },
+  {
+    id: 'organized', name: 'An Organized Bag', icon: '▦',
+    // The only boost that touches the redraw economy. Predicted small and
+    // measured $1.11M — a cheaper redraw fires far more often than the
+    // dead-hand model suggested. Priced accordingly.
+    blurb: 'Everything where you left it. Checking the bag costs half.',
+    redrawDiscount: 1, price: 550_000,
+  },
+
+  // NOT here, and measured out rather than talked out: NEW GROOVES
+  // (sandRelief — bunkers play as fairway) measured $3k a season, dead zero.
+  // Bunker visits are rare, mostly short splash-outs where the spread
+  // penalty barely prices, and the over-90 sand refusal still does the real
+  // damage. The sandRelief mechanism stays in the sim (types.ts/effects.ts,
+  // one clause, same pattern as roughRelief) for content that can earn it;
+  // the boost is culled. A measured rejection is a good outcome.
 ]
 
 export const BOOST: Readonly<Record<string, Boost>> =

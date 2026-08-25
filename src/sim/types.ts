@@ -36,6 +36,8 @@ export interface ShotRules {
   readonly lowFlight?: boolean
   /** shortens to the pin rather than always flying full (wedges, chips) */
   readonly canCutDown?: boolean
+  /** plays its fairway numbers from rough, deep rough and trees (not sand) */
+  readonly ignoreLie?: boolean
 }
 
 export interface ShotCard {
@@ -124,6 +126,16 @@ export interface Boost {
   readonly freeSinks?: number
   /** rough plays like fairway */
   readonly roughRelief?: boolean
+  /** bunkers play like fairway (the over-90 sand refusal still stands) */
+  readonly sandRelief?: boolean
+  /** the tap-in band reaches this many feet — a gimme, in the sport's word */
+  readonly gimmeFeet?: number
+  /** momentum survives this many strokes over par (see focusRegen) */
+  readonly momentumSlack?: number
+  /** sponsor money, paid into earnings for every cut made */
+  readonly cutBonus?: number
+  /** focus knocked off the cost of throwing a hand back */
+  readonly redrawDiscount?: number
   /** extra yards on the safe-left / safe-right aim */
   readonly aimWiden?: number
   /** what the pro shop asks for it */

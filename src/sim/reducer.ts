@@ -9,10 +9,13 @@ import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import { advanceField, makeField, rankCut, standings, yourPlace } from './resolve/field'
 import { BAG_CAP, CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
-import { CARD_PRICE, CUT_PRICE, REROLL_PRICE, type ShopItem } from '../content/shop'
+import {
+  cardPrice, CUT_PRICE, EARLY_SHOP_UNTIL, PREMIUM_BOOST, REROLL_PRICE,
+  type ShopItem,
+} from '../content/shop'
 import { WEEK, WEEKS, LESSON_FEE } from '../content/weeks'
 import { BOOST } from '../content/boosts'
-import { buildCone, focusCost, focusRegen, maxFocus, whyNotPlayable } from './effects'
+import { buildCone, focusCost, focusRegen, gimmeRange, maxFocus, whyNotPlayable } from './effects'
 import { dropPoint, resolveShot } from './resolve/shot'
 import { resolvePutting, sinkCost } from './resolve/putt'
 import { SURFACE_LABEL, surfaceAt, toPin } from './geometry'
@@ -126,16 +129,22 @@ export function reduce(state: GameState, action: Action): GameState {
  * Stock the shop: two pieces of equipment you do not own, two shots.
  * Everything is priced, and every price comes out of the same pot the Money
  * List reads from.
+ *
+ * The opening weeks stay below the premium line (content/shop.ts): the first
+ * Money List check is $1.4M, and a $2.4M sticker at event 2 is a price tag
+ * the wallet cannot act on. Cards are priced one by one, from measurement.
  */
 function stock(state: GameState): GameState {
   return produce(state, d => {
     const owned = new Set(d.boosts)
-    const [bs, r1] = shuffle(BOOSTS.filter(b => !owned.has(b.id)).map(b => b.id), d.rng.draw)
+    const budget = state.event <= EARLY_SHOP_UNTIL
+    const pool = BOOSTS.filter(b => !owned.has(b.id) && (!budget || b.price < PREMIUM_BOOST))
+    const [bs, r1] = shuffle(pool.map(b => b.id), d.rng.draw)
     const [cs, r2] = shuffle(REWARD_POOL, r1)
     d.rng = { ...d.rng, draw: r2 }
     d.offer = [
       ...bs.slice(0, 2).map((id): ShopItem => ({ kind: 'boost', id, price: BOOST[id]!.price })),
-      ...cs.slice(0, 2).map((id): ShopItem => ({ kind: 'card', id, price: CARD_PRICE })),
+      ...cs.slice(0, 2).map((id): ShopItem => ({ kind: 'card', id, price: cardPrice(id) })),
     ]
     d.cutIsPaid = false
     d.phase = 'shop'
@@ -232,11 +241,18 @@ function startEvent(state: GameState): GameState {
   return dealHole(withReset, 0)
 }
 
+/** What a redraw actually costs, after equipment (An Organized Bag). */
+export function redrawPrice(s: GameState): number {
+  const discount = s.boosts.reduce((n, id) => n + (BOOST[id]!.redrawDiscount ?? 0), 0)
+  return Math.max(0, REDRAW_COST - discount)
+}
+
 /** Throw the hand back mid-hole and draw six new ones, for focus. */
 function redraw(state: GameState): GameState {
-  if (state.focus < REDRAW_COST || state.hole.puttFeet !== null) return state
+  const cost = redrawPrice(state)
+  if (state.focus < cost || state.hole.puttFeet !== null) return state
   return produce(state, d => {
-    d.focus -= REDRAW_COST
+    d.focus -= cost
     d.discard.push(...d.hand)
     const res = draw(HAND_SIZE, d.deck, d.discard, d.rng.draw)
     d.hand = res.hand
@@ -350,7 +366,7 @@ function putt(state: GameState, sink: boolean): GameState {
       if (d.freeSinks > 0 && cost > 0) d.freeSinks -= 1
       else d.focus -= cost
     }
-    const res = resolvePutting(feet, sink)
+    const res = resolvePutting(feet, sink, gimmeRange(boostsOf(state)))
     d.hole.strokes += res.strokes
     d.lastShot = res.text
     finishHole(d)
@@ -359,7 +375,7 @@ function putt(state: GameState, sink: boolean): GameState {
 
 /** What holing this putt actually costs, after equipment. */
 export function sinkPrice(s: GameState, feet: number): number | null {
-  const base = sinkCost(feet)
+  const base = sinkCost(feet, gimmeRange(boostsOf(s)))
   if (base === null) return null
   if (base === 0) return 0
   if (s.freeSinks > 0) return 0
@@ -367,11 +383,20 @@ export function sinkPrice(s: GameState, feet: number): number | null {
   return Math.max(1, base - discount)
 }
 
-/** The cut is where you earn equipment. */
+/**
+ * The cut is where you earn equipment — and a major's pick comes from the
+ * premium shelf (content/shop.ts): the season's biggest earned moment must
+ * not offer the discount rack. If the premium shelf is bare it falls back to
+ * anything unowned, and if EVERYTHING is owned the pick is skipped entirely
+ * rather than presenting an empty offer (which used to be a latent softlock).
+ */
 function offerBoosts(state: GameState): GameState {
+  const owned = new Set(state.boosts)
+  const premium = BOOSTS.filter(b => !owned.has(b.id) && b.price >= PREMIUM_BOOST)
+  const any = BOOSTS.filter(b => !owned.has(b.id))
+  const pool = (premium.length > 0 ? premium : any).map(b => b.id)
+  if (pool.length === 0) return dealHole(state, state.scores.length)
   return produce(state, d => {
-    const owned = new Set(d.boosts)
-    const pool = BOOSTS.filter(b => !owned.has(b.id)).map(b => b.id)
     const [shuffled, r] = shuffle(pool, d.rng.draw)
     d.rng = { ...d.rng, draw: r }
     d.boostOffer = shuffled.slice(0, 3)
@@ -442,6 +467,15 @@ function settle(state: GameState, madeCut: boolean): GameState {
       d.lastPlace = place
       d.lastPaid = paid
       d.earnings += paid
+      // sponsor money for the made cut (Boost.cutBonus) — paid into the same
+      // gross number the Money List reads, like any other winnings
+      for (const id of d.boosts) {
+        const b = BOOST[id]!
+        if (b.cutBonus) {
+          d.earnings += b.cutBonus
+          d.log.push({ hole: 0, text: `${b.name} pays out for the made cut.`, tone: 'good' })
+        }
+      }
     }
     d.phase = 'payout'
   })

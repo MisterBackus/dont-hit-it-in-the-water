@@ -155,9 +155,13 @@ export const REWARD_SHOTS: readonly ShotCard[] = [
     rules: { roll: 6 },
   },
   {
+    // The blurb always said "works from the junk"; for a long time the card
+    // did not — it ate deep-rough ×2.6 spread like every other iron, and its
+    // measured value was generic reach wearing a costume. ignoreLie makes the
+    // sentence true: from rough, deep or trees it plays its fairway numbers.
     id: 'rescue', kind: 'shot', name: 'Rescue', carry: 175, spread: 15,
     blurb: 'Long, and it works from the junk.',
-    rules: { roll: 8 },
+    rules: { roll: 8, ignoreLie: true },
   },
   {
     id: 'cutit', kind: 'shot', name: 'Cut It', carry: 190, spread: 9,
@@ -172,12 +176,41 @@ export const REWARD_SHOTS: readonly ShotCard[] = [
   {
     id: 'texas', kind: 'shot', name: 'Texas Wedge', carry: 30, spread: 2,
     blurb: 'Putt it from off the green. Short grass only.',
-    rules: { from: ['fairway', 'green'], roll: 22, lowFlight: true, canCutDown: true },
+    // 'green' used to sit in this list and was dead code — putting pre-empts
+    // every from-check, so the only surface that ever mattered is fairway
+    rules: { from: ['fairway'], roll: 22, lowFlight: true, canCutDown: true },
   },
   {
     id: 'scrape', kind: 'shot', name: 'Scrape It Out', carry: 110, spread: 12,
-    blurb: 'Ugly, but it works from anywhere.',
+    // The blurb said "anywhere", but at 110 carry the sand rule refuses it
+    // (whyNotPlayable: over 90 is too much from a bunker). Say what it does.
+    blurb: 'Ugly, but it works from almost anywhere. Not the sand.',
     rules: { canCutDown: true },
+  },
+  {
+    // The 255→208 finishing gap had exactly one card in it, and the Stinger
+    // cannot carry water. This is the 245 that flies — the alternative on
+    // precisely the holes the game is named after.
+    id: 'highdraw', kind: 'shot', name: 'High Draw', carry: 235, spread: 16,
+    blurb: 'Turns over, carries everything, sits down.',
+    rules: { from: ['tee', 'fairway'], roll: 10 },
+  },
+  {
+    // From a fairway bunker 200 out, the best card in the game used to be
+    // Punch Out — the over-90 sand rule made long sand a guaranteed dropped
+    // stroke with no decision in it, the same shape as the missing-wedge
+    // problem that produced Chip It. This is the specialist that answers it.
+    id: 'pickclean', kind: 'shot', name: 'Pick It Clean', carry: 140, spread: 14,
+    blurb: 'Ball first, then sand. Say it again.',
+    rules: { from: ['tee', 'fairway', 'bunker'], roll: 5 },
+  },
+  {
+    // The inverse specialist: only playable from bad lies, where ignoreLie
+    // makes it the best iron you own. Its value depends entirely on how wild
+    // the rest of the bag is — it pairs with Full Send and fights Knockdown.
+    id: 'gouge', kind: 'shot', name: 'Gouge It Out', carry: 150, spread: 18,
+    blurb: 'Thrives in the thick stuff. Refuses short grass.',
+    rules: { from: ['rough', 'deep', 'trees'], ignoreLie: true, roll: 10 },
   },
 ]
 
@@ -203,12 +236,36 @@ export const REWARD_TECHS: readonly TechniqueCard[] = [
     effects: [{ op: 'addCarry', value: 30 }, { op: 'addRoll', value: 10 },
               { op: 'scaleSpread', value: 1.45 }],
   },
+  {
+    // The only card that uses scaleCarry: a proportional cut, so the whole
+    // ladder shifts down a rung — 265 becomes 212, 165 becomes 132. That is
+    // gap-puzzle material, not another flat tightener.
+    id: 'threequarter', kind: 'technique', name: 'Three-Quarter It', focus: 1,
+    blurb: 'An eighty percent swing. Eighty percent of everything.',
+    effects: [{ op: 'scaleCarry', value: 0.80 }, { op: 'scaleSpread', value: 0.75 }],
+  },
 ]
 
+/**
+ * What is offered — and, as loudly, what is NOT.
+ *
+ * Four entries were culled 25 Aug 2026 on measurement (the season harness
+ * that became tools/rewardcheck.ts; 200 seasons per card, mixed play, added
+ * to the starting deck): Fully Committed −$2.64M a season, Pre-Shot Routine
+ * −$1.59M, a second Smooth It −$966k, a second Short Iron −$630k. All four
+ * are tighteners or short-game dupes — the deck is already saturated on that
+ * axis, and every copy crowds a shot out of a six-card hand. A mine is not a
+ * decision at any sticker; the definitions stay (old saves may hold copies),
+ * the offers stop.
+ */
 export const REWARD_POOL: readonly string[] = [
-  ...REWARD_SHOTS.map(c => c.id), ...REWARD_TECHS.map(c => c.id),
-  // duplicates of good basics are legitimate rewards too
-  'midiron', 'shortiron', 'stinger', 'smooth', 'extra',
+  ...REWARD_SHOTS.map(c => c.id),
+  // techniques: only the zero-focus distance pair and the ladder-shifter
+  // earn a slot — every focus-costing tightener measured under water
+  'nothing', 'onemore', 'threequarter',
+  // duplicates of good basics, where the deck is actually short of them:
+  // midiron +$384k, stinger +$1.66M, extra +$31k measured as adds
+  'midiron', 'stinger', 'extra',
 ]
 
 export const CARD: Readonly<Record<string, ShotCard | TechniqueCard>> = Object.fromEntries(

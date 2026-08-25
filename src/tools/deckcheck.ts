@@ -19,7 +19,7 @@ import { seedBank, next, type RngBank } from '../sim/rng'
 import { draw, shuffle } from '../sim/deck'
 import type { HoleSpec, Point, ShotCard, Surface } from '../sim/types'
 
-type BuildPolicy = 'nothing' | 'random' | 'greedy' | 'thin' | 'greedy+thin'
+type BuildPolicy = 'nothing' | 'random' | 'greedy' | 'thin' | 'greedy+thin' | 'swap'
 
 interface Ctx { bank: RngBank; deck: string[]; discard: string[]; focus: number }
 
@@ -115,6 +115,20 @@ function playRound(seed: number, policy: BuildPolicy) {
     } else if (policy === 'greedy' || policy === 'greedy+thin') {
       const best = [...offer].sort((a, b) => cardValue(b) - cardValue(a))[0]!
       ctx.deck.unshift(best)
+    } else if (policy === 'swap') {
+      // SWAP, NOT ADD — the live economy under BAG_CAP: taking a card means
+      // one comes out, so the question stops being "is this better than
+      // nothing" and becomes "is this better than the card it replaces".
+      const best = [...offer].sort((a, b) => cardValue(b) - cardValue(a))[0]!
+      const all = [...ctx.deck, ...ctx.discard]
+      const worst = [...all].sort((a, b) => cardValue(a) - cardValue(b))[0]
+      if (worst && cardValue(best) > cardValue(worst)) {
+        for (const pile of ['deck', 'discard'] as const) {
+          const i = ctx[pile].indexOf(worst)
+          if (i >= 0) { ctx[pile].splice(i, 1); break }
+        }
+        ctx.deck.unshift(best)
+      }
     }
     // --- the removal, at the cut ---
     if (h === 3 && (policy === 'thin' || policy === 'greedy+thin')) {
@@ -132,7 +146,7 @@ function playRound(seed: number, policy: BuildPolicy) {
 }
 
 const N = Number(process.env.N ?? 500)
-const POLICIES: BuildPolicy[] = ['nothing', 'random', 'greedy', 'thin', 'greedy+thin']
+const POLICIES: BuildPolicy[] = ['nothing', 'random', 'greedy', 'thin', 'greedy+thin', 'swap']
 
 console.log(`\nDOES DECKBUILDING MATTER?  ${N} rounds each · par ${COURSE_PAR}\n`)
 console.log('policy         final deck   avg score   vs par    vs "take nothing"')

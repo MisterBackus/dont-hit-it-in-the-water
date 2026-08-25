@@ -14,7 +14,7 @@
  */
 import type { Action } from '../sim/reducer'
 
-export const SAVE_VERSION = 2 // v2: swap-not-add — BUY at the bag cap opens the remove screen
+export const SAVE_VERSION = 3 // v3: per-card prices, tiered drops, new boosts/cards — old logs replay differently
 const KEY = 'dont-hit-it-in-the-water/save'
 
 export interface SaveFile {

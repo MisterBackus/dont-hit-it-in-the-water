@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'vitest'
-import { CARD, HAND_SIZE, STARTING_DECK } from '../content/cards'
+import { CARD, HAND_SIZE, REWARD_POOL, STARTING_DECK } from '../content/cards'
 import { initialState } from './state'
 import { draw } from './deck'
 import { reduce, boostsOf, handShots } from './reducer'
 import { PUNCH_OUT, freeShot } from '../content/cards'
 import { SEASON, MONEY_CHECKS, EVENT_COUNT, payout } from '../content/season'
-import { CUT_PRICE } from '../content/shop'
+import { CARD_PRICES, CUT_PRICE, PREMIUM_BOOST, cardPrice } from '../content/shop'
+import { BOOST, BOOSTS } from '../content/boosts'
+import { baseputts, resolvePutting, sinkCost } from './resolve/putt'
 import { LESSON_FEE } from '../content/weeks'
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { dropPoint } from './resolve/shot'
@@ -674,6 +676,13 @@ describe('momentum — focus comes back faster after a good hole', () => {
     expect(focusRegen([caddy], 1)).toBe(2)
   })
 
+  test('Short Memory — momentum survives a bogey, and only a bogey', () => {
+    const memory = { id: 'x', name: '', icon: '', blurb: '', price: 0, momentumSlack: 1 }
+    expect(focusRegen([memory], 0)).toBe(2)   // par is still par
+    expect(focusRegen([memory], 1)).toBe(2)   // a bogey is not a story
+    expect(focusRegen([memory], 2)).toBe(1)   // a double still is
+  })
+
   // putting is deterministic, so a hole can be finished on a known score:
   // strokes so far + two putts from 8 feet
   const onGreen = (strokes: number, focus: number) => {
@@ -699,5 +708,196 @@ describe('momentum — focus comes back faster after a good hole', () => {
     const s = reduce(onGreen(2, 5), { type: 'PUTT', sink: false })
     expect(s.focus).toBe(5)
     expect(s.log.some(l => l.text.startsWith('Momentum'))).toBe(false)
+  })
+})
+
+/**
+ * NEW MECHANICS, 25 Aug 2026 — each one field, each measured before it
+ * shipped (tools/rewardcheck.ts; verdicts recorded in content/boosts.ts
+ * and ITEMS-PROPOSAL.md). These tests pin the mechanisms, not the prices.
+ */
+describe('the gimme — Inside the Leather', () => {
+  test('putting stays exactly as it was without one', () => {
+    expect(baseputts(4)).toBe(1)
+    expect(baseputts(5)).toBe(2)
+    expect(sinkCost(4)).toBe(0)
+    expect(sinkCost(8)).toBe(2)
+    expect(resolvePutting(8, false).strokes).toBe(2)
+  })
+
+  test('inside the gimme it is one putt for nothing', () => {
+    expect(baseputts(8, 8)).toBe(1)
+    expect(sinkCost(8, 8)).toBe(0)
+    expect(resolvePutting(8, false, 8).strokes).toBe(1)
+    expect(resolvePutting(8, false, 8).text).toContain('Pick it up')
+    // and nine feet is still a real putt
+    expect(baseputts(9, 8)).toBe(2)
+    expect(sinkCost(9, 8)).toBe(2)
+  })
+
+  test('through the reducer: an eight-footer with the boost is a gimme', () => {
+    const teed = reduce(reduce(initialState(31), { type: 'START' }), { type: 'NEXT' })
+    const green = { ...teed, boosts: ['leather'],
+      hole: { ...teed.hole, lie: 'green' as const, puttFeet: 8, strokes: 2 } }
+    const s = reduce(green, { type: 'PUTT', sink: false })
+    expect(s.scores[0]).toBe(3)                 // 2 + one putt: the gimme
+    const bare = reduce({ ...green, boosts: [] }, { type: 'PUTT', sink: false })
+    expect(bare.scores[0]).toBe(4)              // 2 + two putts without it
+  })
+})
+
+describe('lie relief — ignoreLie shots and sand relief', () => {
+  const cone = (id: string, lie: 'fairway' | 'deep' | 'bunker', boosts: never[] | { sandRelief: boolean }[] = []) =>
+    buildCone(
+      { shot: CARD[id] as never, techniques: [], aim: 'pin' }, lie, 999,
+      boosts.map(b => ({ id: 'x', name: '', icon: '', blurb: '', price: 0, ...b })),
+    ).cone
+
+  test('Rescue plays its fairway numbers from the deep stuff', () => {
+    const fair = cone('rescue', 'fairway')
+    const deep = cone('rescue', 'deep')
+    expect(deep.carry).toBe(fair.carry)
+    expect(deep.spread).toBe(fair.spread)
+    // and a card without the rule still pays the deep-rough price
+    expect(cone('longiron', 'deep').spread)
+      .toBeGreaterThan(cone('longiron', 'fairway').spread)
+  })
+
+  test('ignoreLie does not touch the sand — a bunker is a bunker', () => {
+    // Gouge It Out cannot even be played from sand; prove the principle on
+    // Rescue: its bunker cone must NOT match its fairway cone.
+    expect(cone('rescue', 'bunker').spread)
+      .toBeGreaterThan(cone('rescue', 'fairway').spread)
+  })
+
+  test('sandRelief makes the bunker play as fairway (mechanism kept, boost culled)', () => {
+    const bare = cone('midiron', 'bunker')
+    const relieved = cone('midiron', 'bunker', [{ sandRelief: true }])
+    const fair = cone('midiron', 'fairway')
+    expect(relieved.carry).toBe(fair.carry)
+    expect(relieved.spread).toBe(fair.spread)
+    expect(bare.spread).toBeGreaterThan(relieved.spread)
+  })
+})
+
+describe('scaleCarry — Three-Quarter It, the op with its first card', () => {
+  test('eighty percent of everything, proportionally', () => {
+    const plan = (techs: never[] | object[]) => buildCone(
+      { shot: CARD['midiron'] as never, techniques: techs as never, aim: 'pin' },
+      'fairway', 999,
+    ).cone
+    const full = plan([])
+    const cut = plan([CARD['threequarter']])
+    expect(cut.carry).toBe(Math.round(full.carry * 0.8))
+    expect(cut.spread).toBeLessThan(full.spread)
+  })
+})
+
+describe('the sponsor that pays — cutBonus', () => {
+  const settled = (boosts: string[]) => {
+    const teed = reduce(reduce(initialState(9), { type: 'START' }), { type: 'NEXT' })
+    const done = { ...teed, boosts, scores: [4, 3, 4, 5, 4, 3, 4, 5], phase: 'holed' as const }
+    return reduce(done, { type: 'NEXT' })
+  }
+
+  test('a made season-ending cut pays the decal money into earnings', () => {
+    const bare = settled([])
+    const paid = settled(['pontoon'])
+    expect(paid.phase).toBe('payout')
+    expect(paid.earnings - bare.earnings).toBe(BOOST['pontoon']!.cutBonus)
+    expect(paid.log.some(l => l.text.includes('pays out'))).toBe(true)
+  })
+})
+
+describe('the redraw discount — An Organized Bag', () => {
+  test('one focus is not enough to check the bag bare-handed', () => {
+    const teed = reduce(reduce(initialState(13), { type: 'START' }), { type: 'NEXT' })
+    const broke = { ...teed, focus: 1 }
+    expect(reduce(broke, { type: 'REDRAW' })).toBe(broke)
+  })
+
+  test('with the bag organized, the same focus buys the redraw', () => {
+    const teed = reduce(reduce(initialState(13), { type: 'START' }), { type: 'NEXT' })
+    const s = reduce({ ...teed, focus: 1, boosts: ['organized'] }, { type: 'REDRAW' })
+    expect(s.focus).toBe(0)                      // cost 2 − 1 = 1
+    expect(s.lastShot).toContain('Checked the bag')
+  })
+})
+
+describe('the reward pool holds no mines', () => {
+  test('the four measured-negative entries are culled, definitions intact', () => {
+    for (const id of ['committed', 'routine', 'smooth', 'shortiron']) {
+      expect(CARD[id], `${id} should still be defined`).toBeTruthy()
+    }
+    for (const id of ['committed', 'routine']) {
+      expect(REWARD_POOL).not.toContain(id)
+    }
+    // the dupes that measured positive stay
+    expect(REWARD_POOL).toContain('midiron')
+    expect(REWARD_POOL).toContain('stinger')
+    expect(REWARD_POOL.filter(id => id === 'smooth')).toHaveLength(0)
+    expect(REWARD_POOL.filter(id => id === 'shortiron')).toHaveLength(0)
+  })
+
+  test('every card the pool can offer carries a measured price', () => {
+    for (const id of REWARD_POOL) {
+      expect(CARD_PRICES[id], `${id} has no measured price`).toBeGreaterThan(0)
+    }
+    expect(cardPrice('never-measured')).toBeGreaterThan(0)   // the floor holds
+  })
+})
+
+describe('tiered drops — majors premium, early shop budget', () => {
+  const shopAt = (event: number) => {
+    const teed = reduce(reduce(initialState(11), { type: 'START' }), { type: 'NEXT' })
+    return reduce(
+      { ...teed, event, phase: 'payout' as const, earnings: 5_000_000, madeCut: true },
+      { type: 'NEXT' })
+  }
+
+  test('the opening weeks stock below the premium line', () => {
+    for (const seed of [1, 2, 3]) {
+      void seed
+      const s = shopAt(1)
+      for (const item of s.offer.filter(i => i.kind === 'boost')) {
+        expect(BOOST[item.id]!.price).toBeLessThan(PREMIUM_BOOST)
+      }
+    }
+  })
+
+  test('after the opening weeks the whole rack is out', () => {
+    // premium boosts exist and are reachable: across seeds, event-5 shops
+    // must eventually stock one at or above the line
+    const teed = reduce(reduce(initialState(11), { type: 'START' }), { type: 'NEXT' })
+    const sawPremium = [11, 12, 13, 14, 15].some(seed => {
+      const t = reduce(reduce(initialState(seed), { type: 'START' }), { type: 'NEXT' })
+      void teed
+      const s = reduce(
+        { ...t, event: 5, phase: 'payout' as const, earnings: 0, madeCut: true },
+        { type: 'NEXT' })
+      return s.offer.some(i => i.kind === 'boost' && BOOST[i.id]!.price >= PREMIUM_BOOST)
+    })
+    expect(sawPremium).toBe(true)
+  })
+
+  test('a major hands you the good stuff, never the discount rack', () => {
+    const teed = reduce(reduce(initialState(17), { type: 'START' }), { type: 'NEXT' })
+    const atMajorCut = { ...teed, event: 4, phase: 'cut' as const, madeCut: true,
+      scores: [4, 4, 4, 4] }
+    const s = reduce(atMajorCut, { type: 'NEXT' })
+    expect(s.phase).toBe('boost')
+    expect(s.boostOffer.length).toBeGreaterThan(0)
+    for (const id of s.boostOffer) {
+      expect(BOOST[id]!.price).toBeGreaterThanOrEqual(PREMIUM_BOOST)
+    }
+  })
+
+  test('owning everything skips the pick instead of offering nothing', () => {
+    const teed = reduce(reduce(initialState(17), { type: 'START' }), { type: 'NEXT' })
+    const all = BOOSTS.map(b => b.id)
+    const atMajorCut = { ...teed, event: 4, phase: 'cut' as const, madeCut: true,
+      scores: [4, 4, 4, 4], boosts: all }
+    const s = reduce(atMajorCut, { type: 'NEXT' })
+    expect(s.phase).toBe('playing')   // straight to the fifth tee, no empty offer
   })
 })
