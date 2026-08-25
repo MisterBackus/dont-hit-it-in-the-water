@@ -375,6 +375,46 @@ season.ts's provenance comments and DESIGN.md.
 the commit message; deck.test's win-pays-the-final-leg invariant green;
 survival mixed/aggressive/safe re-measured against the 36/45/3 intent.
 
+> **SLICE 4 COMPLETE — 25 Aug 2026, run once against the finished world**
+> (ten-course pool, depth planners, swap economy, momentum, per-course
+> coupling). What it found and shipped, in order:
+>
+> 1. **Canon-ladder ruling executed.** The live post-depth coursecheck
+>    ladder (CHANGES-7 §10, re-measured verbatim, N=400) is canon. The
+>    original four courses' fieldShifts were retargeted from the plan-era
+>    deltas to the live ones and re-swept by fieldcheck (2000 fields/cell):
+>    Cottonwood 0.070→−0.023, Rockdale −0.186→−0.212, Salt Flats
+>    0.145→0.025. All ten courses now couple within ±0.1 of the player's
+>    measured delta. Note what the ruling means for §3's table: Salt Flats
+>    is +0.38 vs Pine Hollow under the depth engine, not +2.3 — the wall
+>    got shorter when the planners learned to read depth.
+> 2. **The free major-cut boost drops** (owner-found, absent from every
+>    derivation) are modeled in shopcheck's shopper — mirror of reducer
+>    offerBoosts, best-of-three by price. At the finished world's prices
+>    they are worth ~21 points of mixed survival at the old bars.
+> 3. **MONEY_CHECKS $1.4M/$4.8M/$8.4M → $2.3M/$10.0M/$13.3M** (kills had
+>    decayed to 28/6/1; now 44/32/1 vs 41/29/14 intent, survival mixed
+>    37% / aggressive 36% / safe 2%). The §3.4 ±10% prediction FAILED, and
+>    honestly: the coupling residual it priced was real but the drops and
+>    the ten-course pool were not in its model — check 2's bar moved ×2.1.
+>    The final leg ($3.3M) is again covered outright by a major win, so the
+>    deck.test invariant is green with bounds untouched. ADVANCE_CURVE
+>    unchanged: the corrected cutcheck still shows a declining squeeze
+>    (mixed 94→56) with the rotation's local shape on top.
+> 4. **The shop mostly held:** 12 of 17 boosts in band; Long Tees (3.60×),
+>    Forged Wedges (2.85×), Inside the Leather (2.57×), Lucky Ball Marker
+>    (2.53×) repriced up and Short Memory (1.02×/1.25×, two seed sets)
+>    repriced down, all value-over-two. CUT_PRICE and CARD_PRICES held.
+> 5. **SHARE re-measured and LADDER re-anchored** to the shopper's $19.6M
+>    median season (season.ts).
+>
+> Residuals for the dialogue: check 3 kills ~1% vs 14% intent (boost-decay
+> dial, more certain than ever); aggressive survival sits a point under
+> mixed against a 45% intent (economy ordering, not a bars problem);
+> reducer.ts:134 still says the first check is $1.4M in a comment (outside
+> this pass's fences). Open question 4's seasoncheck slot-difficulty column
+> was not built — the calibration ran without needing it.
+
 ---
 
 ## Open questions for the owner

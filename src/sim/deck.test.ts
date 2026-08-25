@@ -210,10 +210,13 @@ describe('the season', () => {
     const major = Math.max(...SEASON.map(e => payout(e.purse, 1)))
     const c = MONEY_CHECKS
     const lastLeg = c[c.length - 1]!.need - c[c.length - 2]!.need
-    // "the final leg, give or take one made cut": under the responding field
-    // the leg calibrated to $3.6M against a $3.4M win, and shrinking the leg
-    // to fit would un-calibrate check 2 (season.ts). A win plus one ordinary
-    // cheque still clears it, so the doomed-but-alive run keeps its target.
+    // Slice 4 re-anchored the checks for the free major-cut drops and the
+    // ten-course world (season.ts): the leg calibrated to $3.3M against a
+    // $3.4M win, so a win now covers the final leg OUTRIGHT — the invariant
+    // is literally true again, not merely within its 0.9 tolerance. The
+    // tolerance stays: the leg is the residual of two measured bars and has
+    // drifted past the win before (it sat at $3.6M under the field-response
+    // triple).
     expect(major).toBeGreaterThan(lastLeg * 0.9)
     expect(major).toBeLessThan(c[c.length - 1]!.need)   // one win is not a season
     // and the leg must not be coverable by simply turning up — you have to win

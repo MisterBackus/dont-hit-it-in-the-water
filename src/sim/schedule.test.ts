@@ -146,11 +146,16 @@ describe('the field feels the course too — fieldShift (SCHEDULE-PLAN §3)', ()
     return sum / n
   }
 
-  test('a positive shift moves the whole field the way it moves you', () => {
+  test('the shift moves the whole field the way the course moves you', () => {
+    // Bounds re-anchored at slice 4's canon-ladder ruling: the coupling now
+    // targets the LIVE player deltas (courses/index.ts header) — Salt Flats
+    // ≈ +0.38, Rockdale ≈ −2.76, Cottonwood ≈ −0.35 vs Pine Hollow. The old
+    // bounds pinned the plan-era ladder (+2.3 / −2.4 / +1.1), which no
+    // longer exists.
     const ph = fieldMean('pinehollow', 40)
-    expect(fieldMean('saltflats', 40)).toBeGreaterThan(ph + 1.0)   // ≈ +2.3
-    expect(fieldMean('rockdale', 40)).toBeLessThan(ph - 1.0)       // ≈ −2.4
-    expect(fieldMean('cottonwood', 40)).toBeGreaterThan(ph + 0.3)  // ≈ +1.1
+    expect(fieldMean('saltflats', 40)).toBeGreaterThan(ph + 0.1)   // ≈ +0.38
+    expect(fieldMean('rockdale', 40)).toBeLessThan(ph - 1.5)       // ≈ −2.76
+    expect(fieldMean('cottonwood', 40)).toBeLessThan(ph - 0.1)     // ≈ −0.35
   })
 
   test('the shift never changes the call count — two rolls per player per hole', () => {

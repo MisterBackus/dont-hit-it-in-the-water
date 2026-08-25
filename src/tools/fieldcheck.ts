@@ -2,10 +2,10 @@
  * Does the field feel the course the way the player does?
  *
  * SCHEDULE-PLAN.md §3.3: each course's fieldShift must move the FIELD's
- * per-round mean by the same amount the course moves the PLAYER —
- *   Rockdale −2.4 · Cottonwood +1.1 · Salt Flats +2.3  (vs Pine Hollow)
- * or relative standing is not preserved and the course is a fine, not
- * difficulty. The registry's numbers started as linearizations
+ * per-round mean by the same amount the course moves the PLAYER, or relative
+ * standing is not preserved and the course is a fine, not difficulty. The
+ * targets are the CANON (live, post-depth) player ladder — see TARGET below
+ * for the ruling. The registry's numbers started as linearizations
  * (offset = targetΔ/8/1.9); per house law they are confirmed here by
  * instrument: this prints the measured field delta per course and a sweep
  * around each offset so the registry can be corrected within ±0.1 strokes.
@@ -40,27 +40,18 @@ function fieldMean(pars: readonly number[], offset: number): number {
 
 const parsOf = (id: keyof typeof COURSES) => COURSES[id].holes.map(h => h.par)
 /**
- * SCHEDULE-PLAN.md §3.3's targets — the player deltas as the plan's ladder
- * measured them (REVIEW-5/6 era). CAVEAT, found while shipping slice 3: the
- * courses moved after the plan was written (v7 / CHANGES-6 unrigged the
- * harness hands and rebuilt Salt Flats 6), and coursecheck TODAY measures the
- * player ladder at PH +1.23 · CW +0.95 · RD −1.42 · SF +1.92 — deltas vs PH
- * of CW −0.3, RD −2.65, SF +0.7, stable across sharpness ×0.9–×1.4. If the
- * owner re-anchors coupling to the LIVE ladder (parity is the plan's stated
- * principle), retarget here and re-sweep; the slice-4 threshold re-derivation
- * should decide which ladder is canon first.
+ * CANON LADDER RULING (slice 4, 25 Aug 2026): the live post-depth coursecheck
+ * ladder is canon — the newest honest measurement wins. The plan-era targets
+ * the original four carried (CW +1.1, RD −2.4, SF +2.3, REVIEW-5/6 era) were
+ * measured against courses and planners that no longer exist; the standing
+ * caveat that used to live here is settled. ALL targets below are the live
+ * measured player deltas vs Pine Hollow from the ten-course coursecheck
+ * record (N=400, mixed, depth engine — CHANGES-7 §10, re-measured verbatim
+ * for the ruling): PH +0.81 · CW +0.46 · RD −1.94 · SF +1.19 · PAL −1.64 ·
+ * MEA −0.60 · DRI −0.59 · FOX −0.27 · BR +0.29 · RIV +0.67.
  */
 const TARGET: Record<string, number> = {
-  pinehollow: 0, cottonwood: 1.1, rockdale: -2.4, saltflats: 2.3,
-  /**
-   * BATCH 2 (CHANGES-7): no plan-era targets exist for these six, so their
-   * targets are the LIVE measured player deltas vs Pine Hollow — the only
-   * numbers they have ever had — from the ten-course coursecheck record
-   * (N=400, mixed, depth engine): PH +0.81 · PAL −1.64 · MEA −0.60 ·
-   * DRI −0.59 · FOX −0.27 · BR +0.29 · RIV +0.67. The original four keep
-   * their plan-era targets pending the canon-ladder ruling (caveat above) —
-   * a knowingly mixed state, called out rather than papered over.
-   */
+  pinehollow: 0, cottonwood: -0.35, rockdale: -2.75, saltflats: 0.38,
   palmetto: -2.45, meadowlark: -1.41, driftwood: -1.40,
   foxglove: -1.08, brackenridge: -0.52, rivermouth: -0.14,
 }

@@ -155,6 +155,7 @@ console.log()
  * Candidate N curves, scored against the measured place distribution.
  * ------------------------------------------------------------------ */
 const CURVES: { label: string; n: number[] }[] = [
+  { label: 'live ADVANCE', n: SEASON.map(e => e.advance) },
   { label: 'linear 42→14', n: Array.from({ length: 14 }, (_, i) => Math.round(42 - i / 13 * 28)) },
   { label: 'linear 44→10', n: Array.from({ length: 14 }, (_, i) => Math.round(44 - i / 13 * 34)) },
   { label: 'eased  45→12', n: Array.from({ length: 14 }, (_, i) => Math.round(45 - Math.pow(i / 13, 1.35) * 33)) },
@@ -172,6 +173,6 @@ for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
       `   overall ${(rates.reduce((a, b) => a + b, 0) / 14).toFixed(0)}%`,
     )
   }
-  console.log('    ' + ' '.repeat(13) + ' ' + CURVES[0]!.n.map(n => String(n).padStart(3)).join(' ') + '   ← top-N (linear 42→14)')
+  console.log('    ' + ' '.repeat(13) + ' ' + CURVES[0]!.n.map(n => String(n).padStart(3)).join(' ') + `   ← top-N (${CURVES[0]!.label})`)
 }
 console.log()

@@ -19,6 +19,7 @@ import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
+import { PREMIUM_BOOST } from '../content/shop'
 import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
@@ -26,7 +27,7 @@ import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
 import { makeField, advanceField, rankCut, standings, yourPlace } from '../sim/resolve/field'
 import { surfaceAt, toPin } from '../sim/geometry'
 import { seedBank, type RngBank } from '../sim/rng'
-import { draw } from '../sim/deck'
+import { draw, shuffle } from '../sim/deck'
 import type { Boost, HoleSpec, Point, Surface } from '../sim/types'
 
 interface Ctx { bank: RngBank; deck: string[]; discard: string[]; focus: number; freeSinks: number }
@@ -206,6 +207,11 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   // Best thing you can afford, not cheapest — buying Soft Spikes first because
   // it is $150k is a harness artefact, not a player.
   const order = [...BOOSTS].sort((a, b) => b.price - a.price)
+  // THE FREE MAJOR-CUT DROPS (DROPS=0 to measure the world without them).
+  // Found live by the owner and absent from every prior threshold derivation:
+  // surviving a major's cut hands you a premium boost for free
+  // (reducer.ts offerBoosts). Modeled below by mirroring that reducer exactly.
+  const DROPS = process.env.DROPS !== '0'
 
   function shoppingSeason(
     seed: number, policy: Policy, _needs: readonly number[], shop: boolean,
@@ -220,6 +226,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     // afford, one a week.
     let banked = 0
     let earned = 0
+    let bought = 0
     const running: number[] = []
     const rota = scheduleFor(seed)
 
@@ -229,12 +236,14 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
         for (const b of order) {
           if (kit.some(k => k.id === b.id)) continue
           if (b.price > banked) continue
-          if (kit.length >= 4) break
-          banked -= b.price; kit.push(b); break
+          // the cap counts PURCHASES: free major-cut drops arrive on top of
+          // the four-buy budget, exactly as they do for a live player
+          if (bought >= 4) break
+          banked -= b.price; kit.push(b); bought += 1; break
         }
       }
 
-      const boosts: Boost[] = [
+      let boosts: Boost[] = [
         { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
         ...kit,
       ]
@@ -253,8 +262,37 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
         - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
       const cut = rankCut(field, thru4, ev.advance)
       if (cut.made) {
+        // THE DROP: surviving a major's cut hands you a boost, free. Mirror
+        // of reducer.ts offerBoosts — premium tier (price >= PREMIUM_BOOST),
+        // falls back to anything unowned when the shelf is bare, skipped
+        // outright when everything is owned; three offered, and the shopper
+        // takes the best of them by price (prices are measured value over
+        // two, so price order IS value order to within the calibration).
+        if (DROPS && ev.major) {
+          const owned = new Set(kit.map(k => k.id))
+          const premium = BOOSTS.filter(b => !owned.has(b.id) && b.price >= PREMIUM_BOOST)
+          const any = BOOSTS.filter(b => !owned.has(b.id))
+          const pool = premium.length > 0 ? premium : any
+          if (pool.length > 0) {
+            const [ids, r] = shuffle(pool.map(b => b.id), ctx.bank.draw)
+            ctx.bank = { ...ctx.bank, draw: r }
+            const pick = ids.slice(0, 3)
+              .map(id => pool.find(b => b.id === id)!)
+              .sort((a, b) => b.price - a.price)[0]!
+            kit.push(pick)
+            // the reducer grants these immediately on pickup
+            ctx.freeSinks += pick.freeSinks ?? 0
+            ctx.focus += pick.maxFocusBonus ?? 0
+            boosts = [
+              { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
+              ...kit,
+            ]
+          }
+        }
         // sponsor money for the made cut (Boost.cutBonus) — gross earnings,
-        // so it lands in the wallet AND on the Money List
+        // so it lands in the wallet AND on the Money List. Counted AFTER the
+        // drop, as the game does: settle reads d.boosts, which by then holds
+        // a boost picked at this very cut.
         const cutBonus = kit.reduce((n, b) => n + (b.cutBonus ?? 0), 0)
         banked += cutBonus
         earned += cutBonus
@@ -273,14 +311,31 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     return running
   }
 
-  const SETS: number[][] = [
-    MONEY_CHECKS.map(c => c.need),
-    [1_400_000, 4_400_000, 7_600_000],
-    [1_400_000, 5_200_000, 9_200_000],
-  ]
+  // SETS="1400000,4800000,8400000;1500000,5600000,9200000" sweeps custom
+  // triples; the defaults bracket the live numbers.
+  const SETS: number[][] = process.env.SETS
+    ? process.env.SETS.split(';').map(s => s.split(',').map(Number))
+    : [
+      MONEY_CHECKS.map(c => c.need),
+      [2_100_000, 9_500_000, 12_800_000],
+      [2_500_000, 10_500_000, 13_800_000],
+    ]
   const IDX = MONEY_CHECKS.map(c => c.after - 1)
 
-  console.log(`  THE MONEY LIST vs A PLAYER WHO SHOPS · ${R} seasons per policy\n`)
+  console.log(`  THE MONEY LIST vs A PLAYER WHO SHOPS · ${R} seasons per policy` +
+    `${DROPS ? '' : ' · DROPS OFF'}\n`)
+  // SHARE=1: median cumulative gross per event for the mixed shopper — the
+  // season.ts SHARE array (median share banked by each event) and the
+  // LADDER's 20th-place anchor are re-measured from this line.
+  if (process.env.SHARE === '1') {
+    const seasons = Array.from({ length: R }, (_, i) => shoppingSeason(700_000 + i, 'mixed', [], true))
+    const med = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)]!
+    const meds = SEASON.map((_, e) => med(seasons.map(s => s[e]!)))
+    const total = meds[meds.length - 1]!
+    console.log('  MIXED SHOPPER · median cumulative gross by event')
+    console.log('    ' + meds.map(m => money(m)).join(' '))
+    console.log('    SHARE: ' + meds.map(m => (m / total).toFixed(2)).join(', ') + '\n')
+  }
   const POLICIES = (process.env.POLICIES ?? 'safe,mixed,aggressive').split(',') as Policy[]
   for (const policy of POLICIES) {
     console.log(`  ${policy}`)

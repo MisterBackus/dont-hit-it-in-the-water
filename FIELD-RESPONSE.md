@@ -117,3 +117,32 @@ dial is boost effect decay, not this one.
 One bonus the sweep bought for free: boost prices held 1.73–2.14× under the
 responding field with no repricing — mid-band pricing absorbed a field
 change whole, which is the argument for pricing to the middle forever.
+
+## 7. Addendum — slice 4, same date, the finished-world calibration
+
+The numbers in §6 stood for exactly one night, which is what §6's own logic
+predicted they would do. Three things moved them:
+
+1. **The instrument was corrected.** cutcheck used to read your cut place
+   against the field's EIGHT-hole totals; the game cuts you against its
+   FOUR. §6's make-cut series (87 71 … 31) is from the old reading and is
+   not comparable with anything measured after. The corrected instrument on
+   the finished world (ten-course rotation, canon-ladder coupling, kit ×1)
+   reads mixed 94 70 66 58 61 82 50 65 71 62 62 66 60 56 — the squeeze
+   still declines, with the rotation's local structure on top. F stays 0.30.
+2. **The free major-cut boost drops** (absent from every derivation,
+   including §6's) and the ten-course world decayed the §6 triple to kills
+   28/6/1. MONEY_CHECKS re-anchored to $2.3M/$10.0M/$13.3M → kills 44/32/1,
+   survival mixed 37% / aggressive 36% / safe 2%. Provenance in season.ts.
+3. **The pricing bonus expired.** Under the finished world five boosts left
+   the 1.4–2.5× band (Long Tees to 3.60×; Short Memory to 1.02×) and were
+   repriced to value over two (content/boosts.ts). Mid-band pricing absorbed
+   one field change whole; it did not absorb a rotation, a coupling
+   retarget, and free premium drops stacked together.
+
+Prediction 2's escape clause has upgraded from suspicion to standing
+verdict: check 3's kill is now ~1% against 14% intent and CANNOT be bought
+with its bar (the win-pays-the-final-leg invariant caps the leg). The
+snowball is equipment — now fed by four free premium boosts a season — and
+its dial is boost effect decay, whenever the owner wants 14% badly enough
+to pay a mechanism for it.

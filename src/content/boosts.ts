@@ -24,6 +24,16 @@ import type { Boost } from '../sim/types'
  * GROSS earnings means a purchase no longer bets your card — so the price is
  * the entire cost of the thing, and it has to be a real one. Each price is the
  * measured full-season value over two, which lands mid-band at ~2.0x.
+ *
+ * SLICE-4 CALIBRATION PASS, same night (shopcheck, N=250, mixed, seeds
+ * 600000+, under the finished world: ten-course pool rotation, canon-ladder
+ * field coupling, depth planners). Thirteen of seventeen held the 1.4x-2.5x
+ * band without touching. Five left it and were repriced, value over two:
+ * Long Tees (3.60x), Forged Wedges (2.85x), Inside the Leather (2.57x),
+ * Lucky Ball Marker (2.53x) drifted OVER — short-game and reach value grew
+ * as the rotation added birdie courses — and Short Memory fell UNDER (see
+ * its own comment). Forged Wedges crosses the premium line at its new
+ * price, joining the major-drop shelf (shop.ts PREMIUM_BOOST).
  */
 export const BOOSTS: readonly Boost[] = [
   {
@@ -49,7 +59,9 @@ export const BOOSTS: readonly Boost[] = [
   {
     id: 'forged', name: 'Forged Wedges', icon: '◢',
     blurb: 'Short shots land where you meant them to.',
-    spreadScale: 0.55, appliesTo: 'short', price: 850_000,
+    // Slice 4: $850k measured 2.85x under the finished world ($2.42M a
+    // season) — repriced to value over two. Now premium: a major can drop it.
+    spreadScale: 0.55, appliesTo: 'short', price: 1_200_000,
   },
   {
     id: 'grips', name: 'Fresh Grips', icon: '❖',
@@ -64,12 +76,17 @@ export const BOOSTS: readonly Boost[] = [
   {
     id: 'marker', name: 'Lucky Ball Marker', icon: '✦',
     blurb: 'The first putt you hole each round is free.',
-    freeSinks: 1, price: 1_250_000,
+    // Slice 4: $1.25M measured 2.53x under the finished world ($3.17M a
+    // season) — repriced to value over two.
+    freeSinks: 1, price: 1_600_000,
   },
   {
     id: 'tees', name: 'Long Tees', icon: '⌃',
     blurb: 'Twenty more yards off the tee.',
-    carryAdd: 20, appliesTo: 'tee', price: 1_000_000,
+    // Slice 4: the biggest drift in the shop — $1.0M measured 3.60x under
+    // the finished world ($3.60M a season; the rotation's scoring courses
+    // pay for reach off the tee). Repriced to value over two.
+    carryAdd: 20, appliesTo: 'tee', price: 1_800_000,
   },
   {
     id: 'spikes', name: 'Soft Spikes', icon: '⌇',
@@ -106,8 +123,10 @@ export const BOOSTS: readonly Boost[] = [
     // The first boost to touch putting DISTANCE: the deterministic bands
     // were untouched by every piece of equipment until this one.
     // Measured $3.84M a season — every ≤8ft birdie stops costing two focus.
+    // Slice 4: $1.9M measured 2.57x under the finished world ($4.89M a
+    // season) — repriced to value over two. Still the dearest thing sold.
     blurb: 'Anything inside eight feet is good. Pick it up.',
-    gimmeFeet: 8, price: 1_900_000,
+    gimmeFeet: 8, price: 2_450_000,
   },
   {
     id: 'shortmemory', name: 'Short Memory', icon: '≈',
@@ -116,9 +135,13 @@ export const BOOSTS: readonly Boost[] = [
     // The swingiest measurement in the shop, on purpose: $980k / $502k /
     // $901k across three independent seed sets (the cheap run was also the
     // richest one — bogey insurance pays least in the seasons that go well).
-    // Priced on the spread: two of three runs land in band at $500k.
+    // Priced on the spread: two of three runs landed in band at $500k.
+    // Slice 4: the high side of that spread did not survive the finished
+    // world — $508k and $625k on independent seed sets (1.02x / 1.25x at
+    // the old sticker; a ten-course rotation full of scoring weeks has
+    // fewer bogeys to insure). Repriced to the two-run mean over two.
     blurb: 'A bogey is not a story. Momentum survives one.',
-    momentumSlack: 1, price: 500_000,
+    momentumSlack: 1, price: 300_000,
   },
   {
     id: 'pontoon', name: 'Sponsor: Lakeview Pontoon Rentals', icon: '▥',

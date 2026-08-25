@@ -131,7 +131,7 @@ export function reduce(state: GameState, action: Action): GameState {
  * List reads from.
  *
  * The opening weeks stay below the premium line (content/shop.ts): the first
- * Money List check is $1.4M, and a $2.4M sticker at event 2 is a price tag
+ * Money List check is $2.3M, and a $2.4M sticker at event 2 is a price tag
  * the wallet cannot act on. Cards are priced one by one, from measurement.
  */
 function stock(state: GameState): GameState {

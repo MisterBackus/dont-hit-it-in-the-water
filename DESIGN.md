@@ -108,6 +108,19 @@ This is the Balatro blind requirement, wearing a visor.
 > Provenance in `content/season.ts`; re-derive with
 > `npx tsx src/tools/shopcheck.ts`.
 
+> **RE-ANCHORED AGAIN at slice 4 (25 Aug 2026, the calibration pass against
+> the finished world): $2.3M / $10.0M / $13.3M.** Two things no prior
+> derivation modeled: the **free major-cut boost drops** (up to four premium
+> boosts a season, found live by the owner) and the **ten-course rotation**
+> under canon-ladder field coupling. Together they had decayed the triple
+> above to kills 28/6/1. The new bars send home 44% / 32% / 1% of arrivals;
+> survival mixed 37%, aggressive 36%, safe 2% (intent 36/45/3). Check 3's
+> residual DEEPENED (1% vs 14% intent — the drops feed the same equipment
+> snowball; the dial remains boost decay), and aggressive now sits a point
+> under mixed, flagged as an economy property no bar can reorder. Full
+> provenance in `content/season.ts`; the drop model is in
+> `tools/shopcheck.ts`.
+
 | Check | After event | Threshold | Kills, of those who arrive |
 |---|---|---|---|
 | First | 5 | **$420,000** | 41% |
@@ -139,10 +152,12 @@ minute 25 instead of minute 80.
 > deliberately, on the dial that exists for it.
 
 **The list itself.** The Money List is the **72 players you tee it up against
-every week** — the same population as the leaderboard, counted twice. A
-mixed-play season banks $2.93M and sits **20th**; the checks demand a pace worth
-30th, then 18th, then 13th. The squeeze is visible in your own position without
-the game ever having to state a demand in places.
+every week** — the same population as the leaderboard, counted twice. A mixed
+shopper's median season banks $19.6M under the finished world (slice 4,
+drops modeled) and sits **20th**; the checks demand a pace worth roughly
+24th, 18th, then 24th again — the last one soft in pace terms because check
+3's kill is the standing residual. The squeeze is visible in your own
+position without the game ever having to state a demand in places.
 
 ### 3.4 The squeeze — where difficulty actually comes from
 

@@ -12,18 +12,16 @@
  * future course ships with its measured difficulty tier and fieldShift and
  * simply registers — nothing else changes.
  *
- * The measured ladder (coursecheck, mixed policy, full round vs par):
- *   Rockdale Muni  −1.65 · Pine Hollow +0.71 · Cottonwood +1.77 ·
- *   Salt Flats +3.02
- * Deltas vs Pine Hollow, the anchor: Rockdale −2.4, Cottonwood +1.1,
- * Salt Flats +2.3 strokes per round.
- *
- * BATCH 2 ladder (CHANGES-7, depth engine, N=400 — note the whole ladder
- * re-based when the planners learned to read depth; the four numbers above
- * are the plan-era anchors their fieldShifts still target):
+ * THE CANON LADDER (ruling, slice 4, 25 Aug 2026: the live post-depth
+ * coursecheck ladder is canon — the newest honest measurement wins; the
+ * plan-era four-course ladder is history). coursecheck, N=400, mixed policy,
+ * full round vs par, depth engine (CHANGES-7 §10, re-measured verbatim for
+ * the ruling):
  *   Rockdale −1.94 · Palmetto −1.64 · Meadowlark −0.60 · Driftwood −0.59 ·
  *   Foxglove −0.27 · Bracken Ridge +0.29 · Cottonwood +0.46 ·
  *   Rivermouth +0.67 · Pine Hollow +0.81 · Salt Flats +1.19
+ * Deltas vs Pine Hollow, the anchor: RD −2.75 · PAL −2.45 · MEA −1.41 ·
+ * DRI −1.40 · FOX −1.08 · BR −0.52 · CW −0.35 · RIV −0.14 · SF +0.38.
  */
 import type { HoleSpec } from '../../sim/types'
 import { PINE_HOLLOW } from './pinehollow'
@@ -67,14 +65,16 @@ export interface Course {
   /**
    * Strokes per round the FIELD's scoring moves at this course — the bias
    * offset advanceField subtracts (SCHEDULE-PLAN.md §3). Positive = the field
-   * scores worse here, exactly as the player does. The plan's starting values
-   * were linearizations (offset = targetΔ / 8 holes / 1.9); per house law the
+   * scores worse here, exactly as the player does. Starting values are
+   * linearizations (offset = targetΔ / 8 holes / 1.9); per house law the
    * shipped numbers are MEASURED, by tools/fieldcheck.ts (2000 fields/cell,
-   * floorLift 0.15): the field's per-round delta vs Pine Hollow matches the
-   * player's measured delta within ±0.1 strokes —
-   *   Rockdale  −0.186 → −2.40 measured (target −2.4; plan's −0.155 gave −1.99)
-   *   Cottonwood 0.070 → +1.04 measured (target +1.1)
-   *   Salt Flats 0.145 → +2.31 measured (target +2.3; plan's 0.152 gave +2.45)
+   * floorLift 0.15), against the CANON ladder's player deltas (header above).
+   * RETARGETED at slice 4 when the canon-ladder ruling landed — the original
+   * four had still been coupling to the plan-era ladder:
+   *   Cottonwood  0.070 → −0.023  (field Δ −0.33, target −0.35)
+   *   Rockdale   −0.186 → −0.212  (field Δ −2.76, target −2.75)
+   *   Salt Flats  0.145 →  0.025  (field Δ +0.36, target +0.38)
+   * All ten courses measure within ±0.1 of their target under the ruling.
    * Without this a hard course is a relative FINE on the player, not
    * difficulty.
    */
@@ -98,9 +98,9 @@ function course(
 
 export const COURSES: Record<CourseId, Course> = {
   pinehollow: course('pinehollow', 'Pine Hollow', PINE_HOLLOW, 0, 'standard', true, false),
-  cottonwood: course('cottonwood', 'Cottonwood', COTTONWOOD, 0.070, 'standard', true, false),
-  rockdale: course('rockdale', 'Rockdale Muni', ROCKDALE_MUNI, -0.186, 'gentle', false, false),
-  saltflats: course('saltflats', 'Salt Flats', SALT_FLATS, 0.145, 'brutal', true, true),
+  cottonwood: course('cottonwood', 'Cottonwood', COTTONWOOD, -0.023, 'standard', true, false),
+  rockdale: course('rockdale', 'Rockdale Muni', ROCKDALE_MUNI, -0.212, 'gentle', false, false),
+  saltflats: course('saltflats', 'Salt Flats', SALT_FLATS, 0.025, 'brutal', true, true),
   /**
    * BATCH 2 (COURSE-SLATE.md, built under the depth engine — CHANGES-7).
    * fieldShift values are MEASURED, not linearized: coursecheck (N=400,

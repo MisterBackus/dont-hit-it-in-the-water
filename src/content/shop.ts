@@ -92,10 +92,17 @@ export const REROLL_PRICE = 70_000
  * A major's free pick comes from at or above this line — the season's biggest
  * earned moment should not offer the discount rack. The weekly shop stocks
  * anything, EXCEPT in the opening weeks (through EARLY_SHOP_UNTIL), when it
- * stays below the line: the first Money List check is $1.4M, and a $2.4M
+ * stays below the line: the first Money List check is $2.3M, and a $2.45M
  * sticker at event 2 is noise an early wallet cannot act on. It also keeps
  * the big cone-touching equipment arriving as the sharpness curve flattens,
  * which is the progression spine (DESIGN.md §3.4a).
+ *
+ * SLICE 4: these free picks turned out to be absent from every prior Money
+ * List threshold derivation — the owner found them live. Modeled now in
+ * shopcheck's shopper season (mirroring reducer.ts offerBoosts): up to four
+ * premium boosts a season, free, and worth roughly 21 points of mixed
+ * survival at the re-derived checks (37% with them, 16% without). The
+ * thresholds in season.ts carry the drops' measured weight.
  */
 export const PREMIUM_BOOST = 1_000_000
 export const EARLY_SHOP_UNTIL = 3

@@ -93,6 +93,20 @@ const VENUES: Readonly<Record<number, string>> = {}
  * Derived, not chosen: measured against 400 seasons per skill level with a
  * player who shops. Make-cut runs 75% → 28% for mixed play, 63% → 23% for safe
  * play, 64% → 31% for aggressive. Safe stays the worst way to keep your card.
+ *
+ * SLICE 4 (25 Aug 2026, corrected instrument — the numbers above are from
+ * cutcheck's old eight-hole-total reading and are NOT comparable): under the
+ * corrected thru-4 cutcheck, on the real pool rotation with canon-ladder
+ * coupling (N=400, kit ×1), make-cut on this curve runs
+ *   mixed       94 70 66 58 61 82 50 65 71 62 62 66 60 56   overall 66%
+ *   safe        70 31 19 33 33 58 18 35 51 44 32 52 46 43   overall 40%
+ *   aggressive  92 68 59 52 51 82 48 70 67 62 61 63 54 52   overall 63%
+ * Still a declining squeeze — 94 early to 56 late for mixed — now with the
+ * rotation's local structure on top: the dip at 7 is Salt Flats, the bumps
+ * at 6 and 9 are the gentle weeks the schedule puts before the checks. The
+ * shape held, so the curve was not touched; the LEVEL changed because the
+ * instrument was fixed, and an instrument correction is not evidence about
+ * the world.
  */
 const ADVANCE_CURVE = [44, 41, 39, 36, 34, 31, 28, 26, 23, 21, 18, 15, 13, 10] as const
 
@@ -103,7 +117,11 @@ const ADVANCE_CURVE = [44, 41, 39, 36, 34, 31, 28, 26, 23, 21, 18, 15, 13, 10] a
  * at 0.30 the live advance curve measures 87 71 70 69 52 56 59 54 56 46 38
  * 43 39 31 (mixed, kit ×1) — the squeeze the intro screen always promised,
  * ending a hair over the 28% ambition with equipment still to be earned on
- * top of it.
+ * top of it. (That series is from cutcheck's OLD eight-hole-total reading —
+ * the corrected thru-4 instrument reads the same world softer; see the
+ * ADVANCE_CURVE note above for the comparable modern curve. F itself was
+ * re-examined at slice 4 and left at 0.30: the squeeze still points the
+ * right way and the dial's job has not changed.)
  */
 const FIELD_LIFT = 0.30
 
@@ -162,22 +180,40 @@ export const EVENT_COUNT = SEASON.length
  * field, check 2's kill was pinned near 20% no matter the number; under the
  * responding field it tracked its bar 20% -> 28% -> 32%.
  *
- * These send home 42% / 28% / 8% of the players who arrive at them.
- * Survival: mixed 38%, aggressive 46%, safe ~4% — against the 36/45/3
- * intent, which the first two hit within noise. A mixed hoarder who never
- * shops survives 10% where the shopper gets 38%: the shop is not a
- * crossover argument any more, it is the difference between living and not.
+ * RE-ANCHORED A THIRD TIME at slice 4 — the calibration pass against the
+ * FINISHED world — for two changes every prior derivation missed:
+ *   1. THE FREE MAJOR-CUT DROPS (found live by the owner): surviving a
+ *      major's cut hands you a premium boost, up to four a season, and no
+ *      threshold had ever been derived with them modeled. At the old triple
+ *      they took the mixed shopper from 47% survival to 68%.
+ *   2. THE TEN-COURSE WORLD: the pool rotation plus the canon-ladder
+ *      coupling retarget (courses/index.ts) — nine of ten courses now sit
+ *      AT or BELOW Pine Hollow, so the rotation is a richer season than
+ *      the four-course one the $1.4M/$4.8M/$8.4M triple was priced in.
+ * Derived by shopcheck threshold sweep (drops modeled, final boost prices,
+ * 400 seasons per policy): $1.4M/$4.8M/$8.4M had decayed to kills 28/6/1
+ * (intent 41/29/14). The triple below sends home 44% / 32% / 1% of
+ * arrivals; survival mixed 37%, aggressive 36%, safe 2% (intent 36/45/3).
+ * Checks 1-2 sit within a sigma of intent; mixed survival is on the nose.
  *
- * The one residual: check 3 kills 8% against a 14% intent, and raising its
- * bar past $8.4M starts starving the win-pays-the-final-leg invariant
- * (deck.test.ts) before it buys much kill. What snowballs past the last
- * check is EQUIPMENT scaling, not field statics — if 14% ever matters, the
- * next dial is boost effect decay, not this number.
+ * Two residuals, stated plainly:
+ *   - Check 3 kills ~1% against 14% intent — WORSE than the 8% it managed
+ *     before the drops existed, and no bar inside the win-pays-the-final-leg
+ *     invariant's ceiling (deck.test.ts; $13.6M bought 1%, $16.5M bought 3%
+ *     for a 72% check-2 overkill) buys real kill. The equipment snowball
+ *     that was already the named suspect now has four free premium boosts
+ *     feeding it. If 14% ever matters, the dial is boost effect decay —
+ *     more certainly than ever, not this number.
+ *   - Aggressive survival measures 36%, BELOW mixed's 37%, against a 45%
+ *     intent that wants aggression rewarded. That ordering is a property of
+ *     the economy (aggressive banks slightly less gross through event 9
+ *     under the rotation), not of these bars — no triple can reorder two
+ *     policies facing the same numbers. Flagged for the dialogue.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
-  { after: 5, need: 1_400_000 },
-  { after: 9, need: 4_800_000 },
-  { after: 12, need: 8_400_000 },
+  { after: 5, need: 2_300_000 },
+  { after: 9, need: 10_000_000 },
+  { after: 12, need: 13_300_000 },
 ]
 
 export function checkAfter(event: number) {
@@ -222,17 +258,31 @@ export function money(n: number): string {
  * a list that is not finished yet, which is the only way "you are 46th" means
  * anything in June.
  */
+/**
+ * RE-ANCHORED at slice 4: the 20th-place rung is the measured median season
+ * of the mixed SHOPPER with the major-cut drops modeled — $19.6M gross
+ * (shopcheck, 400 seasons, final prices) — and every other rung keeps its
+ * old ratio to that anchor (the shape is still invented; only the anchor is
+ * measured). The previous ladder was anchored to a $2.93M median from a
+ * world with no drops, no rotation, and a pre-momentum economy; under it a
+ * player scraping past check 3 read as 1st on the list, which is the "reads
+ * like a typo" failure this ladder exists to prevent.
+ */
 const LADDER: readonly (readonly [number, number])[] = [
-  [1, 8_500_000], [3, 5_600_000], [5, 4_700_000], [10, 4_200_000],
-  [20, 2_900_000], [30, 2_200_000], [40, 1_600_000], [50, 1_100_000],
-  [60, 650_000], [72, 150_000],
+  [1, 57_000_000], [3, 37_500_000], [5, 31_500_000], [10, 28_000_000],
+  [20, 19_600_000], [30, 14_700_000], [40, 10_700_000], [50, 7_400_000],
+  [60, 4_400_000], [72, 1_000_000],
 ]
 
 /**
- * Median share of a season's money banked by the end of each event, measured
- * across 400 seasons: $561k / $1.22M / $2.11M / $2.93M at events 5, 9, 12, 14.
+ * Median share of a season's money banked by the end of each event.
+ * Re-measured at slice 4 from the same 400 shopper seasons as the LADDER
+ * anchor: medians $175k / $793k / $3.42M / $8.93M / $16.43M / $19.62M at
+ * events 1, 3, 6, 9, 12, 14. Flatter early and steeper late than the old
+ * array — the majors' purses and the drops they hand out load the earning
+ * curve onto the back half (the jump at 7 is Salt Flats's $20M purse).
  */
-const SHARE = [0.05, 0.09, 0.13, 0.16, 0.19, 0.25, 0.31, 0.37, 0.42, 0.50, 0.61, 0.72, 0.86, 1.00]
+const SHARE = [0.01, 0.02, 0.04, 0.09, 0.13, 0.17, 0.32, 0.39, 0.46, 0.53, 0.69, 0.76, 0.84, 1.00]
 
 /**
  * THE LIST IS THE FIELD YOU ALREADY SEE.
@@ -243,8 +293,9 @@ const SHARE = [0.05, 0.09, 0.13, 0.16, 0.19, 0.25, 0.31, 0.37, 0.42, 0.50, 0.61,
  * week, so the Money List is now the same population as the leaderboard —
  * one tour, counted twice.
  *
- * The ladder is placed against measured earnings: a mixed-play season banks
- * $2.93M, which sits 20th. Below that is a long tail of players who miss cuts.
+ * The ladder is placed against measured earnings: a mixed shopper's median
+ * season banks $19.6M under the finished world (drops modeled), which sits
+ * 20th. Below that is a long tail of players who miss cuts.
  */
 export const TOUR_SIZE = 72
 
