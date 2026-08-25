@@ -34,24 +34,34 @@ export const COTTONWOOD: readonly HoleSpec[] = [
     note: 'The green sits twenty-two yards right of where you are pointed. First of eight lessons.',
   },
   {
-    // v4 — the fork moved to the tee, per REVIEW-3: at 460 both realistic
-    // approaches reached, so no hazard could save it (0.07 → 0.13 → 0.12
-    // across three tries). Lengthened to the par-4 limit: Bomb leaves 194,
-    // which the Long Iron reaches (14 past, wobbling) and LI−15 fits at a
-    // tight 193 if held; Stinger leaves 216, which NOTHING reaches — the
-    // safe drive now buys a lay-up and a wedge, a stroke by structure. The
-    // ditch stays where it was, pricing the stretched approach's left band.
-    // Honest flag for the harness: the LI−15 fit softens the aggressive
-    // line's risk — if the fork underperforms, that technique's focus price
-    // is what's carrying it.
-    num: 2, par: 4, length: 470, name: 'Wrong Number',
-    corridor: [{ at: 0, half: 24 }, { at: 255, half: 20 }, { at: 360, half: 20 }, { at: 470, half: 19 }],
-    greenRadius: 15, greenSide: -30,
+    // v5 — Wrong Number is dead, by its own pre-registration. CHANGES-3 §2
+    // said a fourth revision would be a concession, and the shared-shape
+    // criterion (this hole and Salt Flats' Question rise or fall together)
+    // came due: 0.25-0.30 across three eras here, 0.22-0.30 there, and
+    // 0.21/73 under honest hands. The 470 Stinger-refused shape never forked
+    // anywhere it was built. Conceded, not revised.
+    // An intermediate replacement, The Ferry (a 435 cape over water on the
+    // inside of the diagonal), measured 0.17/74: continuous lateral pricing
+    // CONVERGES the appetites — everyone threads in proportion to their
+    // nerve and arrives at the same expected score. Second data point for
+    // REVIEW-5's Crossing finding; it goes in the law. The forks that
+    // measure are discrete: a thing you are either past or short of.
+    // So: one sentinel cottonwood dead on the line at the careful drive's
+    // finish (line passes +21 at down 250; the tree spans +5..+29). Bomb
+    // flies it and leaves a 60-yard pitch; Long Iron stops 26 short of it
+    // and flies an owned 130 over; Stinger's finish is IN it — the planner
+    // sees all three, on the lateral axis (REVIEW-6 §5's clause). The pond
+    // left of the landing zone prices the Bomb's pull, exactly the
+    // Retention-Pond placement: never the aimed shot, only the wide cone's
+    // left third.
+    num: 2, par: 4, length: 335, name: 'The Sentinel',
+    corridor: [{ at: 0, half: 25 }, { at: 200, half: 22 }, { at: 280, half: 19 }, { at: 335, half: 17 }],
+    greenRadius: 13, greenSide: 28,
     hazards: [
-      { surface: 'water', at: { down: 400, side: -45 }, rDown: 70, rSide: 7 },
-      { surface: 'bunker', at: { down: 252, side: 26 }, rDown: 17, rSide: 10 },
+      { surface: 'water', at: { down: 270, side: -20 }, rDown: 35, rSide: 10 },
+      { surface: 'trees', at: { down: 250, side: 17 }, rDown: 18, rSide: 14 },
     ],
-    note: 'Bomb leaves 194, which might reach. Stinger leaves 216, which will not. The ditch has no preference.',
+    note: 'One tree stands exactly where the careful drive wants to finish. Over it is a pitch; around it is a wedge. Through it has been tried.',
   },
   {
     // v5 — REVIEW-4's instructive pair: same 205, same par, Ballwasher 0.88

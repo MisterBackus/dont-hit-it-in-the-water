@@ -28,6 +28,13 @@ import type { HoleSpec } from '../../sim/types'
  * now the sip inside the interrogation, funding the forks at 3–5. The back
  * keeps the mercy at 7 — flat on purpose, per the Rockdale-8 principle that
  * not every hole must fork — funding The Verdict as it always did.
+ *
+ * v7 (CHANGES-6): the harness had been dealing every simulated round the
+ * same unshuffled deck, so all pre-v7 numbers in the comments below were
+ * measured against rigged hands. Under honest hands the 6th (The Question,
+ * the 470 Stinger-refused shape) hit its pre-registered kill criterion and
+ * became The Mirage — a 300-yard tempter in the Oak family. Back is now
+ * 496 / 300 / 150 / 545.
  */
 export const SALT_FLATS: readonly HoleSpec[] = [
   {
@@ -69,6 +76,13 @@ export const SALT_FLATS: readonly HoleSpec[] = [
     // outside everything: pretty, and they cost nothing, per Retention Pond.
     // Prediction on record: tees 3–4 rise above 2.5, and at least two of
     // holes 3–5 clear 0.35 with no hazard on them changing.
+    // v7 (CHANGES-6): the measured +0.70 REVIEW-6 indicted this hole for was
+    // the harness's unshuffled deck — the simulated hand at the 2nd tee was
+    // ALWAYS pitch/bump/flop/splash/MI/SI, no Bomb, no Stinger, no
+    // technique, so the ladder this comment describes never once appeared
+    // in the measurement. Under honest hands the hole plays −0.14 mixed
+    // (gap 0.28, split 58) with not a yard changed. The note was true; the
+    // instrument was lying. Geometry untouched.
     num: 2, par: 4, length: 365, name: 'The Canteen',
     corridor: [{ at: 0, half: 24 }, { at: 280, half: 21 }, { at: 365, half: 19 }],
     greenRadius: 15, greenSide: 0,
@@ -129,22 +143,28 @@ export const SALT_FLATS: readonly HoleSpec[] = [
     note: 'Reachable with your loosest long iron and the nerve to swing it. The pan collects the ones that leaked.',
   },
   {
-    // v6: was The Echo, the old 2nd mirrored. When the 2nd became the
-    // funding round the interrogation moved here whole, and it is asked once
-    // now, late, which is where it always hurt most anyway. Max-length par
-    // 4, the Stinger-refused shape: Bomb leaves 193 — the Long Iron arrives
-    // 15 past, wobbling, or LI−15 fits tight if held. Stinger leaves 215 and
-    // NOTHING reaches: lay to 45 and wedge, a stroke by structure. The pan
-    // runs the left of the stretched approach, pricing the wide card's pull;
-    // bailing right putts from the low-side fringe. Its shadow falls on the
-    // mercy at 7, which is the one hole that can afford it.
-    num: 6, par: 4, length: 470, name: 'The Question',
-    corridor: [{ at: 0, half: 23 }, { at: 255, half: 18 }, { at: 380, half: 14 }, { at: 470, half: 15 }],
-    greenRadius: 13, greenSide: -12,
+    // v7 — The Question is dead, by its own pre-registration. CHANGES-3 put
+    // it on record: if holes 2-here and Cottonwood 2 both miss, the 470
+    // Stinger-refused shape is dead and all of them go. Both missed in every
+    // era of the instrument — rich (0.30), poor (0.28), and honest-hands
+    // (0.22/63) — so the shape is conceded, not revised a fourth time.
+    // The replacement transplants the best measured par-4 fork in the game
+    // (Rockdale's Oak, 0.40/69 under honest hands) into salt: 300 yards,
+    // green offset the full ±12 the flats allow, and one slab of crust dead
+    // on the line 48 short of the green. Bomb flies it and leaves a chip;
+    // Mid Iron stops 80 short of the slab and flies an owned 133 over it;
+    // the slab takes the shot that was neither. The pan strip left prices
+    // the Bomb's pull — picture-doubt, on the lateral axis the planner and
+    // the cone can actually see (REVIEW-6 §5's clause, obeyed). Its shadow
+    // still falls on the mercy at 7, which can afford it.
+    num: 6, par: 4, length: 300, name: 'The Mirage',
+    corridor: [{ at: 0, half: 23 }, { at: 190, half: 19 }, { at: 300, half: 17 }],
+    greenRadius: 13, greenSide: 12,
     hazards: [
-      { surface: 'ob', at: { down: 430, side: -27 }, rDown: 50, rSide: 7 },
+      { surface: 'ob', at: { down: 270, side: -21 }, rDown: 42, rSide: 7 },
+      { surface: 'deep', at: { down: 252, side: 11 }, rDown: 16, rSide: 12 },
     ],
-    note: 'Two-fifteen in after the safe drive. Count your cards again. Now count them after the Bomb.',
+    note: 'Three hundred through the shimmer, and the shimmer is hiding something. Fly it all or go the long way round. The salt does not negotiate.',
   },
   {
     // The mercy. 150, everything reaches, bunkers politely wide, and the

@@ -21,7 +21,7 @@ import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
 import { surfaceAt, toPin } from '../sim/geometry'
 import { seedBank, type RngBank } from '../sim/rng'
-import { draw } from '../sim/deck'
+import { draw, shuffle } from '../sim/deck'
 import type { Boost, HoleSpec, Point, Surface } from '../sim/types'
 
 interface Ctx { bank: RngBank; deck: string[]; discard: string[]; focus: number }
@@ -150,7 +150,15 @@ function report(course: readonly HoleSpec[], label: string) {
   for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
     four[policy] = []; full[policy] = []; perHole[policy] = course.map(() => [])
     for (let i = 0; i < N; i++) {
-      const ctx: Ctx = { bank: seedBank(800_000 + i), deck: [...STARTING_DECK], discard: [], focus: 5 }
+      // Shuffle the starting deck per round, exactly as the game does at round
+      // init (sim/state.ts). The harness used to deal STARTING_DECK in card-
+      // definition order, so every simulated round played hole 1 with the
+      // identical six cards, hole 2 with the identical six (no Bomb, no
+      // Stinger, no technique — ever), and hole 3 with the identical six.
+      // Every pre-CHANGES-6 number was measured against those rigged hands.
+      const bank0 = seedBank(800_000 + i)
+      const [deck0, drawRng0] = shuffle(STARTING_DECK, bank0.draw)
+      const ctx: Ctx = { bank: { ...bank0, draw: drawRng0 }, deck: deck0, discard: [], focus: 5 }
       const boosts: Boost[] = [{ id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: SHARP }]
       const holes = course.map((h, k) => {
         MEASURE_HOLE = k
@@ -194,9 +202,14 @@ function report(course: readonly HoleSpec[], label: string) {
     const ms = ['safe', 'mixed', 'aggressive'].map(mean)
     const gap = Math.max(...ms) - Math.min(...ms)
     const f = (m: number) => `${m >= 0 ? '+' : ''}${m.toFixed(2)}`.padStart(6)
-    const verdict = gap >= 0.40 ? 'REAL' : gap >= 0.22 ? 'some' : 'flat'
     const d = disagree[k]
     const pctDiff = d && d.n ? (d.diff / d.n * 100) : 0
+    // REAL is the standing two-axis bar (COURSE-TODO): the appetites must
+    // score differently (gap ≥ 0.35) AND actually pick differently (split
+    // ≥ 60%). The tag used to award REAL on gap alone, which let a 57%-split
+    // hole get called a fork (REVIEW-6 §9). The raw columns are unchanged;
+    // only the printed verdict is qualified.
+    const verdict = gap >= 0.35 && pctDiff >= 60 ? 'REAL' : gap >= 0.22 ? 'some' : 'flat'
     console.log(`  ${String(h.num).padStart(3)}   ${h.par}  ${String(h.length).padStart(3)}   ` +
       `${h.name.padEnd(20)}${f(ms[0]!)}  ${f(ms[1]!)}  ${f(ms[2]!)}   ${gap.toFixed(2)} ${verdict}` +
       `   ${pctDiff.toFixed(0).padStart(3)}%`)
