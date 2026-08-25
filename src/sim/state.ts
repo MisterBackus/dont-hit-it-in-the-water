@@ -67,6 +67,12 @@ export interface GameState {
   readonly offer: readonly ShopItem[]
   /** true when a purchase sent you to the cut-a-card screen */
   readonly cutIsPaid: boolean
+  /**
+   * True when a card was bought with the bag already full (BAG_CAP): the
+   * remove screen is showing and REFUSES null — something has to come out.
+   * This is the swap-not-add rule that fixed dilution; see ITEMS-PROPOSAL.md.
+   */
+  readonly mustSwap: boolean
   /** the two alternatives to playing, offered this week */
   readonly weekOptions: readonly string[]
   /**
@@ -137,6 +143,7 @@ export function initialState(seed: number): GameState {
     madeCut: null,
     offer: [],
     cutIsPaid: false,
+    mustSwap: false,
     weekOptions: [],
     pendingWeek: null,
     practice: 1,

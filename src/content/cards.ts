@@ -229,6 +229,21 @@ export const CARD: Readonly<Record<string, ShotCard | TechniqueCard>> = Object.f
 export const HAND_SIZE = 6
 
 /**
+ * THE BAG HOLDS TWENTY. A real bag legally holds fourteen clubs; ours holds
+ * twenty shots, and for the same reason the rule exists in golf — the
+ * question "what do you carry" only means something when you cannot carry
+ * everything.
+ *
+ * This is the fix for dilution (ITEMS-PROPOSAL.md): measured season-long,
+ * ADDING a card was worse than nothing more often than not (Knockdown: −$92k
+ * added, +$1.16M swapped in for Bump and Run — the same card, sign-flipped
+ * by what it displaced). Buying a card with the bag full sends you to the
+ * remove screen, and something has to come out. Cutting below the cap stays
+ * a paid luxury; the cap only stops the bag from silently poisoning itself.
+ */
+export const BAG_CAP = 20
+
+/**
  * Focus to throw the hand back and draw a fresh six.
  *
  * Deliberately the same price as holing a ten-footer, so the trade is legible:

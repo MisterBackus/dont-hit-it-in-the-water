@@ -14,7 +14,7 @@
  */
 import type { Action } from '../sim/reducer'
 
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2 // v2: swap-not-add — BUY at the bag cap opens the remove screen
 const KEY = 'dont-hit-it-in-the-water/save'
 
 export interface SaveFile {

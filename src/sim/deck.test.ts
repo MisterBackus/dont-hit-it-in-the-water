@@ -83,6 +83,49 @@ describe('the pro shop — money finally does something', () => {
     expect(after.deck[0]).toBe(s.offer[i]!.id)
   })
 
+  describe('the bag holds twenty — swap, not add', () => {
+    // Measured (ITEMS-PROPOSAL.md): the same card is worth −$92k added and
+    // +$1.16M swapped in. A prize that dilutes the bag is a trap; the cap is
+    // what makes every card offer an honest question.
+    const buyCard = (s: ReturnType<typeof shop>) => {
+      const i = s.offer.findIndex(x => x.kind === 'card')
+      return { after: reduce(s, { type: 'BUY', index: i }), bought: s.offer[i]!.id }
+    }
+    const size = (s: ReturnType<typeof shop>) =>
+      s.deck.length + s.hand.length + s.discard.length
+
+    test('buying at the cap opens the remove screen and will not close empty', () => {
+      const s = shop(11, 5_000_000)
+      expect(size(s)).toBe(20)
+      const { after } = buyCard(s)
+      expect(after.phase).toBe('remove')
+      expect(after.mustSwap).toBe(true)
+      // refusing is not an option
+      expect(reduce(after, { type: 'REMOVE_CARD', id: null })).toBe(after)
+    })
+
+    test('the swap completes back to the shop at twenty cards', () => {
+      const s = shop(11, 5_000_000)
+      const { after } = buyCard(s)
+      const victim = after.deck.find(id => id !== after.deck[0])!
+      const done = reduce(after, { type: 'REMOVE_CARD', id: victim })
+      expect(done.phase).toBe('shop')
+      expect(done.mustSwap).toBe(false)
+      expect(size(done)).toBe(20)
+    })
+
+    test('a cut below the cap opens a slot, and the next buy just fits', () => {
+      const s = shop(11, 5_000_000)
+      const paid = reduce(s, { type: 'BUY_CUT' })
+      const thinned = reduce(paid, { type: 'REMOVE_CARD', id: paid.deck[1]! })
+      expect(size(thinned)).toBe(19)
+      const { after } = buyCard(thinned)
+      expect(after.phase).toBe('shop')   // no forced swap — the slot was bought
+      expect(after.mustSwap).toBe(false)
+      expect(size(after)).toBe(20)
+    })
+  })
+
   test('a bought boost is carried and never enters the deck', () => {
     const s = shop(11, 5_000_000)
     const i = s.offer.findIndex(x => x.kind === 'boost')

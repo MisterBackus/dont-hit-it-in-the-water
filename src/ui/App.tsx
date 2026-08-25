@@ -333,11 +333,14 @@ export function App() {
     return (
       <div className="shell intro">
         <div className="mini-eyebrow">
-          {s.cutIsPaid ? 'The pro shop · fitting' : 'A week getting fitted'}
+          {s.mustSwap ? 'The pro shop · the bag is full'
+            : s.cutIsPaid ? 'The pro shop · fitting' : 'A week getting fitted'}
         </div>
-        <h1 className="small">Cut a card</h1>
+        <h1 className="small">{s.mustSwap ? 'Something has to come out' : 'Cut a card'}</h1>
         <p className="tagline">
-          Fewer cards means you draw the good ones more often. Pick one to go.
+          {s.mustSwap
+            ? 'The bag holds twenty and you just bought the twenty-first. Pick what goes.'
+            : 'Fewer cards means you draw the good ones more often. Pick one to go.'}
         </p>
         <div className="removelist">
           {deckList(s).map((id, i) => (
@@ -350,9 +353,11 @@ export function App() {
             </button>
           ))}
         </div>
-        <button className="ghost" onClick={() => dispatch({ type: 'REMOVE_CARD', id: null })}>
-          Changed my mind — refund it
-        </button>
+        {!s.mustSwap && (
+          <button className="ghost" onClick={() => dispatch({ type: 'REMOVE_CARD', id: null })}>
+            Changed my mind — refund it
+          </button>
+        )}
       </div>
     )
   }

@@ -8,7 +8,7 @@ import {
 import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import { advanceField, makeField, rankCut, standings, yourPlace } from './resolve/field'
-import { CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
+import { BAG_CAP, CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
 import { CARD_PRICE, CUT_PRICE, REROLL_PRICE, type ShopItem } from '../content/shop'
 import { WEEK, WEEKS, LESSON_FEE } from '../content/weeks'
 import { BOOST } from '../content/boosts'
@@ -159,6 +159,12 @@ function buy(state: GameState, index: number): GameState {
       // straight onto the top of the deck, so you draw it at the next tee
       d.deck.unshift(item.id)
       d.log.push({ hole: 0, text: `Bought ${CARD[item.id]!.name}.`, tone: 'good' })
+      // SWAP, NOT ADD: with the bag at cap, buying means displacing — the
+      // remove screen opens and refuses to close empty-handed (BAG_CAP).
+      if (d.deck.length + d.hand.length + d.discard.length > BAG_CAP) {
+        d.mustSwap = true
+        d.phase = 'remove'
+      }
     }
   })
 }
@@ -182,6 +188,11 @@ function reroll(state: GameState): GameState {
 
 function removeCard(state: GameState, id: string | null): GameState {
   const paidCut = state.cutIsPaid
+  const swap = state.mustSwap
+  // The bag is full and a card was just bought: refusing is not an option.
+  // (Removing the card you just bought IS — that is changing your mind, at
+  // the price of having paid for it.)
+  if (swap && !id) return state
   const next = produce(state, d => {
     if (id) {
       for (const pile of ['deck', 'hand', 'discard'] as const) {
@@ -194,10 +205,12 @@ function removeCard(state: GameState, id: string | null): GameState {
       d.spent -= CUT_PRICE
     }
     d.cutIsPaid = false
+    d.mustSwap = false
   })
-  // A paid cut came from the shop — go back to it. A free one came from a
-  // fitting week, and that week is spent: the season moves on without you.
-  return paidCut
+  // A paid cut or a forced swap came from the shop — go back to it. A free
+  // cut came from a fitting week, and that week is spent: the season moves
+  // on without you.
+  return paidCut || swap
     ? produce(next, d => { d.phase = 'shop' })
     : weekPassed(next)
 }
