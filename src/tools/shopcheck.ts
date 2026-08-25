@@ -14,7 +14,8 @@
  *
  * Run: npx tsx src/tools/shopcheck.ts
  */
-import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
+import { COURSES } from '../content/courses'
+import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
@@ -98,7 +99,10 @@ function seasonEarningsWithDeck(
   const ctx: Ctx = { bank: seedBank(seed), deck: [...startDeck], discard: [], focus: 5, freeSinks: 0 }
   const cutBonus = kit.reduce((n, b) => n + (b.cutBonus ?? 0), 0)
   let earned = 0
+  // the real rotation for this seed — the same pool draw the game makes
+  const rota = scheduleFor(seed)
   for (const ev of SEASON) {
+    const course = COURSES[rota[ev.num - 1]!]
     const boosts: Boost[] = [
       { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
       ...kit,
@@ -109,23 +113,23 @@ function seasonEarningsWithDeck(
     ctx.bank = { ...ctx.bank, field: fr }
 
     const holes: number[] = []
-    PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {
+    course.holes.slice(0, 4).forEach(hole => {
       holes.push(playHole(hole, ctx, boosts, policy))
-      const [f2, r2] = advanceField(field, i, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
     const thru4 = holes.reduce((a, b) => a + b, 0)
-      - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
+      - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
     const cut = rankCut(field, thru4, ev.advance)
     if (!cut.made) continue
     earned += cutBonus   // sponsor money for the made cut (Boost.cutBonus)
     field = cut.field
-    PINE_HOLLOW.slice(4).forEach((hole, i) => {
+    course.holes.slice(4).forEach(hole => {
       holes.push(playHole(hole, ctx, boosts, policy))
-      const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
-    const rel = holes.reduce((a, b) => a + b, 0) - COURSE_PAR
+    const rel = holes.reduce((a, b) => a + b, 0) - course.par
     earned += payout(ev.purse, yourPlace(standings(field, rel, 8, false)))
   }
   return earned
@@ -217,8 +221,10 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     let banked = 0
     let earned = 0
     const running: number[] = []
+    const rota = scheduleFor(seed)
 
     for (const ev of SEASON) {
+      const course = COURSES[rota[ev.num - 1]!]
       if (shop && ev.num > 1) {
         for (const b of order) {
           if (kit.some(k => k.id === b.id)) continue
@@ -238,13 +244,13 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
       ctx.bank = { ...ctx.bank, field: fr }
 
       const holes: number[] = []
-      PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {
+      course.holes.slice(0, 4).forEach(hole => {
         holes.push(playHole(hole, ctx, boosts, policy))
-        const [f2, r2] = advanceField(field, i, ctx.bank.field)
+        const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
         field = f2; ctx.bank = { ...ctx.bank, field: r2 }
       })
       const thru4 = holes.reduce((a, b) => a + b, 0)
-        - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
+        - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
       const cut = rankCut(field, thru4, ev.advance)
       if (cut.made) {
         // sponsor money for the made cut (Boost.cutBonus) — gross earnings,
@@ -253,12 +259,12 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
         banked += cutBonus
         earned += cutBonus
         field = cut.field
-        PINE_HOLLOW.slice(4).forEach((hole, i) => {
+        course.holes.slice(4).forEach(hole => {
           holes.push(playHole(hole, ctx, boosts, policy))
-          const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
+          const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
           field = f2; ctx.bank = { ...ctx.bank, field: r2 }
         })
-        const cheque = payout(ev.purse, yourPlace(standings(field, holes.reduce((a, b) => a + b, 0) - COURSE_PAR, 8, false)))
+        const cheque = payout(ev.purse, yourPlace(standings(field, holes.reduce((a, b) => a + b, 0) - course.par, 8, false)))
         banked += cheque
         earned += cheque
       }

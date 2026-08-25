@@ -12,7 +12,7 @@ import { LESSON_FEE } from '../content/weeks'
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { dropPoint } from './resolve/shot'
 import { standings, rankCut } from './resolve/field'
-import { currentHole, COURSE } from './state'
+import { currentHole } from './state'
 import { toPin, greenCentre } from './geometry'
 import { buildCone, focusRegen, whyNotPlayable } from './effects'
 
@@ -233,8 +233,11 @@ describe('the season', () => {
   test('the cut is judged on the front four, so they must be a real test', () => {
     // With the easy holes first the median through four sat at -1 all season
     // and 92% of rounds survived event 1 — the cut never bit.
-    const front = COURSE.slice(0, 4)
-    const back = COURSE.slice(4)
+    // Pinned to the course file on purpose: this is a claim about Pine
+    // Hollow's DESIGN (hard holes first), not about whichever course the
+    // schedule deals — same rule as the water-drop tests below.
+    const front = PINE_HOLLOW.slice(0, 4)
+    const back = PINE_HOLLOW.slice(4)
     expect(front.reduce((a, h) => a + h.par, 0)).toBeLessThan(
       back.reduce((a, h) => a + h.par, 0))
     // at least two long par 4s up front

@@ -4,8 +4,9 @@ import {
   type Action,
 } from '../sim/reducer'
 import {
-  COURSE, CUT_AFTER_HOLE, MAX_FOCUS,
-  currentEvent, currentHole, deckList, grossEarnings, initialState, parThrough, toPar,
+  CUT_AFTER_HOLE, MAX_FOCUS,
+  courseFor, courseOf, currentEvent, currentHole, deckList, grossEarnings,
+  holeCount, initialState, parThrough, toPar,
   type GameState,
 } from '../sim/state'
 import {
@@ -50,6 +51,13 @@ function relStr(n: number): string {
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'], v = n % 100
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]!)
+}
+
+/** "Eight holes at Salt Flats" reads better than "8 holes at Salt Flats". */
+function countWord(n: number): string {
+  const words = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
+    'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve']
+  return words[n] ?? String(n)
 }
 
 export function App() {
@@ -136,14 +144,14 @@ export function App() {
         </div>
         <p className="tagline">
           {ev.major
-            ? 'A major. Survive the cut and you pick up equipment.'
-            : `Eight holes at Pine Hollow. Top ${ev.advance} and ties play the weekend.`}
+            ? `A major, at ${courseOf(s).label}. Survive the cut and you pick up equipment.`
+            : `${countWord(holeCount(s))} holes at ${courseOf(s).label}. Top ${ev.advance} and ties play the weekend.`}
         </p>
         <div className="ladder">
           {SEASON.map(e => (
             <span key={e.num}
               className={`rung ${e.num === s.event ? 'now' : ''} ${e.num < s.event ? 'done' : ''} ${e.major ? 'maj' : ''}`}
-              title={e.name}>{e.num}</span>
+              title={`${e.name} · ${courseFor(s.seed, e.num).label}`}>{e.num}</span>
           ))}
         </div>
         <p className="moneynote">
@@ -213,7 +221,7 @@ export function App() {
 
   if (s.phase === 'payout') {
     const total = s.scores.reduce((a, b) => a + b, 0)
-    const rel = total - parThrough(s.scores.length)
+    const rel = total - parThrough(s, s.scores.length)
     const made = s.madeCut !== false
     return (
       <div className="shell intro">
@@ -233,7 +241,7 @@ export function App() {
         <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
           {made ? 'To the bag' : 'On to the next one'}
         </button>
-        <Leaderboard rows={board} window={8} thruTotal={COURSE.length}
+        <Leaderboard rows={board} window={8} thruTotal={holeCount(s)}
           title="Final leaderboard" />
       </div>
     )
@@ -365,7 +373,7 @@ export function App() {
   }
 
   if (s.phase === 'cut') {
-    const front = s.scores.slice(0, CUT_AFTER_HOLE).reduce((a, b) => a + b, 0) - parThrough(CUT_AFTER_HOLE)
+    const front = s.scores.slice(0, CUT_AFTER_HOLE).reduce((a, b) => a + b, 0) - parThrough(s, CUT_AFTER_HOLE)
     const ev = currentEvent(s)
     return (
       <div className="shell intro">
@@ -381,7 +389,44 @@ export function App() {
             ? (ev.major ? 'Pick up your prize' : 'Play the weekend')
             : 'Pack up'}
         </button>
-        <Leaderboard rows={board} window={6} thruTotal={COURSE.length} />
+        <Leaderboard rows={board} window={6} thruTotal={holeCount(s)} />
+      </div>
+    )
+  }
+
+  if (s.phase === 'boost') {
+    /*
+     * UI REACHABILITY — this screen was missing for the game's ENTIRE life.
+     * The reducer has had the 'boost' phase since majors began handing out
+     * equipment, and every harness bot takes its boost through the reducer,
+     * so every test stayed green — while a real player who made a major's cut
+     * pressed "Pick up your prize", landed in a phase with no screen, and the
+     * app fell through to the playing shell with nothing actionable in it.
+     * A permanent softlock only a human at the actual UI could ever meet.
+     * When the reducer gains a phase, the UI must gain a room.
+     */
+    return (
+      <div className="shell intro">
+        <div className="mini-eyebrow">{currentEvent(s).name} · the cut is made</div>
+        <h1 className="small good">Pick up your prize</h1>
+        <p className="tagline">
+          A major pays its survivors in equipment. Take one — it is yours for
+          the rest of the season, and the weekend starts the moment you lift it.
+        </p>
+        <div className="offer">
+          {s.boostOffer.map(id => {
+            const b = BOOST[id]!
+            return (
+              <button key={id} className="offercard is-boost"
+                onClick={() => dispatch({ type: 'TAKE_BOOST', id })}>
+                <span className="offer-kind">Equipment · always on</span>
+                <span className="boost-icon">{b.icon}</span>
+                <span className="offer-name">{b.name}</span>
+                <span className="offer-blurb">{b.blurb}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -426,7 +471,7 @@ export function App() {
           {SEASON.map(e => (
             <span key={e.num}
               className={`rung ${e.num < s.event ? 'done' : ''} ${e.num === s.event ? 'now' : ''} ${e.major ? 'maj' : ''}`}
-              title={e.name}>{e.num}</span>
+              title={`${e.name} · ${courseFor(s.seed, e.num).label}`}>{e.num}</span>
           ))}
         </div>
         {s.boosts.length > 0 && (
@@ -552,7 +597,7 @@ export function App() {
 
           {holed && (
             <>
-              <Leaderboard rows={board} window={5} thruTotal={COURSE.length} />
+              <Leaderboard rows={board} window={5} thruTotal={holeCount(s)} />
               <div className="holed">
                 {scoreName(s.hole.strokes - hole.par)} · {s.hole.strokes} on a par {hole.par}
               </div>
@@ -560,7 +605,7 @@ export function App() {
                 <div className="momentum">◆◆ Momentum — focus comes back faster after a good hole</div>
               )}
               <button className="big flowact" onClick={() => dispatch({ type: 'NEXT' })}>
-                {s.scores.length === COURSE.length ? 'Sign your card' : 'Next hole'}
+                {s.scores.length === holeCount(s) ? 'Sign your card' : 'Next hole'}
               </button>
             </>
           )}
@@ -650,7 +695,7 @@ export function App() {
           )}
 
           <div className="scorecard">
-            {COURSE.map((h, i) => {
+            {courseOf(s).holes.map((h, i) => {
               const sc = s.scores[i]
               const d = sc === undefined ? null : sc - h.par
               return (
@@ -678,7 +723,7 @@ export function App() {
           )}
           {holed && (
             <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
-              {s.scores.length === COURSE.length ? 'Sign your card' : 'Next hole'}
+              {s.scores.length === holeCount(s) ? 'Sign your card' : 'Next hole'}
             </button>
           )}
           {s.phase === 'playing' && s.hole.puttFeet === null && (

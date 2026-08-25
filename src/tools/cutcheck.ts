@@ -20,7 +20,8 @@
  *
  * Run: npx tsx src/tools/cutcheck.ts
  */
-import { PINE_HOLLOW } from '../content/courses/pinehollow'
+import { COURSES } from '../content/courses'
+import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON } from '../content/season'
 import { buildCone, focusRegen } from '../sim/effects'
@@ -91,7 +92,12 @@ const KIT = Number(process.env.KIT ?? 1)
 function seasonPlaces(seed: number, policy: Policy): number[] {
   const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5 }
   const out: number[] = []
+  // THE REAL ROTATION: the same pool draw the game makes for this seed
+  // (SCHEDULE-PLAN.md §4 — an instrument playing a different schedule than
+  // the game is a confidently-wrong harness).
+  const rota = scheduleFor(seed)
   SEASON.forEach((ev, ei) => {
+    const course = COURSES[rota[ei]!]
     // equipment accumulates through the season
     const kit = Math.pow(KIT, ei / (SEASON.length - 1))
     const boosts: Boost[] = [{
@@ -102,18 +108,26 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
     ctx.bank = { ...ctx.bank, field: fr }
     let rel = 0
     // FOUR holes — the cut is judged here. No fieldEdge: the field is static.
-    PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {
+    course.holes.slice(0, 4).forEach(hole => {
       rel += playHole(hole, ctx, boosts, policy) - hole.par
-      const [f2, r2] = advanceField(field, i, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
+    // SNAPSHOT HERE — the game's cut compares your four holes to the field's
+    // four (rankCut fires with the field thru 4). This instrument used to
+    // read your place against the field's EIGHT-hole totals, which was a
+    // harsher-but-course-neutral convention right up until fieldShift landed:
+    // an eight-hole total carries a course's FULL shift while your four-hole
+    // rel carries about half, so at Salt Flats the old reading flattered you
+    // by ~9 places. The confidently-wrong-harness lesson, again.
+    const placeAtCut = yourPlace(standings(field, rel, 4, false))
     // play the rest so the deck cycles the way a real event would
-    PINE_HOLLOW.slice(4).forEach((hole, i) => {
+    course.holes.slice(4).forEach(hole => {
       playHole(hole, ctx, boosts, policy)
-      const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
-    out.push(yourPlace(standings(field, rel, 4, false)))
+    out.push(placeAtCut)
   })
   return out
 }

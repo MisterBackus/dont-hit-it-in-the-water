@@ -2,8 +2,8 @@ import { produce, type Draft } from 'immer'
 import type { AimChoice, Boost, Cone, HoleSpec, Point, ShotCard, Surface, TechniqueCard } from './types'
 import type { GameState } from './state'
 import {
-  COURSE, CUT_AFTER_HOLE, MAX_FOCUS, currentEvent, currentHole, freshHole,
-  initialState, parThrough,
+  CUT_AFTER_HOLE, MAX_FOCUS, courseOf, currentEvent, currentHole, freshHole,
+  holeCount, initialState, parThrough,
 } from './state'
 import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
@@ -80,7 +80,7 @@ export function boostsOf(s: GameState) {
 }
 
 export function previewCone(s: GameState): { cone: Cone; blocked: string | null } | null {
-  if (!s.selectedShot || !COURSE[s.hole.index]) return null
+  if (!s.selectedShot || !courseOf(s).holes[s.hole.index]) return null
   const shot = shotOf(s.selectedShot)
   if (!shot) return null
   const techs = s.selectedTechs.map(techOf).filter((t): t is TechniqueCard => t !== null)
@@ -417,12 +417,14 @@ function takeBoost(state: GameState, id: string): GameState {
 }
 
 function finishHole(draft: Draft<GameState>): void {
-  const hole = COURSE[draft.hole.index]!
+  const course = courseOf(draft)
+  const hole = course.holes[draft.hole.index]!
   const rel = draft.hole.strokes - hole.par
   draft.scores.push(draft.hole.strokes)
   draft.phase = 'holed'
-  // everyone else plays the hole too
-  const [field, r] = advanceField(draft.field, draft.hole.index, draft.rng.field)
+  // everyone else plays the hole too — and the course moves them as it moves
+  // you (fieldShift, SCHEDULE-PLAN.md §3)
+  const [field, r] = advanceField(draft.field, hole.par, draft.rng.field, course.fieldShift)
   draft.field = field
   draft.rng = { ...draft.rng, field: r }
   draft.log.push({
@@ -461,7 +463,7 @@ function settle(state: GameState, madeCut: boolean): GameState {
       d.lastPlace = 0
       d.lastPaid = 0
     } else {
-      const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(d.scores.length)
+      const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(d, d.scores.length)
       const place = yourPlace(standings(d.field, rel, d.scores.length, false))
       const paid = payout(ev.purse, place)
       d.lastPlace = place
@@ -569,7 +571,7 @@ function advance(state: GameState): GameState {
     // the cut is judged after four holes
     if (played === CUT_AFTER_HOLE) {
       return produce(state, d => {
-        const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(CUT_AFTER_HOLE)
+        const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(state, CUT_AFTER_HOLE)
         // TOP N AND TIES — a place, not a score. See content/season.ts.
         const res = rankCut(d.field, rel, currentEvent(state).advance)
         d.madeCut = res.made
@@ -581,7 +583,7 @@ function advance(state: GameState): GameState {
         d.phase = 'cut'
       })
     }
-    if (played >= COURSE.length) return settle(state, true)
+    if (played >= holeCount(state)) return settle(state, true)
     return dealHole(state, played)
   }
 

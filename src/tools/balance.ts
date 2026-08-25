@@ -2,6 +2,11 @@
  * Headless balance harness. ARCHITECTURE.md §7.2.
  * Plays whole rounds with scripted policies, dealing real hands, and renders
  * nothing. Run: npm run balance   (N=500 npm run balance to change sample size)
+ *
+ * DELIBERATELY PINE-HOLLOW-FIXED (SCHEDULE-PLAN.md §4): this is the per-hole
+ * microscope. Per-course scoring is coursecheck's job; the schedule rotation
+ * is modelled by the economy tools (cutcheck, moneycheck, shopcheck,
+ * pursecheck, rewardcheck, seasoncheck).
  */
 import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'

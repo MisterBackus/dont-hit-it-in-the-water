@@ -1,10 +1,11 @@
-import type { AimChoice, Point, Surface } from './types'
+import type { AimChoice, HoleSpec, Point, Surface } from './types'
 import type { RngBank } from './rng'
 import type { FieldPlayer } from './resolve/field'
 import type { ShopItem } from '../content/shop'
+import type { Course } from '../content/courses'
 import { seedBank } from './rng'
 import { shuffle } from './deck'
-import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
+import { courseForEvent } from './schedule'
 import { STARTING_DECK } from '../content/cards'
 import { SEASON } from '../content/season'
 
@@ -167,19 +168,34 @@ export function deckList(s: GameState): string[] {
   return [...s.deck, ...s.hand, ...s.discard].sort()
 }
 
-export const COURSE = PINE_HOLLOW
-export const PAR = COURSE_PAR
-
-export function currentHole(s: GameState) {
+/**
+ * THE COURSE IS A FACT ABOUT THE EVENT (SCHEDULE-PLAN.md §1). Nothing below
+ * reads a course constant any more: which holes you are playing, what par is,
+ * and how many holes there are all flow from (seed, event) through the
+ * schedule. `CUT_AFTER_HOLE` stays a global — the cut is a season rule, not a
+ * course rule — and nothing may assume eight holes except via holeCount.
+ */
+export function courseFor(seed: number, event: number): Course {
+  return courseForEvent(seed, event)
+}
+export function courseOf(s: Pick<GameState, 'seed' | 'event'>): Course {
+  return courseForEvent(s.seed, s.event)
+}
+export function holeCount(s: Pick<GameState, 'seed' | 'event'>): number {
+  return courseOf(s).holes.length
+}
+export function currentHole(s: GameState): HoleSpec {
   // Between events the index can sit past the last hole for a render or two.
-  return COURSE[Math.min(s.hole.index, COURSE.length - 1)]!
+  const holes = courseOf(s).holes
+  return holes[Math.min(s.hole.index, holes.length - 1)]!
 }
 export function currentEvent(s: GameState) { return SEASON[s.event - 1]! }
-export function parThrough(n: number): number {
-  return COURSE.slice(0, n).reduce((a, h) => a + h.par, 0)
+/** Par through the first n holes OF THE COURSE THE EVENT IS PLAYED ON. */
+export function parThrough(s: Pick<GameState, 'seed' | 'event'>, n: number): number {
+  return courseOf(s).holes.slice(0, n).reduce((a, h) => a + h.par, 0)
 }
 export function toPar(s: GameState): number {
-  return s.scores.reduce((a, b) => a + b, 0) - parThrough(s.scores.length)
+  return s.scores.reduce((a, b) => a + b, 0) - parThrough(s, s.scores.length)
 }
 
 /**

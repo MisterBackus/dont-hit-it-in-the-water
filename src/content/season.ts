@@ -3,7 +3,14 @@
  *
  * Both curves in here were derived against the live simulation, not by feel.
  * See DESIGN.md §3.4a / §3.4b and src/tools/seasoncheck.ts.
+ *
+ * WHERE each event is played is NOT in this file: the schedule is a pool
+ * mechanism (SCHEDULE-PLAN.md, owner decision) — sim/schedule.ts draws each
+ * run's rotation from the course registry, seeded from the run's seed, under
+ * the slot constraints the registry carries. This file only contributes the
+ * per-event pins below: an event named after a venue plays that venue.
  */
+import type { CourseId } from './courses'
 
 export interface EventSpec {
   readonly num: number
@@ -16,11 +23,26 @@ export interface EventSpec {
   /**
    * FIELD RESPONSE: how far the field's skill floor has risen this week
    * (see FIELD-RESPONSE.md and makeField). 0 in the spring; by the finale
-   * the bottom of the tour has gone home and stayed there. This is the dial
-   * a course will also pull when the schedule work lands.
+   * the bottom of the tour has gone home and stayed there. (The course's
+   * dial turned out to be a SECOND number, not this one: fieldStrength can
+   * only lift the floor, so the course carries fieldShift on the registry
+   * instead — SCHEDULE-PLAN.md §3.2.)
    */
   readonly fieldStrength: number
   readonly purse: number
+  /**
+   * NAMED EVENTS PIN TO THEIR VENUE while the venue is in the pool: the
+   * Pine Hollow Classic cannot be played somewhere else without the fiction
+   * breaking. Unpinned events draw from the pool under slot constraints.
+   */
+  readonly pin?: CourseId
+  /**
+   * HOSTING FICTION: events sharing a venue name (Bracken Ridge, events 8
+   * and 11) must draw the SAME course — a name must mean the same course
+   * every time it appears (SCHEDULE-PLAN.md §2). The venue itself has no
+   * course file yet; it is the strongest candidate for a fifth one.
+   */
+  readonly venue?: string
 }
 
 const NAMES = [
@@ -32,6 +54,21 @@ const NAMES = [
 ]
 
 const MAJORS = new Set([4, 7, 11, 14])
+
+/** The named-event pins — an event wearing a venue's name plays that venue. */
+const PINS: Readonly<Record<number, CourseId>> = {
+  2: 'pinehollow',   // Pine Hollow Classic
+  3: 'cottonwood',   // Cottonwood Invitational
+  4: 'pinehollow',   // THE MASTERS OF PINE HOLLOW
+  6: 'rockdale',     // The Muni Championship
+  7: 'saltflats',    // THE OPEN AT SALT FLATS
+}
+
+/** Shared hosting-fiction venues — same name, same drawn course. */
+const VENUES: Readonly<Record<number, string>> = {
+  8: 'brackenridge',   // Bracken Ridge Classic
+  11: 'brackenridge',  // THE PGA AT BRACKEN RIDGE
+}
 
 /**
  * THE CUT IS A PLACE, NOT A SCORE.
@@ -70,6 +107,8 @@ export const SEASON: readonly EventSpec[] = NAMES.map((name, i) => {
     sharpness: Math.round((1.40 - (num - 1) / (NAMES.length - 1) * 0.60) * 100) / 100,
     fieldStrength: Math.round(FIELD_LIFT * (num - 1) / (NAMES.length - 1) * 1000) / 1000,
     purse: major ? 20_000_000 : 9_000_000,
+    pin: PINS[num],
+    venue: VENUES[num],
   }
 })
 

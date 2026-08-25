@@ -37,7 +37,12 @@ export function triangular(rng: RngState): readonly [number, RngState] {
   return [a - b, r2] as const
 }
 
-function hash(seed: number, salt: number): number {
+/**
+ * Salted seed derivation — the same mix seedBank uses for its four streams.
+ * Exported so one-shot derived streams (the schedule assignment, salt 5) can
+ * come from the same family without perturbing any bank stream's sequence.
+ */
+export function hash(seed: number, salt: number): number {
   let h = (seed ^ (salt * 0x9e3779b9)) >>> 0
   h = Math.imul(h ^ (h >>> 16), 0x85ebca6b)
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35)

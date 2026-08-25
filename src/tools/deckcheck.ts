@@ -6,6 +6,13 @@
  * season on that assumption, check it: play the same rounds under different
  * deckbuilding policies and see whether the deck decisions move the score at all.
  *
+ * DELIBERATELY PINE-HOLLOW-FIXED (SCHEDULE-PLAN.md §4): this measures whether
+ * DECK decisions move the score, round by round, with no season, no field and
+ * no schedule in the loop — a fixed course is the controlled condition, the
+ * same way balance.ts and coursecheck.ts hold theirs. The tools that price
+ * the economy (cutcheck, moneycheck, shopcheck, pursecheck, rewardcheck,
+ * seasoncheck) all play the real rotation.
+ *
  * Run: npx tsx src/tools/deckcheck.ts
  */
 import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'

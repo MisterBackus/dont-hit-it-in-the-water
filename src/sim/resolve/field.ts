@@ -1,7 +1,6 @@
 import type { RngState } from '../rng'
 import { next } from '../rng'
 import { FIRST, LAST, FIELD_SIZE } from '../../content/players'
-import { COURSE } from '../state'
 
 export interface FieldPlayer {
   readonly name: string
@@ -57,11 +56,21 @@ export function makeField(rng: RngState, floorLift = 0): readonly [FieldPlayer[]
 /**
  * Play one hole for everyone still in. Better players make more birdies and
  * fewer messes; nobody is immune to a par 5.
+ *
+ * `par` is the hole being played — passed in, so the field has no idea which
+ * course file it is on (this also killed a state↔field value-level import
+ * cycle, SCHEDULE-PLAN.md §1.3).
+ *
+ * `courseShift` is the course's fieldShift (SCHEDULE-PLAN.md §3): a flat bias
+ * offset — the fiction of everyone suffering the same course. It moves
+ * everyone, winners included, which is what a hard course does; it is NOT
+ * fieldStrength, which is a skill floor lift and can only make the field
+ * better. DETERMINISM: it moves the scoring thresholds only, never the call
+ * count — still exactly two rolls per live player per hole on every course.
  */
 export function advanceField(
-  field: readonly FieldPlayer[], holeIndex: number, rng: RngState,
+  field: readonly FieldPlayer[], par: number, rng: RngState, courseShift = 0,
 ): readonly [FieldPlayer[], RngState] {
-  const par = COURSE[holeIndex]?.par ?? 4
   let r = rng
   const out = field.map(p => {
     if (p.cut) return p
@@ -77,7 +86,7 @@ export function advanceField(
     // the cut never removed anyone on its own and had to be propped up by
     // fieldEdge, and why you could stand 11th of 72 while shooting level par.
     const roll = (a + b) / 2
-    const bias = 0.20 + p.skill * 0.42 + (par === 5 ? 0.08 : 0)
+    const bias = 0.20 + p.skill * 0.42 + (par === 5 ? 0.08 : 0) - courseShift
     const shot = roll < bias - 0.30 ? -1
       : roll < bias + 0.28 ? 0
       : roll < bias + 0.52 ? 1

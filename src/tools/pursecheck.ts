@@ -16,7 +16,8 @@
  *
  * Run: npx tsx src/tools/pursecheck.ts
  */
-import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
+import { COURSES } from '../content/courses'
+import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON, money } from '../content/season'
 import { buildCone, focusRegen } from '../sim/effects'
@@ -94,8 +95,11 @@ const FLAT: Purses = (_n, major) => (major ? 20_000_000 : 9_000_000)
 function playSeason(seed: number, policy: Policy, pay: Payout, purses: Purses): number[] {
   const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5 }
   const per: number[] = []
+  // the real rotation for this seed — the same pool draw the game makes
+  const rota = scheduleFor(seed)
 
   for (const ev of SEASON) {
+    const course = COURSES[rota[ev.num - 1]!]
     const boosts: Boost[] = [{
       id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness,
     }]
@@ -105,22 +109,22 @@ function playSeason(seed: number, policy: Policy, pay: Payout, purses: Purses): 
 
     const holes: number[] = []
     // FOUR holes, then the cut — top N and ties, judged on the board.
-    PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {
+    course.holes.slice(0, 4).forEach(hole => {
       holes.push(playHole(hole, ctx, boosts, policy))
-      const [f2, r2] = advanceField(field, i, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
     const thru4 = holes.reduce((a, b) => a + b, 0)
-      - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
+      - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
     const cut = rankCut(field, thru4, ev.advance)
     if (!cut.made) { per.push(0); continue }
     field = cut.field
-    PINE_HOLLOW.slice(4).forEach((hole, i) => {
+    course.holes.slice(4).forEach(hole => {
       holes.push(playHole(hole, ctx, boosts, policy))
-      const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
-    const rel = holes.reduce((a, b) => a + b, 0) - COURSE_PAR
+    const rel = holes.reduce((a, b) => a + b, 0) - course.par
     per.push(pay(purses(ev.num, ev.major), yourPlace(standings(field, rel, 8, false))))
   }
   return per

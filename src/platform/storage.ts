@@ -14,7 +14,7 @@
  */
 import type { Action } from '../sim/reducer'
 
-export const SAVE_VERSION = 3 // v3: per-card prices, tiered drops, new boosts/cards — old logs replay differently
+export const SAVE_VERSION = 4 // v4: the schedule rotation — events draw courses from the pool, so a v3 log replays as a different run
 const KEY = 'dont-hit-it-in-the-water/save'
 
 export interface SaveFile {

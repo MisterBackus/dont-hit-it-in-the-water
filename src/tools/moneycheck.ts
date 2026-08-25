@@ -8,7 +8,8 @@
  *
  * Run: npx tsx src/tools/moneycheck.ts
  */
-import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
+import { COURSES } from '../content/courses'
+import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
 import { buildCone, focusRegen } from '../sim/effects'
@@ -84,8 +85,11 @@ function playSeason(seed: number, policy: Policy, spend = false): number[] {
   const running: number[] = []
   let earned = 0
   let bought = 0
+  // the real rotation for this seed — the same pool draw the game makes
+  const rota = scheduleFor(seed)
 
   for (const ev of SEASON) {
+    const course = COURSES[rota[ev.num - 1]!]
     if (spend) {
       const ci = MONEY_CHECKS.findIndex(c => c.after >= ev.num)
       const next = MONEY_CHECKS[ci] ?? MONEY_CHECKS[MONEY_CHECKS.length - 1]!
@@ -108,22 +112,22 @@ function playSeason(seed: number, policy: Policy, spend = false): number[] {
     ctx.bank = { ...ctx.bank, field: fr }
 
     const per: number[] = []
-    PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {
+    course.holes.slice(0, 4).forEach(hole => {
       per.push(playHole(hole, ctx, boosts, policy))
-      const [f2, r2] = advanceField(field, i, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
     const thru4 = per.reduce((a, b) => a + b, 0)
-      - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
+      - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
     const cut = rankCut(field, thru4, ev.advance)
     if (cut.made) {
       field = cut.field
-      PINE_HOLLOW.slice(4).forEach((hole, i) => {
+      course.holes.slice(4).forEach(hole => {
         per.push(playHole(hole, ctx, boosts, policy))
-        const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
+        const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
         field = f2; ctx.bank = { ...ctx.bank, field: r2 }
       })
-      const rel = per.reduce((a, b) => a + b, 0) - COURSE_PAR
+      const rel = per.reduce((a, b) => a + b, 0) - course.par
       earned += payout(ev.purse, yourPlace(standings(field, rel, 8, false)))
     }
     running.push(earned)
@@ -136,7 +140,9 @@ function playSeasonFreeKit(seed: number, policy: Policy): number[] {
   const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5 }
   const running: number[] = []
   let earned = 0
+  const rota = scheduleFor(seed)
   for (const ev of SEASON) {
+    const course = COURSES[rota[ev.num - 1]!]
     // pieces arrive on the same rough schedule a shopper would manage
     const bought = Math.min(4, Math.floor((ev.num - 1) / 3))
     const boosts: Boost[] = [{
@@ -147,22 +153,22 @@ function playSeasonFreeKit(seed: number, policy: Policy): number[] {
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
     const per: number[] = []
-    PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {
+    course.holes.slice(0, 4).forEach(hole => {
       per.push(playHole(hole, ctx, boosts, policy))
-      const [f2, r2] = advanceField(field, i, ctx.bank.field)
+      const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
     const thru4 = per.reduce((a, b) => a + b, 0)
-      - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
+      - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
     const cut = rankCut(field, thru4, ev.advance)
     if (cut.made) {
       field = cut.field
-      PINE_HOLLOW.slice(4).forEach((hole, i) => {
+      course.holes.slice(4).forEach(hole => {
         per.push(playHole(hole, ctx, boosts, policy))
-        const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
+        const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
         field = f2; ctx.bank = { ...ctx.bank, field: r2 }
       })
-      earned += payout(ev.purse, yourPlace(standings(field, per.reduce((a, b) => a + b, 0) - COURSE_PAR, 8, false)))
+      earned += payout(ev.purse, yourPlace(standings(field, per.reduce((a, b) => a + b, 0) - course.par, 8, false)))
     }
     running.push(earned)
   }

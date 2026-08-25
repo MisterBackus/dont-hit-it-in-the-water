@@ -8,7 +8,8 @@
  *
  * This measures the gap. Run: npx tsx src/tools/seasoncheck.ts
  */
-import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
+import { COURSES, type Course } from '../content/courses'
+import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { buildCone, focusRegen } from '../sim/effects'
 import { chooseShot } from './policy'
@@ -74,14 +75,14 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: Boost[]) {
   return strokes
 }
 
-function playRound(seed: number, sharpness: number) {
+function playRound(seed: number, sharpness: number, course: Course) {
   const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5 }
   const boosts = [sharpnessBoost(sharpness)]
   const per: number[] = []
-  for (const hole of PINE_HOLLOW) per.push(playHole(hole, ctx, boosts))
+  for (const hole of course.holes) per.push(playHole(hole, ctx, boosts))
   const front4 = per.slice(0, 4).reduce((a, b) => a + b, 0)
-    - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
-  return { front4, full: per.reduce((a, b) => a + b, 0) - COURSE_PAR }
+    - course.holes.slice(0, 4).reduce((a, h) => a + h.par, 0)
+  return { front4, full: per.reduce((a, b) => a + b, 0) - course.par }
 }
 
 const N = Number(process.env.N ?? 300)
@@ -96,7 +97,12 @@ function run(label: string, sharpnessAt: (ev: number) => number, cut: readonly n
   const rates: number[] = []
   for (let ev = 1; ev <= EVENTS; ev++) {
     const sh = sharpnessAt(ev)
-    const rounds = Array.from({ length: N }, (_, i) => playRound(ev * 7919 + i, sh))
+    // each simulated round plays the course its seed's schedule deals event
+    // `ev` — the same pool draw the game makes (SCHEDULE-PLAN.md §4)
+    const rounds = Array.from({ length: N }, (_, i) => {
+      const seed = ev * 7919 + i
+      return playRound(seed, sh, COURSES[scheduleFor(seed)[ev - 1]!])
+    })
     const scores = rounds.map(r => r.front4).sort((a, b) => a - b)
     const med = scores[Math.floor(scores.length / 2)]!
     // THE CUT IS JUDGED ON FOUR HOLES — measure what the game actually does

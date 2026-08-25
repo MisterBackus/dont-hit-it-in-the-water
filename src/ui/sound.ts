@@ -17,7 +17,7 @@
  */
 import { useEffect, useRef } from 'react'
 import type { GameState } from '../sim/state'
-import { COURSE } from '../sim/state'
+import { courseOf } from '../sim/state'
 
 const STORE_KEY = 'water-sound'
 const MASTER_GAIN = 0.25
@@ -256,7 +256,8 @@ function vary(s: GameState): number {
 
 function relOfFinishedHole(s: GameState): number | null {
   const strokes = s.scores[s.scores.length - 1]
-  const hole = COURSE[Math.min(s.hole.index, COURSE.length - 1)]
+  const holes = courseOf(s).holes
+  const hole = holes[Math.min(s.hole.index, holes.length - 1)]
   return strokes === undefined || hole === undefined ? null : strokes - hole.par
 }
 
