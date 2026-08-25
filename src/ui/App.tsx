@@ -23,7 +23,7 @@ import { HoleView } from './HoleView'
 import { Leaderboard } from './Leaderboard'
 import { standings } from '../sim/resolve/field'
 import { ShotButton, TechButton, DeckPanel } from './Cards'
-import { loadSave, persistSave } from '../platform/storage'
+import { SAVE_VERSION, loadSave, persistSave } from '../platform/storage'
 import { useGameAudio } from './sound'
 
 const START_SEED = 20260824
@@ -79,6 +79,17 @@ export function App() {
     persistSave(log.seed, log.actions)
   }
   useGameAudio(s)
+  // THE CLUBHOUSE BOARD (tools/board.ts): a run is shared as its replayable
+  // action log — the board verifies by replaying, so this IS the submission.
+  const [copied, setCopied] = useState(false)
+  const copyRun = () => {
+    const log = logRef.current
+    const blob = JSON.stringify({ version: SAVE_VERSION, seed: log.seed, actions: log.actions })
+    navigator.clipboard.writeText(blob).then(
+      () => { setCopied(true); setTimeout(() => setCopied(false), 2500) },
+      () => {},
+    )
+  }
   const hole = currentHole(s)
   const pv = previewCone(s)
   const techs = handTechs(s).filter(t => s.selectedTechs.includes(t.id))
@@ -162,6 +173,12 @@ export function App() {
           {s.skipped > 0 && ` · ${s.skipped} week${s.skipped > 1 ? 's' : ''} sat out`}
         </p>
         <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>Tee off</button>
+        <p className="note" style={{ textAlign: 'center' }}>
+          <button className="ghost" onClick={copyRun}>
+            {copied ? 'Copied — paste it in the chat' : 'Copy this run for the board'}
+          </button>
+          {' '}<a href="board.html">the clubhouse board →</a>
+        </p>
 
         {s.weekOptions.length > 0 && (
           <>
@@ -484,6 +501,12 @@ export function App() {
             </div>
           </>
         )}
+        <p className="note" style={{ textAlign: 'center' }}>
+          <button className="ghost" onClick={copyRun}>
+            {copied ? 'Copied — paste it in the chat' : 'Copy this season for the board'}
+          </button>
+          {' '}<a href="board.html">the clubhouse board →</a>
+        </p>
         <button className="big" onClick={() => dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7 })}>
           New season
         </button>

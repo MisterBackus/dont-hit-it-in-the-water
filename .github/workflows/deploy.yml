@@ -26,6 +26,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # the clubhouse board: verify shared runs by replay, emit public/board.html
+      - run: npx tsx src/tools/board.ts
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

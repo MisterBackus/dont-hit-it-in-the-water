@@ -3,3 +3,4 @@ dist/
 *.local
 .claude/
 vite.config.ts.timestamp-*.mjs
+public/board.html
