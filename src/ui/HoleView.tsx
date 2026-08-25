@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { Cone, HoleSpec, Point } from '../sim/types'
 import { corridorHalf, greenCentre } from '../sim/geometry'
 import { aimFrame } from '../sim/resolve/shot'
-import { HALF_WIDTH, project, totalDepth, viewBox } from './scale'
+import { HALF_WIDTH, RUNOUT, project, totalDepth, viewBox, windowFrom } from './scale'
 import {
   DEEP_BAND, DEEP_BEYOND, ROUGH_BAND, TREES_BAND,
   holeEdgeBand, holeEdgeCorridor, holeEdgeEllipse, obEdge, scatterInEllipse,
@@ -276,6 +277,39 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
   )
 }
 
+/**
+ * Full-hole locator strip, shown when the camera window (§2.3 of
+ * MOBILE-PROPOSAL.md) has cropped the view. Same viewBox() and project()
+ * as the main figure — one code path, two windows. It draws NO cone, so it
+ * cannot violate the shared-scale contract: that contract binds the cone
+ * to the ground it is drawn on, and the cone is only drawn on the main view.
+ */
+function MiniMap({ hole, ball, winDepth }: { hole: HoleSpec; ball: Point; winDepth: number }) {
+  const g = greenCentre(hole)
+  const gp = project(g, hole)
+  const bp = project(ball, hole)
+  return (
+    <svg className="minimap" viewBox={viewBox(hole)} preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true">
+      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={totalDepth(hole)}
+        fill="var(--rough)" />
+      <path d={corridorPath(hole)} fill="var(--fairway)" />
+      {hole.hazards.map((h, i) => {
+        const c = project(h.at, hole)
+        return <ellipse key={i} cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown}
+          fill={FILL[h.surface] ?? 'var(--rough)'} />
+      })}
+      <ellipse cx={gp.x} cy={gp.y} rx={hole.greenRadius} ry={hole.greenRadius}
+        fill="var(--green)" />
+      {/* the bracket: what the main view is currently showing */}
+      <rect x={-HALF_WIDTH + 2} y={1} width={HALF_WIDTH * 2 - 4} height={Math.max(winDepth - 2, 1)}
+        fill="none" stroke="var(--cone)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+      <circle cx={bp.x} cy={bp.y} r="9" fill="#fff" stroke="var(--ink)" strokeWidth="1"
+        vectorEffect="non-scaling-stroke" />
+    </svg>
+  )
+}
+
 const ART_KEY = 'water-art'
 
 function readArtFlag(): boolean {
@@ -309,24 +343,58 @@ export function HoleView({
   const gp = project(g, hole)
   const bp = project(ball, hole)
 
+  // The camera follows the BALL, never the staged cone — toggling a technique
+  // must not move the ground under the preview (MOBILE-PROPOSAL.md §2.3).
+  // On the tee this is the full hole, exactly today's view.
+  const from = ball.down > 0 ? ball.down - 15 : undefined
+  const lo = windowFrom(hole, from)
+  const winDepth = hole.length + 30 - lo
+  const windowed = lo > -RUNOUT
+
+  // px per yard of the rendered figure, so markers and labels can hold a
+  // fixed SCREEN size while everything geometric stays in yard space.
+  const svgRef = useRef<SVGSVGElement | null>(null)
+  const [k, setK] = useState(1)
+  useLayoutEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const update = () => {
+      const w = el.clientWidth, h = el.clientHeight
+      if (w > 0 && h > 0) setK(Math.min(w / (HALF_WIDTH * 2), h / winDepth))
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [winDepth])
+
+  // never smaller than ~4.5px on screen; never bigger than the classic look
+  const ballR = Math.max(5, 4.5 / k)
+  const mk = Math.max(1, 0.8 / k)
+  const gridFs = Math.max(9, 10 / k)
+
   return (
-    <div className={tape ? 'holewrap tape' : 'holewrap'}>
-      <svg className="holeview" viewBox={viewBox(hole)} preserveAspectRatio="xMidYMin meet">
+    <div className={tape ? 'holewrap tape' : 'holewrap'}
+      style={{ '--gridfs': `${gridFs.toFixed(1)}px` } as CSSProperties}>
+      <svg ref={svgRef} className="holeview" viewBox={viewBox(hole, from)}
+        preserveAspectRatio="xMidYMin meet">
         {tape ? <TapeCourse hole={hole} /> : <ClassicCourse hole={hole} />}
 
         {/* cone — identical in both looks, always above the terrain */}
         {showCone && cone && <ConeShape hole={hole} from={ball} cone={cone} />}
 
         {/* pin */}
-        <line x1={gp.x} y1={gp.y} x2={gp.x} y2={gp.y - 26}
+        <line x1={gp.x} y1={gp.y} x2={gp.x} y2={gp.y - 26 * mk}
           stroke="var(--ink)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
-        <polygon points={`${gp.x},${gp.y - 26} ${gp.x + 15},${gp.y - 20} ${gp.x},${gp.y - 14}`}
+        <polygon points={`${gp.x},${gp.y - 26 * mk} ${gp.x + 15 * mk},${gp.y - 20 * mk} ${gp.x},${gp.y - 14 * mk}`}
           fill="var(--pin)" />
 
         {/* ball */}
-        <circle className="ballmark" cx={bp.x} cy={bp.y} r="5" fill="#fff" stroke="var(--ink)"
+        <circle className="ballmark" cx={bp.x} cy={bp.y} r={ballR} fill="#fff" stroke="var(--ink)"
           strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
       </svg>
+
+      {windowed && <MiniMap hole={hole} ball={ball} winDepth={winDepth} />}
 
       {/* broadcast furniture: one bug, the scanlines, the vignette — tape only */}
       {tape && <div className="scan" />}

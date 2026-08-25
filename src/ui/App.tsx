@@ -23,6 +23,7 @@ import { Leaderboard } from './Leaderboard'
 import { standings } from '../sim/resolve/field'
 import { ShotButton, TechButton, DeckPanel } from './Cards'
 import { loadSave, persistSave } from '../platform/storage'
+import { useGameAudio } from './sound'
 
 const START_SEED = 20260824
 
@@ -69,6 +70,7 @@ export function App() {
     else log.actions.push(a)
     persistSave(log.seed, log.actions)
   }
+  useGameAudio(s)
   const hole = currentHole(s)
   const pv = previewCone(s)
   const techs = handTechs(s).filter(t => s.selectedTechs.includes(t.id))
@@ -447,7 +449,7 @@ export function App() {
   const holed = s.phase === 'holed'
 
   return (
-    <div className="shell">
+    <div className="shell play">
       <header className="topbar">
         <div className="hz">
           <span className="hnum">{hole.num}</span>
@@ -464,7 +466,7 @@ export function App() {
           {me && (
             <div className="stat"><b>{me.tied ? 'T' : ''}{me.place}</b><span>position</span></div>
           )}
-          <div className="stat"><b>{s.hole.strokes}</b><span>on this hole</span></div>
+          <div className="stat strokes"><b>{s.hole.strokes}</b><span>on this hole</span></div>
           {s.boosts.length > 0 && (
             <div className="stat bag">
               <b>{s.boosts.map(id => BOOST[id]!.icon).join(' ')}</b>
@@ -514,15 +516,38 @@ export function App() {
           <div className="note">{hole.note}</div>
         </div>
 
-        <div className="panel">
+        {/* Region B, lower half (MOBILE-PROPOSAL.md §2.1): the situation and
+            the aim never scroll away from the diagram they describe. On
+            desktop this renders exactly where the panel's first rows sat. */}
+        <div className="cockpit">
           <div className="situation">
             <b>{dist}</b> yards to the pin — from {SURFACE_LABEL[s.hole.lie]}
+            <i className="sit-strokes"> · stroke {s.hole.strokes}</i>
           </div>
 
           {s.lastShot && <div className={`shotline ${holed ? 'big-news' : ''}`}>{s.lastShot}</div>}
 
+          {s.phase === 'playing' && s.hole.puttFeet === null && (
+            <>
+              <div className="lbl">Aim</div>
+              <div className="aims">
+                {(['left', 'pin', 'right'] as const).map(a => (
+                  <button key={a} className={`aim ${s.aim === a ? 'sel' : ''}`}
+                    onClick={() => dispatch({ type: 'SET_AIM', aim: a })}>
+                    {a === 'pin' ? 'At the pin' : a === 'left' ? '◀ Safe left' : 'Safe right ▶'}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="panel">
+          {/* the note reads once, at the tee, then gets out of the way (mobile) */}
+          {s.hole.strokes === 0 && !holed && <div className="note m-note">{hole.note}</div>}
+
           {s.phase === 'shot' && (
-            <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>Next shot</button>
+            <button className="big flowact" onClick={() => dispatch({ type: 'NEXT' })}>Next shot</button>
           )}
 
           {holed && (
@@ -534,7 +559,7 @@ export function App() {
               {s.log.some(l => l.hole === hole.num && l.text.startsWith('Momentum')) && (
                 <div className="momentum">◆◆ Momentum — focus comes back faster after a good hole</div>
               )}
-              <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
+              <button className="big flowact" onClick={() => dispatch({ type: 'NEXT' })}>
                 {s.scores.length === COURSE.length ? 'Sign your card' : 'Next hole'}
               </button>
             </>
@@ -583,16 +608,6 @@ export function App() {
 
           {s.phase === 'playing' && s.hole.puttFeet === null && (
             <>
-              <div className="lbl">Aim</div>
-              <div className="aims">
-                {(['left', 'pin', 'right'] as const).map(a => (
-                  <button key={a} className={`aim ${s.aim === a ? 'sel' : ''}`}
-                    onClick={() => dispatch({ type: 'SET_AIM', aim: a })}>
-                    {a === 'pin' ? 'At the pin' : a === 'left' ? '◀ Safe left' : 'Safe right ▶'}
-                  </button>
-                ))}
-              </div>
-
               {handTechs(s).length > 0 && (
                 <>
                   <div className="lbl">Technique <em>costs focus, not strokes</em></div>
@@ -627,7 +642,7 @@ export function App() {
                 <b>{'\u25c6'.repeat(REDRAW_COST)}</b>
               </button>
 
-              <button className="big commit" disabled={!pv || !!pv.blocked}
+              <button className="big commit flowact" disabled={!pv || !!pv.blocked}
                 onClick={() => dispatch({ type: 'COMMIT' })}>
                 {pv?.blocked ? pv.blocked : pv ? 'Hit it' : 'Pick a shot'}
               </button>
@@ -646,6 +661,35 @@ export function App() {
               )
             })}
           </div>
+        </div>
+
+        {/* Region D (MOBILE-PROPOSAL.md §2.1): on a phone the primary action
+            lives in ONE fixed slot at the thumb, next to the focus it spends.
+            Hidden on desktop; the in-flow .flowact buttons are hidden on
+            mobile — same dispatches, one visible at a time. */}
+        <div className="actionbar">
+          <div className="ab-focus">
+            <b>{'◆'.repeat(Math.max(0, s.focus - spent))}<i>{'◆'.repeat(spent)}</i>
+              {'◇'.repeat(Math.max(0, maxFocus(MAX_FOCUS, boostsOf(s)) - s.focus))}</b>
+            <span>focus</span>
+          </div>
+          {s.phase === 'shot' && (
+            <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>Next shot</button>
+          )}
+          {holed && (
+            <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
+              {s.scores.length === COURSE.length ? 'Sign your card' : 'Next hole'}
+            </button>
+          )}
+          {s.phase === 'playing' && s.hole.puttFeet === null && (
+            <button className="big commit" disabled={!pv || !!pv.blocked}
+              onClick={() => dispatch({ type: 'COMMIT' })}>
+              {pv?.blocked ? pv.blocked : pv ? 'Hit it' : 'Pick a shot'}
+            </button>
+          )}
+          {s.phase === 'playing' && s.hole.puttFeet !== null && (
+            <div className="ab-note">On the green — {s.hole.puttFeet} feet</div>
+          )}
         </div>
       </div>
     </div>

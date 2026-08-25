@@ -14,13 +14,17 @@
 }}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--fb);
-  -webkit-font-smoothing:antialiased}
-button{font:inherit;color:inherit;cursor:pointer}
+  -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent}
 button:disabled{cursor:not-allowed}
 button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 
-.shell{max-width:1180px;margin:0 auto;padding:16px 18px 40px}
+.shell{max-width:1180px;margin:0 auto;
+  padding:16px max(18px,env(safe-area-inset-right))
+    calc(40px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
 .intro{max-width:620px;padding-top:9vh;text-align:left}
 .intro h1{font-family:var(--fd);font-weight:900;font-size:clamp(38px,7vw,64px);
   line-height:.94;letter-spacing:-.03em;margin:0 0 14px;text-transform:uppercase}
@@ -45,19 +49,33 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .stats{display:flex;gap:22px}
 .stat{text-align:right}
 .stat b{display:block;font-family:var(--fm);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.stat span{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.stat span{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 .stat.focus b{color:var(--cone);letter-spacing:1px}
 .stat.focus i{opacity:.3;font-style:normal}
 
-.board{display:grid;grid-template-columns:minmax(230px,0.78fr) minmax(360px,1fr);gap:22px;align-items:start}
-@media(max-width:860px){.board{grid-template-columns:1fr}}
-.figure{position:sticky;top:12px}
-.holeview{width:100%;height:auto;max-height:74vh;display:block;
+/* The board now has four children — figure, cockpit (situation + aim),
+   panel, actionbar — so the mobile frame can pin the first two and the
+   last while only the panel scrolls. On desktop: figure left, cockpit
+   over panel right, actionbar hidden; row-gap matches the panel's old
+   internal 10px so the desktop picture is unchanged. */
+.board{display:grid;grid-template-columns:minmax(230px,0.78fr) minmax(360px,1fr);
+  column-gap:22px;row-gap:10px;align-items:start}
+.figure{position:sticky;top:12px;grid-column:1;grid-row:1/span 3}
+.cockpit{display:flex;flex-direction:column;gap:10px;grid-column:2;min-width:0}
+.actionbar{display:none}
+.sit-strokes{display:none;font-style:normal}
+.m-note{display:none}
+@media(max-width:860px){
+  .board{grid-template-columns:1fr}
+  .figure{grid-column:auto;grid-row:auto}
+  .cockpit,.panel{grid-column:auto}
+}
+.holeview{width:100%;height:auto;max-height:74vh;max-height:74dvh;display:block;
   border:1px solid var(--line);border-radius:3px;background:var(--rough)}
-.gridlabel{font-family:var(--fm);font-size:9px;fill:var(--grid);opacity:.55}
+.gridlabel{font-family:var(--fm);font-size:var(--gridfs,9px);fill:var(--grid);opacity:.55}
 .note{font-size:13px;color:var(--soft);font-style:italic;margin-top:8px;line-height:1.45}
 
-.panel{display:flex;flex-direction:column;gap:10px}
+.panel{display:flex;flex-direction:column;gap:10px;grid-column:2;min-width:0}
 .situation{font-family:var(--fm);font-size:14px;color:var(--soft);
   background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:10px 12px}
 .situation b{font-size:22px;color:var(--ink)}
@@ -72,8 +90,8 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .lbl em{font-style:normal;text-transform:none;letter-spacing:0;opacity:.8}
 
 .aims{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-.aim{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:9px 4px;
-  font-size:12px}
+.aim{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:12px 4px;
+  font-size:13px;min-height:44px}
 .aim.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 
 .techs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -83,7 +101,7 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .tech.off{opacity:.38}
 .tech-name{font-family:var(--fd);font-weight:700;font-size:12.5px;line-height:1.15}
 .tech-blurb{font-size:11px;color:var(--soft);line-height:1.3}
-.tech-cost{position:absolute;top:7px;right:8px;font-family:var(--fm);font-size:9.5px;color:var(--cone)}
+.tech-cost{position:absolute;top:7px;right:8px;font-family:var(--fm);font-size:11px;color:var(--cone)}
 
 .clubs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .club{display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--panel);
@@ -94,24 +112,24 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   letter-spacing:.02em;text-align:center;line-height:1.15}
 .cardcone{width:100%;height:60px;display:block}
 .club-num{font-family:var(--fm);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
-.club-why{font-size:8.5px;color:var(--faint);text-align:center;line-height:1.1}
+.club-why{font-size:10px;color:var(--faint);text-align:center;line-height:1.1}
 
 .scorecard,.card-final{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:14px}
 .sq,.fh{background:var(--panel);border:1px solid var(--line);border-radius:2px;
   padding:5px 2px;text-align:center}
-.sq span,.fh span{display:block;font-family:var(--fm);font-size:9px;color:var(--faint)}
+.sq span,.fh span{display:block;font-family:var(--fm);font-size:10px;color:var(--faint)}
 .sq b,.fh b{font-family:var(--fm);font-size:15px;font-variant-numeric:tabular-nums}
 .sq.now{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
 .sq.good b,.fh.good b{color:var(--good)} .sq.bad b,.fh.bad b{color:var(--bad)}
-.club-cut{font-size:8.5px;color:var(--faint);text-align:center;line-height:1.1;font-family:var(--fm)}
+.club-cut{font-size:10px;color:var(--faint);text-align:center;line-height:1.1;font-family:var(--fm)}
 .club.cut .club-num{color:var(--soft)}
 .putts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .putt{display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--panel);
   border:1px solid var(--line);border-radius:3px;padding:12px 8px}
-.putt:hover{border-color:var(--cone)}
+@media(hover:hover){.putt:hover{border-color:var(--cone)}}
 .putt-name{font-family:var(--fd);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.02em}
 .putt-make{font-family:var(--fm);font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
-.putt-sub{font-family:var(--fm);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.putt-sub{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 .putt-risk{font-family:var(--fm);font-size:10.5px;color:var(--soft);margin-top:6px;
   border-top:1px solid var(--line);padding-top:6px;width:100%;text-align:center}
 .putt-risk.hot{color:var(--bad)}
@@ -126,22 +144,22 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   letter-spacing:.02em;text-align:center;line-height:1.15;min-height:2.2em}
 .shot-num{font-family:var(--fm);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .shot-num i{font-style:normal;font-size:10px;color:var(--faint);margin-left:1px}
-.shot-blurb{font-size:9px;color:var(--faint);text-align:center;line-height:1.2;min-height:2.4em}
-.shot-tag{position:absolute;top:5px;right:6px;font-family:var(--fm);font-size:7.5px;
+.shot-blurb{font-size:10px;color:var(--faint);text-align:center;line-height:1.2;min-height:2.4em}
+.shot-tag{position:absolute;top:5px;right:6px;font-family:var(--fm);font-size:9.5px;
   letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 .mini-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--faint);margin-bottom:10px}
 .intro h1.small{font-size:clamp(30px,5vw,46px)}
 .ghost{display:block;width:100%;background:none;border:1px dashed var(--line);
   border-radius:3px;padding:12px;color:var(--soft);font-size:13.5px;margin-top:14px}
-.ghost:hover{border-color:var(--soft);color:var(--ink)}
+@media(hover:hover){.ghost:hover{border-color:var(--soft);color:var(--ink)}}
 
 .offer{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .offercard{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--panel);
   border:1px solid var(--line);border-radius:3px;padding:12px 10px 11px;text-align:center}
-.offercard:hover{border-color:var(--cone);box-shadow:inset 0 0 0 1px var(--cone)}
+@media(hover:hover){.offercard:hover{border-color:var(--cone);box-shadow:inset 0 0 0 1px var(--cone)}}
 .offercard.is-tech{border-left:3px solid var(--cone)}
-.offer-kind{font-family:var(--fm);font-size:8.5px;letter-spacing:.11em;text-transform:uppercase;
+.offer-kind{font-family:var(--fm);font-size:10px;letter-spacing:.11em;text-transform:uppercase;
   color:var(--faint)}
 .offer-name{font-family:var(--fd);font-weight:700;font-size:14px;text-transform:uppercase;
   letter-spacing:.02em;line-height:1.15;min-height:2.2em;display:flex;align-items:center}
@@ -150,14 +168,14 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .offer-blurb{font-size:11.5px;color:var(--soft);line-height:1.35}
 
 .removelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;
-  max-height:44vh;overflow-y:auto}
+  max-height:44vh;max-height:44dvh;overflow-y:auto}
 .removeone{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
   background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:9px 11px;text-align:left}
-.removeone:hover{border-color:var(--bad);color:var(--bad)}
+@media(hover:hover){.removeone:hover{border-color:var(--bad);color:var(--bad)}}
 .removeone b{font-family:var(--fd);font-weight:700;font-size:12.5px}
 .removeone span{font-family:var(--fm);font-size:10px;color:var(--faint)}
 
-.deckbtn{background:none;border:0;padding:0;text-align:right}
+.deckbtn{background:none;border:0;padding:0 2px;text-align:right;min-height:44px}
 .deckbtn b i{font-style:normal;font-size:12px;color:var(--faint)}
 .deckdrawer{background:var(--panel);border:1px solid var(--line);border-radius:3px;
   padding:12px 14px;margin-bottom:14px}
@@ -168,24 +186,24 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .chip b{font-weight:600;margin-left:3px;color:var(--ink)}
 .shuffled{font-family:var(--fm);font-size:11.5px;letter-spacing:.05em;color:var(--cone);
   border:1px dashed var(--cone);border-radius:3px;padding:8px 12px;margin-bottom:12px}
-.shot-leave{font-family:var(--fm);font-size:10px;letter-spacing:.04em;color:var(--faint);
+.shot-leave{font-family:var(--fm);font-size:11px;letter-spacing:.04em;color:var(--faint);
   border-top:1px solid var(--line);width:100%;text-align:center;padding-top:4px;margin-top:2px}
 .shot-leave.hot{color:var(--good);font-weight:600}
 .offercard.is-boost{border-left:3px solid var(--sand)}
-.offercard.is-boost:hover{border-color:var(--sand);box-shadow:inset 0 0 0 1px var(--sand)}
+@media(hover:hover){.offercard.is-boost:hover{border-color:var(--sand);box-shadow:inset 0 0 0 1px var(--sand)}}
 .boost-icon{font-size:32px;line-height:1;color:var(--sand);padding:6px 0 2px}
 .stat.bag b{letter-spacing:2px;color:var(--sand)}
 .chip.boost{border-color:var(--sand);color:var(--sand)}
 .redraw{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
-  background:none;border:1px dashed var(--line);border-radius:3px;padding:10px 13px;
-  color:var(--soft);font-size:13px;margin-top:8px}
-.redraw:hover:not(:disabled){border-color:var(--cone);color:var(--ink)}
+  background:none;border:1px dashed var(--line);border-radius:3px;padding:12px 13px;
+  color:var(--soft);font-size:13px;margin-top:8px;min-height:44px}
+@media(hover:hover){.redraw:hover:not(:disabled){border-color:var(--cone);color:var(--ink)}}
 .redraw:disabled{opacity:.4}
 .redraw b{font-family:var(--fm);color:var(--cone);letter-spacing:1px}
 .intro h1.major{color:var(--sand)}
 .evfacts{display:flex;gap:26px;margin:0 0 20px}
 .evfacts b{display:block;font-family:var(--fm);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
-.evfacts span{font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.evfacts span{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 .ladder{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 14px}
 .rung{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);
   border-radius:2px;font-family:var(--fm);font-size:11px;color:var(--faint)}
@@ -198,7 +216,7 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .leaderboard{background:var(--panel);border:1px solid var(--line);border-radius:3px;
   padding:8px 0 6px;margin:10px 0}
 .lbhead{display:flex;justify-content:space-between;padding:0 12px 7px;
-  font-family:var(--fm);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+  font-family:var(--fm);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
   color:var(--faint);border-bottom:1px solid var(--line);margin-bottom:4px}
 .lbrow{display:grid;grid-template-columns:34px 1fr 42px 26px;gap:6px;align-items:baseline;
   padding:3px 12px;font-size:13px}
@@ -221,7 +239,7 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .weeks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
 .weekcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;
   background:var(--panel);border:1px dashed var(--line);border-radius:3px;padding:12px 13px}
-.weekcard:hover:not(:disabled){border-style:solid;border-color:var(--cone)}
+@media(hover:hover){.weekcard:hover:not(:disabled){border-style:solid;border-color:var(--cone)}}
 .weekcard.off{opacity:.4}
 .weekcard.picked{border-style:solid;border-color:var(--bad);background:var(--panel)}
 .weekcard.picked .week-icon{color:var(--bad)}
@@ -247,10 +265,10 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
    app-wide. Default is classic; the toggle lives on the figure.
    ============================================================ */
 .holewrap{position:relative}
-.artbtn{position:absolute;top:8px;right:8px;z-index:3;font-family:var(--fm);font-size:9px;
+.artbtn{position:absolute;top:8px;right:8px;z-index:3;font-family:var(--fm);font-size:10px;
   letter-spacing:.14em;background:var(--panel);color:var(--faint);border:1px solid var(--line);
-  border-radius:2px;padding:3px 8px;opacity:.75}
-.artbtn:hover{opacity:1;border-color:var(--cone);color:var(--ink)}
+  border-radius:2px;padding:5px 10px;opacity:.75}
+@media(hover:hover){.artbtn:hover{opacity:1;border-color:var(--cone);color:var(--ink)}}
 
 .holewrap.tape{
   /* course tokens, remapped to the Sunday Tape contract (sunday-tape.css) */
@@ -276,6 +294,9 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .holewrap.tape .gridlabel{fill:var(--grid);opacity:.6}
 .holewrap.tape .ballmark{fill:var(--ink)}     /* only the cone is white */
 .holewrap.tape .cone{filter:drop-shadow(0 0 1.2px #060906) drop-shadow(0 0 1.2px #060906)}
+/* owner playtest, 25 Aug 2026: the white wedge read too heavy over the tape
+   ground — lighter fill, and the boundary keeps the say via the stroke */
+.holewrap.tape .cone path{fill-opacity:.18}
 
 /* broadcast furniture — per sunday-tape.css non-negotiable #6 */
 .holewrap.tape .scan{position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:3px;
@@ -287,3 +308,115 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;color:#82E39B;
   background:rgba(6,10,7,.72);border:1px solid rgba(130,227,155,.35);padding:3px 7px}
 .holewrap.tape .artbtn{background:#0A0F0B;color:#82E39B;border-color:rgba(130,227,155,.35)}
+
+/* ============================================================
+   MOBILE (MOBILE-PROPOSAL.md) — the touch pass.
+   Portrait phone gets the fixed/scroll/fixed frame (§2.1): topbar
+   and figure pinned, the panel scrolls, the action bar at the thumb.
+   Desktop ≥861px keeps the exact layout above — everything here is
+   additive and media-scoped, except the always-on minimap/ab styles
+   which only apply to elements desktop hides or never windows.
+   ============================================================ */
+
+/* full-hole locator strip — shown whenever the camera is windowed (§2.3) */
+.minimap{position:absolute;right:6px;bottom:6px;z-index:2;width:36px;height:46%;
+  pointer-events:none;border:1px solid var(--line);border-radius:2px;
+  background:var(--rough);opacity:.92}
+.holewrap.tape .minimap{border-color:#2A4230}
+
+/* the action bar's focus meter — focus lives next to what spends it */
+.ab-focus{flex:none;min-width:86px}
+.ab-focus b{display:block;font-family:var(--fm);font-size:17px;font-weight:600;
+  color:var(--cone);letter-spacing:1px;white-space:nowrap}
+.ab-focus i{opacity:.3;font-style:normal}
+.ab-focus span{font-family:var(--fm);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint)}
+.ab-note{flex:1;font-family:var(--fm);font-size:13px;color:var(--soft);text-align:right}
+
+/* touch: deletion reads as danger without a hover to reveal it */
+@media(hover:none){
+  .removeone{border-left:3px solid var(--bad)}
+}
+
+@media(max-width:640px) and (orientation:portrait){
+  /* ---- between-event screens ---- */
+  .intro{padding-top:24px}
+  .shoprow{grid-template-columns:1fr}
+
+  /* ---- the playing frame ---- */
+  .shell.play{display:flex;flex-direction:column;height:100vh;height:100dvh;
+    overflow:hidden;max-width:none;
+    padding:calc(8px + env(safe-area-inset-top)) max(10px,env(safe-area-inset-right))
+      0 max(10px,env(safe-area-inset-left))}
+  .shell.play .topbar{flex-wrap:nowrap;gap:10px;align-items:center;
+    padding-bottom:8px;margin-bottom:8px}
+  .shell.play .hz{min-width:0;flex:1;gap:8px}
+  .shell.play .hz>div{min-width:0}
+  .shell.play .hnum{font-size:22px}
+  .shell.play .hname{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .shell.play .hmeta{font-size:9.5px;letter-spacing:.05em;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .shell.play .stats{gap:12px;flex:none}
+  .shell.play .stat b{font-size:16px}
+  /* strokes moves into the situation line; bag folds into the deck drawer;
+     focus moves to the action bar it gets spent from */
+  .shell.play .stat.bag,.shell.play .stat.strokes,.shell.play .stat.focus{display:none}
+  .sit-strokes{display:inline;color:var(--faint)}
+
+  .shell.play .deckdrawer{position:fixed;top:calc(56px + env(safe-area-inset-top));
+    left:10px;right:10px;z-index:30;margin:0;max-height:70dvh;overflow-y:auto;
+    box-shadow:0 12px 32px rgba(0,0,0,.3)}
+  .shuffled{margin-bottom:8px;padding:6px 10px}
+
+  .board{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex:1;
+    min-height:0;overflow:hidden}
+  .figure{position:static;flex:none}
+  .figure .note{display:none}       /* reads once at the tee, in the panel */
+  .m-note{display:block;margin:0}
+  .holeview{height:38vh;height:38dvh;max-height:none}
+  .cockpit{flex:none;gap:6px}
+  .cockpit .lbl{display:none}       /* "Aim" — the three buttons explain themselves */
+  .situation{padding:7px 10px;font-size:13px}
+  .situation b{font-size:18px}
+  .shotline{padding:8px 10px;font-size:13.5px}
+  .panel{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;padding-bottom:10px}
+  .flowact{display:none}
+  .actionbar{display:flex;align-items:center;gap:14px;flex:none;
+    border-top:2px solid var(--ink);background:var(--paper);
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+  .actionbar .big{margin-top:0;flex:1;padding:12px;min-height:44px}
+}
+
+/* landscape phone (§2.4): figure left at full height, panel scrolls right,
+   the action bar pinned under the panel column only */
+@media(orientation:landscape) and (max-height:520px){
+  .shell.play{display:flex;flex-direction:column;height:100vh;height:100dvh;
+    overflow:hidden;max-width:none;
+    padding:6px max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left))}
+  .shell.play .topbar{flex-wrap:nowrap;gap:10px;padding-bottom:6px;margin-bottom:6px}
+  .shell.play .hz{min-width:0;flex:1}
+  .shell.play .hnum{font-size:20px}
+  .shell.play .hname{font-size:13px;white-space:nowrap}
+  .shell.play .hmeta{font-size:9.5px;white-space:nowrap}
+  .shell.play .stats{gap:12px;flex:none}
+  .shell.play .stat b{font-size:15px}
+  .shell.play .stat.bag,.shell.play .stat.focus{display:none}
+  .board{flex:1;min-height:0;overflow:hidden;display:grid;
+    grid-template-columns:minmax(190px,42%) 1fr;grid-template-rows:auto 1fr auto;
+    column-gap:14px;row-gap:8px;align-items:stretch}
+  .figure{position:static;grid-column:1;grid-row:1/span 3;min-height:0;display:flex}
+  .figure .note{display:none}
+  .m-note{display:none}
+  .holewrap{flex:1;min-height:0}
+  .holeview{height:100%;max-height:none;width:100%}
+  .cockpit{grid-column:2;grid-row:1;gap:6px}
+  .cockpit .lbl{display:none}
+  .panel{grid-column:2;grid-row:2;min-height:0;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .flowact{display:none}
+  .actionbar{display:flex;grid-column:2;grid-row:3;align-items:center;gap:14px;
+    border-top:2px solid var(--ink);background:var(--paper);
+    padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+  .actionbar .big{margin-top:0;flex:1;padding:10px}
+}
