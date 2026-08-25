@@ -89,6 +89,22 @@ Between every event you get a **week**, which is a choice node (§8).
 Cumulative season earnings must clear a threshold or the run ends immediately.
 This is the Balatro blind requirement, wearing a visor.
 
+> **RE-ANCHORED 25 Aug 2026 — three changes, one playtest question.** The list
+> now checks **GROSS earnings** (`earnings + spent`): it records what you won,
+> the way a money list does, and shopping cannot demote you on it. The first
+> playtester's first question — "it feels like you can't buy anything, so how
+> do you get better?" — was the net check reading as a mugging, and the
+> measured truth was worse: under momentum regen every boost had drifted to
+> 7–20× its price and the old thresholds killed almost nobody. Boosts are
+> repriced to ~2.0× measured value, and the thresholds below are superseded by
+> **$1.4M / $4.4M / $7.6M**, which send home 42% / 21% / 5% of arrivals
+> (mixed survival 43%; a mixed hoarder survives 16% against the shopper's 43%,
+> so the shop is now the difference between living and not). The late checks
+> sit under the kill intent and cannot be raised to it — equipped survivors
+> snowball past any static number — which is the field-response wall measured
+> from a fourth angle. Provenance in `content/season.ts`; re-derive with
+> `npx tsx src/tools/shopcheck.ts`.
+
 | Check | After event | Threshold | Kills, of those who arrive |
 |---|---|---|---|
 | First | 5 | **$420,000** | 41% |

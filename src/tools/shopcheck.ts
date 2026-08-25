@@ -198,35 +198,29 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   // Best thing you can afford, not cheapest — buying Soft Spikes first because
   // it is $150k is a harness artefact, not a player.
   const order = [...BOOSTS].sort((a, b) => b.price - a.price)
-  const MARGIN = Number(process.env.MARGIN ?? 1.15)
 
   function shoppingSeason(
-    seed: number, policy: Policy, needs: readonly number[], shop: boolean,
+    seed: number, policy: Policy, _needs: readonly number[], shop: boolean,
   ): number[] {
     const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5, freeSinks: 0 }
     const kit: Boost[] = []
+    // The check runs on GROSS earnings now, so the wallet and the list are
+    // separate numbers: `banked` is what the shop can take, `earned` is what
+    // the Money List sees, and buying moves only the first. The old
+    // pace-protection logic died with the net check — a purchase cannot
+    // endanger a check, so the shopper simply buys the best thing they can
+    // afford, one a week.
+    let banked = 0
     let earned = 0
     const running: number[] = []
 
     for (const ev of SEASON) {
-      // PROJECT, do not just stay on pace. Spending down to the straight line
-      // in week one is not shopping, it is bankruptcy: it killed 44% of runs
-      // at the first check. A player buys when their CURRENT RATE still gets
-      // them there afterwards, with a margin, and buys one thing at a time.
       if (shop && ev.num > 1) {
-        const ci = MONEY_CHECKS.findIndex(c => c.after >= ev.num)
-        const next = MONEY_CHECKS[ci] ?? MONEY_CHECKS[MONEY_CHECKS.length - 1]!
-        const need = needs[Math.max(0, ci)] ?? next.need
-        const done = ev.num - 1
-        const rate = earned / done
-        const left = Math.max(0, next.after - done)
         for (const b of order) {
           if (kit.some(k => k.id === b.id)) continue
-          if (b.price > earned) continue
+          if (b.price > banked) continue
           if (kit.length >= 4) break
-          if ((earned - b.price) + rate * left >= need * MARGIN) {
-            earned -= b.price; kit.push(b); break
-          }
+          banked -= b.price; kit.push(b); break
         }
       }
 
@@ -255,7 +249,9 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
           const [f2, r2] = advanceField(field, i + 4, ctx.bank.field)
           field = f2; ctx.bank = { ...ctx.bank, field: r2 }
         })
-        earned += payout(ev.purse, yourPlace(standings(field, holes.reduce((a, b) => a + b, 0) - COURSE_PAR, 8, false)))
+        const cheque = payout(ev.purse, yourPlace(standings(field, holes.reduce((a, b) => a + b, 0) - COURSE_PAR, 8, false)))
+        banked += cheque
+        earned += cheque
       }
       running.push(earned)
     }
@@ -264,8 +260,10 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
 
   const SETS: number[][] = [
     MONEY_CHECKS.map(c => c.need),
-    [420_000, 1_300_000, 2_700_000],
-    [500_000, 1_550_000, 3_200_000],
+    [1_300_000, 4_000_000, 7_000_000],
+    [1_400_000, 4_200_000, 7_200_000],
+    [1_400_000, 4_400_000, 7_600_000],
+    [1_500_000, 4_600_000, 8_000_000],
   ]
   const IDX = MONEY_CHECKS.map(c => c.after - 1)
 

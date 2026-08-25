@@ -66,8 +66,9 @@ export const EVENT_COUNT = SEASON.length
  *
  * The numbers are set by CONDITIONAL kill rate, not by percentile of the
  * population: everyone facing check 2 already survived check 1, so the pool is
- * richer than the spread suggests. These send home 41% / 29% / 14% of the
- * players who actually arrive at them.
+ * richer than the spread suggests. The kill-profile intent is 41% / 29% / 14%
+ * of the players who actually arrive at each — see the re-anchoring note
+ * below for how close the current numbers get and why the tail cannot.
  *
  * Raised twice in one day, both times to pay for the short game getting fairer:
  * first the free chip inside 60 yards (cards.ts, CHIP_OUT), then the cone-angle
@@ -79,21 +80,29 @@ export const EVENT_COUNT = SEASON.length
  * for it lives.
  *
  * Calibrated against a player who SHOPS, using the only harness with the real
- * boosts in it. Survival: mixed 36%, aggressive 45%, safe ~3% — and a hoarder
- * who never visits the pro shop gets 24% where a shopper gets 36%, which is
- * the crossover the shop needs to exist at all. Aggressive play pulling clear
- * of mixed is the short-game fix landing where it should: recovering from a
- * bad spot is now cheap enough that going for it is worth the misses.
+ * boosts in it. Safe play is not merely worse, it is hopeless, because a cut
+ * to a PLACE punishes the timid in a way a cut to a score never did: par no
+ * longer keeps up with a field that is trying to beat you. That is P7
+ * arriving in full. Re-derive with `npx tsx src/tools/shopcheck.ts`.
  *
- * Safe play is now not merely worse, it is hopeless, because a cut to a PLACE
- * punishes the timid in a way a cut to a score never did: par no longer keeps
- * up with a field that is trying to beat you. That is P7 arriving in full.
- * Re-derive with `npx tsx src/tools/shopcheck.ts`.
+ * RE-ANCHORED 25 Aug 2026, for three changes at once: momentum regen made
+ * every season richer, the list moved to GROSS earnings (spending no longer
+ * lowers the number the check reads), and the shop was repriced to ~2.0x.
+ * These send home 42% / 21% / 5% of the players who arrive at them —
+ * survival: mixed 43%, aggressive 55%, safe 4%, and a mixed hoarder who
+ * never shops survives 16% where the shopper gets 43%. The shop is no longer
+ * a crossover argument; it is the difference between living and not.
+ *
+ * The late checks sit below the 29% / 14% kill intent and CANNOT be pushed
+ * there by raising numbers: equipped survivors snowball past any static
+ * threshold (check 3's kill moved 3% -> 6% while its bar rose $1.4M). That
+ * residual is the field-response wall, measured from a fourth angle, and it
+ * is assigned there — not to this dial.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
-  { after: 5, need: 420_000 },
-  { after: 9, need: 1_300_000 },
-  { after: 12, need: 2_700_000 },
+  { after: 5, need: 1_400_000 },
+  { after: 9, need: 4_400_000 },
+  { after: 12, need: 7_600_000 },
 ]
 
 export function checkAfter(event: number) {

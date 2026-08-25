@@ -1,10 +1,16 @@
 /**
  * THE PRO SHOP — where money finally does something.
  *
- * Prize money is your survival AND your shopping. Every dollar spent here is a
- * dollar off the Money List, so buying the Golden Putter in March might be what
- * costs you your card in September. That tension is the point (DESIGN.md §6.3),
- * and it is why there is only one pot rather than a tidy second currency.
+ * SUPERSEDED, 25 Aug 2026: the paragraph that used to live here — "every
+ * dollar spent is a dollar off the Money List, that tension is the point" —
+ * lost its argument to a playtester's first question ("it feels like you
+ * can't buy anything, so how do you get better?"). The list now checks GROSS
+ * season earnings: it records what you won, the way an actual money list
+ * does, and buying wedges cannot demote you on it. The tension the old rule
+ * was after lives where Balatro actually keeps it: prices high enough that
+ * choosing between boosts is the decision, and thresholds high enough that
+ * you must get better to live. Wallet and winnings are still one number on
+ * screen apart — `earnings` is the wallet, `earnings + spent` is the list.
  *
  * PRICES ARE MEASURED, not guessed — and the first measurement was taken with
  * a broken instrument. A synthetic "equipment tightens cones 12%" stand-in said
@@ -33,8 +39,9 @@ export interface ShopItem {
 
 /**
  * Adding a shot is cheap. Cutting one is not — thinning is the stronger play,
- * measured at $878k a season for the best single cut, so it is priced like one.
+ * re-measured at $1.91M a season for the best single cut under momentum, so
+ * it is priced like the equipment: measured value over two.
  */
 export const CARD_PRICE = 120_000
-export const CUT_PRICE = 350_000
+export const CUT_PRICE = 950_000
 export const REROLL_PRICE = 70_000

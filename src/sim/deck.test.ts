@@ -155,19 +155,20 @@ describe('the season', () => {
     expect(EVENT_COUNT - last.after).toBeGreaterThanOrEqual(2)
   })
 
-  test('winning a major is season-defining, and that is deliberate', () => {
-    // Measured every way, a win clears whatever the Money List is asking:
-    // fourteen events at 45% make-cut is about six pay days, mostly mid-pack,
-    // so one first place is always worth a season. Flattening the curve only
-    // changed the multiple, never the fact, and cost the drama of a win.
-    // So it stays — a doomed run has a target, the way it does in the sport.
-    // What it must NOT be is a surprise: the schedule shows the purse.
+  test('winning a major buys the final leg — no longer the whole season', () => {
+    // The old invariant — one win clears whatever the list is asking — died
+    // with the net check. On GROSS earnings with re-anchored bars, money only
+    // accumulates, and no single Sunday should equal twelve weeks of work.
+    // What a win still is: the entire last leg of the climb in one cheque —
+    // everything the list demands between the second check and the third. The
+    // doomed-but-alive run keeps its target; it just has to be alive at 9.
     const major = Math.max(...SEASON.map(e => payout(e.purse, 1)))
-    const need = MONEY_CHECKS[MONEY_CHECKS.length - 1]!.need
-    expect(major).toBeGreaterThan(need)
-    expect(major).toBeLessThan(need * 2.5)
-    // and it must not be reachable by simply turning up — you have to win
-    expect(payout(SEASON[13]!.purse, 10)).toBeLessThan(need)
+    const c = MONEY_CHECKS
+    const lastLeg = c[c.length - 1]!.need - c[c.length - 2]!.need
+    expect(major).toBeGreaterThan(lastLeg)
+    expect(major).toBeLessThan(c[c.length - 1]!.need)   // one win is not a season
+    // and the leg must not be coverable by simply turning up — you have to win
+    expect(payout(SEASON[13]!.purse, 10)).toBeLessThan(lastLeg)
   })
 
   test('making the cut always pays something', () => {
