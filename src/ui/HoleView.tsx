@@ -1,7 +1,12 @@
+import { useMemo, useState } from 'react'
 import type { Cone, HoleSpec, Point } from '../sim/types'
 import { corridorHalf, greenCentre } from '../sim/geometry'
 import { aimFrame } from '../sim/resolve/shot'
 import { HALF_WIDTH, project, totalDepth, viewBox } from './scale'
+import {
+  DEEP_BAND, DEEP_BEYOND, ROUGH_BAND, TREES_BAND,
+  holeEdgeBand, holeEdgeCorridor, holeEdgeEllipse, obEdge, scatterInEllipse,
+} from './holeArt'
 
 function corridorPath(hole: HoleSpec): string {
   const step = 20
@@ -26,6 +31,9 @@ const FILL: Record<string, string> = {
  * The cone, drawn in the SAME yard-space viewBox as the hole itself AND
  * along the same ball→pin direction the shot actually travels. If these
  * two ever disagree the preview is lying, which P8 forbids.
+ *
+ * The cone is exempt from art styling (GRAPHICS-PROPOSAL.md §3.4): both
+ * looks draw this exact shape, and it always sits above the terrain.
  */
 function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Cone }) {
   const { dir, perp } = aimFrame(hole, from)
@@ -54,23 +62,10 @@ function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Co
   )
 }
 
-export function HoleView({
-  hole, ball, cone, showCone,
-}: { hole: HoleSpec; ball: Point; cone: Cone | null; showCone: boolean }) {
-  const g = greenCentre(hole)
-  const gp = project(g, hole)
-  const bp = project(ball, hole)
-  const depth = totalDepth(hole)
-
+/** Shared yardage grid — identical in both looks; only the tokens change. */
+function YardGrid({ hole }: { hole: HoleSpec }) {
   return (
-    <svg className="holeview" viewBox={viewBox(hole)} preserveAspectRatio="xMidYMin meet">
-      {/* ground */}
-      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={depth} fill="var(--rough)" />
-
-      {/* fairway corridor */}
-      <path d={corridorPath(hole)} fill="var(--fairway)" />
-
-      {/* yardage grid every 50 */}
+    <>
       {Array.from({ length: Math.floor(hole.length / 50) }, (_, i) => (i + 1) * 50).map(d => {
         const p = project({ down: d, side: 0 }, hole)
         return (
@@ -81,6 +76,25 @@ export function HoleView({
           </g>
         )
       })}
+    </>
+  )
+}
+
+/** The original yardage-book rendering, untouched. This is the default. */
+function ClassicCourse({ hole }: { hole: HoleSpec }) {
+  const g = greenCentre(hole)
+  const gp = project(g, hole)
+  const depth = totalDepth(hole)
+  return (
+    <>
+      {/* ground */}
+      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={depth} fill="var(--rough)" />
+
+      {/* fairway corridor */}
+      <path d={corridorPath(hole)} fill="var(--fairway)" />
+
+      {/* yardage grid every 50 */}
+      <YardGrid hole={hole} />
 
       {/* hazards */}
       {hole.hazards.map((h, i) => {
@@ -96,19 +110,233 @@ export function HoleView({
       <ellipse cx={gp.x} cy={gp.y} rx={hole.greenRadius} ry={hole.greenRadius}
         fill="var(--green)" stroke="var(--greenline)" strokeWidth="1.5"
         vectorEffect="non-scaling-stroke" />
+    </>
+  )
+}
 
-      {/* cone */}
-      {showCone && cone && <ConeShape hole={hole} from={ball} cone={cone} />}
+const TAPE_FILL: Record<string, string> = {
+  water: 'var(--water)', bunker: 'var(--sand)', trees: 'var(--band-trees)',
+  rough: 'var(--rough)', deep: 'var(--deep)',
+}
 
-      {/* pin */}
-      <line x1={gp.x} y1={gp.y} x2={gp.x} y2={gp.y - 26}
-        stroke="var(--ink)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
-      <polygon points={`${gp.x},${gp.y - 26} ${gp.x + 15},${gp.y - 20} ${gp.x},${gp.y - 14}`}
-        fill="var(--pin)" />
+/**
+ * Sunday Tape rendering — GRAPHICS-PROPOSAL.md approach (a) in the direction
+ * chosen 2026-08-24 (sunday-tape.css). Same sim truth, better clothes:
+ *
+ * - every fill is the true geometry, edges carry ≤1.5yd of deterministic
+ *   hand-drawn wobble (holeArt.ts), decoration is clipped to the true shapes
+ * - the two penalty boundaries are drawn CRISP at the exact sim edge: water
+ *   gets a tube-ink outline on the true ellipse, OB gets a signal-red dashed
+ *   line at exactly corridor+40 (signal red is spent on penalty only)
+ * - the lie bands the sim already believes in (rough/deep/trees, and the
+ *   all-deep zone past length+35) are finally drawn, where before they all
+ *   rendered as undifferentiated rough
+ */
+function TapeCourse({ hole }: { hole: HoleSpec }) {
+  const g = greenCentre(hole)
+  const gp = project(g, hole)
+  const depth = totalDepth(hole)
+  const teeY = project({ down: 0, side: 0 }, hole).y
+  const deepY = project({ down: hole.length + DEEP_BEYOND, side: 0 }, hole).y
+  const fwEnd = hole.length + 20
 
-      {/* ball */}
-      <circle cx={bp.x} cy={bp.y} r="5" fill="#fff" stroke="var(--ink)"
-        strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-    </svg>
+  const art = useMemo(() => ({
+    fairway: holeEdgeCorridor(hole),
+    deepL: holeEdgeBand(hole, -1, ROUGH_BAND, DEEP_BAND),
+    deepR: holeEdgeBand(hole, 1, ROUGH_BAND, DEEP_BAND),
+    treesL: holeEdgeBand(hole, -1, DEEP_BAND, TREES_BAND),
+    treesR: holeEdgeBand(hole, 1, DEEP_BAND, TREES_BAND),
+    obL: holeEdgeBand(hole, -1, TREES_BAND, 95),
+    obR: holeEdgeBand(hole, 1, TREES_BAND, 95),
+    obLineL: obEdge(hole, -1),
+    obLineR: obEdge(hole, 1),
+    green: holeEdgeEllipse(hole, 50, greenCentre(hole), hole.greenRadius, hole.greenRadius),
+  }), [hole])
+
+  const obTeeHalf = corridorHalf(hole, 0) + TREES_BAND
+
+  return (
+    <>
+      {/* base ground = the rough band (everything between corridor and deep) */}
+      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={depth} fill="var(--rough)" />
+
+      {/* lie bands, exactly where surfaceAt puts them */}
+      <path d={art.obL} fill="var(--ob-field)" />
+      <path d={art.obR} fill="var(--ob-field)" />
+      <path d={art.deepL} fill="var(--deep)" />
+      <path d={art.deepR} fill="var(--deep)" />
+      <path d={art.treesL} fill="var(--band-trees)" />
+      <path d={art.treesR} fill="var(--band-trees)" />
+
+      {/* past length+35 the sim calls everything deep, full width */}
+      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={Math.max(deepY, 0)} fill="var(--deep)" />
+
+      {/* behind the tee is out of bounds, full width */}
+      <rect x={-HALF_WIDTH} y={teeY} width={HALF_WIDTH * 2} height={Math.max(depth - teeY, 0)}
+        fill="var(--ob-field)" />
+
+      {/* fairway, with mowline banding clipped to its own drawn shape */}
+      <defs>
+        <clipPath id={`h${hole.num}-fw`}><path d={art.fairway} /></clipPath>
+      </defs>
+      <path d={art.fairway} fill="var(--fairway)" stroke="var(--tube)" strokeWidth="1"
+        vectorEffect="non-scaling-stroke" />
+      {Array.from({ length: Math.ceil(fwEnd / 60) }, (_, k) => k).map(k => {
+        const a = k * 60 + 30
+        const b = Math.min(k * 60 + 60, fwEnd)
+        if (a >= b) return null
+        const y1 = project({ down: b, side: 0 }, hole).y
+        const y2 = project({ down: a, side: 0 }, hole).y
+        return <rect key={k} x={-HALF_WIDTH} y={y1} width={HALF_WIDTH * 2} height={y2 - y1}
+          fill="var(--bent)" opacity=".13" clipPath={`url(#h${hole.num}-fw)`} />
+      })}
+
+      {/* yardage grid — phosphor via scoped tokens */}
+      <YardGrid hole={hole} />
+
+      {/* hazards: wobbled fills, textures clipped to the TRUE ellipse,
+          and every shape outlined in tube ink (outline rule, sunday-tape.css) */}
+      {hole.hazards.map((h, i) => {
+        const c = project(h.at, hole)
+        const blob = holeEdgeEllipse(hole, 100 + i, h.at, h.rDown, h.rSide)
+        const clipId = `h${hole.num}-hz${i}`
+        if (h.surface === 'water') {
+          return (
+            <g key={i}>
+              <defs>
+                <clipPath id={clipId}><ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} /></clipPath>
+              </defs>
+              <path d={blob} fill="var(--water)" />
+              <g clipPath={`url(#${clipId})`}>
+                <path d={holeEdgeEllipse(hole, 160 + i, h.at, h.rDown * 0.62, h.rSide * 0.62)}
+                  fill="none" stroke="var(--ink)" strokeOpacity=".14" strokeWidth="1"
+                  vectorEffect="non-scaling-stroke" />
+                <path d={holeEdgeEllipse(hole, 190 + i, h.at, h.rDown * 0.32, h.rSide * 0.32)}
+                  fill="none" stroke="var(--ink)" strokeOpacity=".14" strokeWidth="1"
+                  vectorEffect="non-scaling-stroke" />
+              </g>
+              {/* water costs a stroke — its true edge is drawn crisp, exactly */}
+              <ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} fill="none"
+                stroke="var(--tube)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+            </g>
+          )
+        }
+        if (h.surface === 'bunker') {
+          return (
+            <g key={i}>
+              <defs>
+                <clipPath id={clipId}><ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} /></clipPath>
+              </defs>
+              <path d={blob} fill="var(--sand)" stroke="var(--tube)" strokeWidth="1"
+                vectorEffect="non-scaling-stroke" />
+              <g clipPath={`url(#${clipId})`} fill="var(--tube)" opacity=".22">
+                {scatterInEllipse(hole, 130 + i, h.at, h.rDown, h.rSide, 12, 0.4, 0.9, 0.75)
+                  .map((p, k) => <circle key={k} cx={p.x} cy={p.y} r={p.r} />)}
+              </g>
+            </g>
+          )
+        }
+        if (h.surface === 'trees') {
+          const blobs = Math.max(8, Math.round((h.rDown * h.rSide) / 40))
+          return (
+            <g key={i}>
+              <defs>
+                <clipPath id={clipId}><ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} /></clipPath>
+              </defs>
+              <path d={blob} fill="var(--band-trees)" stroke="var(--tube)" strokeWidth="1"
+                vectorEffect="non-scaling-stroke" />
+              <g clipPath={`url(#${clipId})`} fill="var(--fairway)" opacity=".28">
+                {scatterInEllipse(hole, 220 + i, h.at, h.rDown, h.rSide, blobs, 3, 6.5, 0.95)
+                  .map((p, k) => <circle key={k} cx={p.x} cy={p.y} r={p.r} />)}
+              </g>
+            </g>
+          )
+        }
+        return <path key={i} d={blob} fill={TAPE_FILL[h.surface] ?? 'var(--rough)'}
+          stroke="var(--tube)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+      })}
+
+      {/* green: bentgrass fill with edge character, true circle drawn crisp
+          (full circle — surfaceAt tests a full circle; keep it that way) */}
+      <path d={art.green} fill="var(--green)" />
+      <ellipse cx={gp.x} cy={gp.y} rx={hole.greenRadius} ry={hole.greenRadius} fill="none"
+        stroke="var(--tube)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+      <circle cx={gp.x} cy={gp.y} r={hole.greenRadius * 0.55} fill="none"
+        stroke="var(--tube)" strokeWidth="1" opacity=".18" vectorEffect="non-scaling-stroke" />
+
+      {/* OB — two strokes. Signal red is spent here and nowhere decorative. */}
+      <path d={art.obLineL} fill="none" stroke="var(--signal)" strokeWidth="1.4"
+        strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".85" />
+      <path d={art.obLineR} fill="none" stroke="var(--signal)" strokeWidth="1.4"
+        strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".85" />
+      <line x1={-obTeeHalf} y1={teeY} x2={obTeeHalf} y2={teeY}
+        stroke="var(--signal)" strokeWidth="1.4" strokeDasharray="7 5"
+        vectorEffect="non-scaling-stroke" opacity=".6" />
+    </>
+  )
+}
+
+const ART_KEY = 'water-art'
+
+function readArtFlag(): boolean {
+  try {
+    return window.localStorage.getItem(ART_KEY) === 'tape'
+  } catch {
+    return false
+  }
+}
+
+function writeArtFlag(on: boolean): void {
+  try {
+    if (on) window.localStorage.setItem(ART_KEY, 'tape')
+    else window.localStorage.removeItem(ART_KEY)
+  } catch {
+    /* storage unavailable — the toggle still works for this session */
+  }
+}
+
+export function HoleView({
+  hole, ball, cone, showCone,
+}: { hole: HoleSpec; ball: Point; cone: Cone | null; showCone: boolean }) {
+  // Art toggle lives HERE, not in App: flip old/new live, default = classic.
+  const [tape, setTape] = useState(readArtFlag)
+  const toggle = () => setTape(t => {
+    writeArtFlag(!t)
+    return !t
+  })
+
+  const g = greenCentre(hole)
+  const gp = project(g, hole)
+  const bp = project(ball, hole)
+
+  return (
+    <div className={tape ? 'holewrap tape' : 'holewrap'}>
+      <svg className="holeview" viewBox={viewBox(hole)} preserveAspectRatio="xMidYMin meet">
+        {tape ? <TapeCourse hole={hole} /> : <ClassicCourse hole={hole} />}
+
+        {/* cone — identical in both looks, always above the terrain */}
+        {showCone && cone && <ConeShape hole={hole} from={ball} cone={cone} />}
+
+        {/* pin */}
+        <line x1={gp.x} y1={gp.y} x2={gp.x} y2={gp.y - 26}
+          stroke="var(--ink)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
+        <polygon points={`${gp.x},${gp.y - 26} ${gp.x + 15},${gp.y - 20} ${gp.x},${gp.y - 14}`}
+          fill="var(--pin)" />
+
+        {/* ball */}
+        <circle className="ballmark" cx={bp.x} cy={bp.y} r="5" fill="#fff" stroke="var(--ink)"
+          strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+      </svg>
+
+      {/* broadcast furniture: one bug, the scanlines, the vignette — tape only */}
+      {tape && <div className="scan" />}
+      {tape && <div className="vig" />}
+      {tape && <div className="tapebug">{`HOLE ${hole.num} · PAR ${hole.par} · ${hole.length}`}</div>}
+
+      <button className="artbtn" type="button" onClick={toggle}
+        title="Course art: classic yardage book / Sunday Tape broadcast">
+        {tape ? 'TAPE' : 'CLASSIC'}
+      </button>
+    </div>
   )
 }

@@ -238,3 +238,52 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .week-name{font-family:var(--fd);font-weight:700;font-size:14px;margin-top:2px}
 .week-blurb{font-size:12.5px;color:var(--soft);line-height:1.4}
 .week-cost{font-size:11.5px;color:var(--faint);font-style:italic;line-height:1.35;margin-top:3px}
+
+/* ============================================================
+   Course art toggle + SUNDAY TAPE hole rendering
+   GRAPHICS-PROPOSAL.md approach (a) · tokens from /sunday-tape.css
+   Scoped to .holewrap.tape so ONLY the hole figure changes — the
+   rest of the app keeps the current look until the theme lands
+   app-wide. Default is classic; the toggle lives on the figure.
+   ============================================================ */
+.holewrap{position:relative}
+.artbtn{position:absolute;top:8px;right:8px;z-index:3;font-family:var(--fm);font-size:9px;
+  letter-spacing:.14em;background:var(--panel);color:var(--faint);border:1px solid var(--line);
+  border-radius:2px;padding:3px 8px;opacity:.75}
+.artbtn:hover{opacity:1;border-color:var(--cone);color:var(--ink)}
+
+.holewrap.tape{
+  /* course tokens, remapped to the Sunday Tape contract (sunday-tape.css) */
+  --rough:#152F1E;        /* Overwatered Olive */
+  --fairway:#20663A;      /* Tower Green */
+  --green:#2A7A46;        /* Bentgrass */
+  --bent:#2A7A46;
+  --greenline:#060906;
+  --sand:#C7A360;         /* Bunker Amber */
+  --water:#1C5680;        /* Broadcast Blue */
+  --pin:#E3BC5F;          /* Chyron Gold — the pin is gold on tape */
+  --cone:#F5F8EE;         /* Telestrator White — the cone and NOTHING else */
+  --grid:#82E39B;         /* Phosphor */
+  --ink:#DCE8DA;          /* Tube White */
+  --tube:#060906;         /* Tube Black — outlines */
+  --signal:#C4523E;       /* Signal Red — the OB line only */
+  /* derived course shades (bands the sim believes in, finally drawn) */
+  --deep:#101F15;
+  --band-trees:#0C1911;
+  --ob-field:#080D09;
+}
+.holewrap.tape .holeview{background:#070B08;border-color:#2A4230}
+.holewrap.tape .gridlabel{fill:var(--grid);opacity:.6}
+.holewrap.tape .ballmark{fill:var(--ink)}     /* only the cone is white */
+.holewrap.tape .cone{filter:drop-shadow(0 0 1.2px #060906) drop-shadow(0 0 1.2px #060906)}
+
+/* broadcast furniture — per sunday-tape.css non-negotiable #6 */
+.holewrap.tape .scan{position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:3px;
+  mix-blend-mode:overlay;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.055) 0 1px,rgba(0,0,0,.14) 1px 3px)}
+.holewrap.tape .vig{position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:3px;
+  background:radial-gradient(ellipse 120% 105% at 50% 45%,transparent 62%,rgba(6,9,6,.55) 100%)}
+.tapebug{position:absolute;top:8px;left:8px;z-index:2;pointer-events:none;
+  font-family:var(--fm);font-size:9.5px;letter-spacing:.12em;color:#82E39B;
+  background:rgba(6,10,7,.72);border:1px solid rgba(130,227,155,.35);padding:3px 7px}
+.holewrap.tape .artbtn{background:#0A0F0B;color:#82E39B;border-color:rgba(130,227,155,.35)}
