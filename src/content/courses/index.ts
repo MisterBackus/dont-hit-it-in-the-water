@@ -17,14 +17,30 @@
  *   Salt Flats +3.02
  * Deltas vs Pine Hollow, the anchor: Rockdale −2.4, Cottonwood +1.1,
  * Salt Flats +2.3 strokes per round.
+ *
+ * BATCH 2 ladder (CHANGES-7, depth engine, N=400 — note the whole ladder
+ * re-based when the planners learned to read depth; the four numbers above
+ * are the plan-era anchors their fieldShifts still target):
+ *   Rockdale −1.94 · Palmetto −1.64 · Meadowlark −0.60 · Driftwood −0.59 ·
+ *   Foxglove −0.27 · Bracken Ridge +0.29 · Cottonwood +0.46 ·
+ *   Rivermouth +0.67 · Pine Hollow +0.81 · Salt Flats +1.19
  */
 import type { HoleSpec } from '../../sim/types'
 import { PINE_HOLLOW } from './pinehollow'
 import { COTTONWOOD } from './cottonwood'
 import { ROCKDALE_MUNI } from './rockdale'
 import { SALT_FLATS } from './saltflats'
+import { PALMETTO } from './palmetto'
+import { MEADOWLARK } from './meadowlark'
+import { DRIFTWOOD } from './driftwood'
+import { FOXGLOVE } from './foxglove'
+import { BRACKEN_RIDGE } from './brackenridge'
+import { RIVERMOUTH } from './rivermouth'
 
-export type CourseId = 'pinehollow' | 'cottonwood' | 'rockdale' | 'saltflats'
+export type CourseId =
+  | 'pinehollow' | 'cottonwood' | 'rockdale' | 'saltflats'
+  | 'palmetto' | 'meadowlark' | 'driftwood' | 'foxglove'
+  | 'brackenridge' | 'rivermouth'
 
 /**
  * Slot tiers, as data (SCHEDULE-PLAN.md §2 shape):
@@ -32,6 +48,12 @@ export type CourseId = 'pinehollow' | 'cottonwood' | 'rockdale' | 'saltflats'
  *   intro screen promises;
  * - Money List CHECK weeks avoid the 'brutal' tier — a check should be about
  *   conversion, not survival of a gauntlet.
+ *
+ * The tier is SLOT DATA, not a difficulty grade. 'brutal' means exactly one
+ * thing to the schedule — "check weeks avoid me" — which is why Foxglove
+ * (mid difficulty, but its identity is the focus economy and a check week
+ * should never be decided by an experiment in technique pricing) registers
+ * as 'brutal' alongside the genuinely cruel Bracken Ridge and Salt Flats.
  */
 export type CourseTier = 'gentle' | 'standard' | 'brutal'
 
@@ -79,11 +101,28 @@ export const COURSES: Record<CourseId, Course> = {
   cottonwood: course('cottonwood', 'Cottonwood', COTTONWOOD, 0.070, 'standard', true, false),
   rockdale: course('rockdale', 'Rockdale Muni', ROCKDALE_MUNI, -0.186, 'gentle', false, false),
   saltflats: course('saltflats', 'Salt Flats', SALT_FLATS, 0.145, 'brutal', true, true),
+  /**
+   * BATCH 2 (COURSE-SLATE.md, built under the depth engine — CHANGES-7).
+   * fieldShift values are MEASURED, not linearized: coursecheck (N=400,
+   * mixed) gives each course's player delta vs Pine Hollow, and
+   * tools/fieldcheck.ts sweeps the offset until the FIELD moves the same
+   * amount (±0.1). The slate's Δ/8/1.9 starting guesses are recorded in
+   * CHANGES-7 next to what the sweep actually chose.
+   */
+  palmetto: course('palmetto', 'Palmetto', PALMETTO, -0.182, 'gentle', false, false),
+  meadowlark: course('meadowlark', 'Meadowlark', MEADOWLARK, -0.114, 'gentle', false, false),
+  driftwood: course('driftwood', 'Driftwood', DRIFTWOOD, -0.099, 'standard', false, false),
+  foxglove: course('foxglove', 'Foxglove', FOXGLOVE, -0.078, 'brutal', false, false),
+  brackenridge: course('brackenridge', 'Bracken Ridge', BRACKEN_RIDGE, -0.034, 'brutal', true, false),
+  rivermouth: course('rivermouth', 'Rivermouth', RIVERMOUTH, -0.009, 'standard', false, false),
 }
 
 /**
  * The pool, in a FIXED order — the schedule draw indexes into this, so the
  * order is part of determinism. Append new courses at the end; never reorder.
+ * Batch 2 appended in the slate's build order.
  */
-export const COURSE_POOL: readonly CourseId[] =
-  ['pinehollow', 'cottonwood', 'rockdale', 'saltflats']
+export const COURSE_POOL: readonly CourseId[] = [
+  'pinehollow', 'cottonwood', 'rockdale', 'saltflats',
+  'palmetto', 'meadowlark', 'driftwood', 'foxglove', 'brackenridge', 'rivermouth',
+]

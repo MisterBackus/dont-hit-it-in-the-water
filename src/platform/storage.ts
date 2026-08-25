@@ -14,7 +14,7 @@
  */
 import type { Action } from '../sim/reducer'
 
-export const SAVE_VERSION = 4 // v4: the schedule rotation — events draw courses from the pool, so a v3 log replays as a different run
+export const SAVE_VERSION = 5 // v5: ten-course pool + new pins reshuffle every seed's schedule // v4: the schedule rotation — events draw courses from the pool, so a v3 log replays as a different run
 const KEY = 'dont-hit-it-in-the-water/save'
 
 export interface SaveFile {

@@ -55,20 +55,30 @@ const NAMES = [
 
 const MAJORS = new Set([4, 7, 11, 14])
 
-/** The named-event pins — an event wearing a venue's name plays that venue. */
+/**
+ * The named-event pins — an event wearing a VENUE'S name plays that venue,
+ * and only those: the Sunbelt Open, the Fall Series, the Coastal Classic
+ * and their kin name regions and seasons, not places, so they cycle with
+ * the pool (six free slots at ten courses, more with every batch). The
+ * full cycling vision — unpinned slots WEARING the name of whatever venue
+ * the pool deals — arrives when event names become per-course data (each
+ * course already carries a home-event name in COURSE-SLATE.md); a design
+ * task for the dialogue, noted so this list reads as a waypoint.
+ */
 const PINS: Readonly<Record<number, CourseId>> = {
   2: 'pinehollow',   // Pine Hollow Classic
   3: 'cottonwood',   // Cottonwood Invitational
   4: 'pinehollow',   // THE MASTERS OF PINE HOLLOW
+  5: 'rivermouth',   // Rivermouth Open
   6: 'rockdale',     // The Muni Championship
   7: 'saltflats',    // THE OPEN AT SALT FLATS
+  8: 'brackenridge', // Bracken Ridge Classic
+  11: 'brackenridge',// THE PGA AT BRACKEN RIDGE
 }
 
-/** Shared hosting-fiction venues — same name, same drawn course. */
-const VENUES: Readonly<Record<number, string>> = {
-  8: 'brackenridge',   // Bracken Ridge Classic
-  11: 'brackenridge',  // THE PGA AT BRACKEN RIDGE
-}
+/** Shared hosting-fiction venues — same name, same drawn course. Retired to
+ * direct pins now that Bracken Ridge exists; kept for the next homeless name. */
+const VENUES: Readonly<Record<number, string>> = {}
 
 /**
  * THE CUT IS A PLACE, NOT A SCORE.

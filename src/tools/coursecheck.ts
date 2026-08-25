@@ -8,11 +8,20 @@
  * a coin flip between tied scores, and the player's skill stops deciding it.
  *
  * Run: npx tsx src/tools/coursecheck.ts
+ *   N=800            sample size per policy (default 500)
+ *   ONLY=palmetto,driftwood   report only the named courses (iteration aid;
+ *                    the full ten-course run is the one that counts)
  */
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { COTTONWOOD } from '../content/courses/cottonwood'
 import { ROCKDALE_MUNI } from '../content/courses/rockdale'
 import { SALT_FLATS } from '../content/courses/saltflats'
+import { PALMETTO } from '../content/courses/palmetto'
+import { MEADOWLARK } from '../content/courses/meadowlark'
+import { DRIFTWOOD } from '../content/courses/driftwood'
+import { FOXGLOVE } from '../content/courses/foxglove'
+import { BRACKEN_RIDGE } from '../content/courses/brackenridge'
+import { RIVERMOUTH } from '../content/courses/rivermouth'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD, freeShot } from '../content/cards'
 import { SEASON } from '../content/season'
 import { buildCone, focusRegen, whyNotPlayable } from '../sim/effects'
@@ -223,8 +232,21 @@ function report(course: readonly HoleSpec[], label: string) {
   softlockScan(course)
 }
 
-report(PINE_HOLLOW, 'PINE HOLLOW  (the incumbent, for comparison)')
-report(COTTONWOOD, 'COTTONWOOD  — "the straight line is a lie"')
-report(ROCKDALE_MUNI, 'ROCKDALE MUNICIPAL  — "par is easy; the cut does not care about par"')
-report(SALT_FLATS, 'SALT FLATS  — "every honest answer is half a club short"')
+/** The report list — every registered course, in registry/pool order. */
+const REPORTS: readonly [string, readonly HoleSpec[], string][] = [
+  ['pinehollow', PINE_HOLLOW, 'PINE HOLLOW  (the incumbent, for comparison)'],
+  ['cottonwood', COTTONWOOD, 'COTTONWOOD  — "the straight line is a lie"'],
+  ['rockdale', ROCKDALE_MUNI, 'ROCKDALE MUNICIPAL  — "par is easy; the cut does not care about par"'],
+  ['saltflats', SALT_FLATS, 'SALT FLATS  — "every honest answer is half a club short"'],
+  ['palmetto', PALMETTO, 'PALMETTO  — "how much do you want it?"'],
+  ['meadowlark', MEADOWLARK, 'MEADOWLARK  — "is closer actually better?"'],
+  ['driftwood', DRIFTWOOD, 'DRIFTWOOD  — "do you fly it or run it?"'],
+  ['foxglove', FOXGLOVE, 'FOXGLOVE  — "what will you pay for the right number?"'],
+  ['brackenridge', BRACKEN_RIDGE, 'BRACKEN RIDGE  — "how much fairway do you need?"'],
+  ['rivermouth', RIVERMOUTH, 'RIVERMOUTH  — "how much carry do you buy?"'],
+]
+const ONLY = (process.env.ONLY ?? '').split(',').map(s => s.trim()).filter(Boolean)
+for (const [key, holes, label] of REPORTS) {
+  if (ONLY.length === 0 || ONLY.includes(key)) report(holes, label)
+}
 console.log()

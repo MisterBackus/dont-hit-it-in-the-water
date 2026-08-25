@@ -52,6 +52,17 @@ const parsOf = (id: keyof typeof COURSES) => COURSES[id].holes.map(h => h.par)
  */
 const TARGET: Record<string, number> = {
   pinehollow: 0, cottonwood: 1.1, rockdale: -2.4, saltflats: 2.3,
+  /**
+   * BATCH 2 (CHANGES-7): no plan-era targets exist for these six, so their
+   * targets are the LIVE measured player deltas vs Pine Hollow — the only
+   * numbers they have ever had — from the ten-course coursecheck record
+   * (N=400, mixed, depth engine): PH +0.81 · PAL −1.64 · MEA −0.60 ·
+   * DRI −0.59 · FOX −0.27 · BR +0.29 · RIV +0.67. The original four keep
+   * their plan-era targets pending the canon-ladder ruling (caveat above) —
+   * a knowingly mixed state, called out rather than papered over.
+   */
+  palmetto: -2.45, meadowlark: -1.41, driftwood: -1.40,
+  foxglove: -1.08, brackenridge: -0.52, rivermouth: -0.14,
 }
 
 const base = fieldMean(parsOf('pinehollow'), 0)

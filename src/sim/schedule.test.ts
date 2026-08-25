@@ -79,12 +79,27 @@ describe('the pool assignment honours its slot constraints, every seed', () => {
   })
 
   test('the free slots actually rotate — this is a pool, not a table', () => {
-    // across many seeds the unpinned slots must not all collapse to one course
-    for (const slot of [0, 4, 7, 8, 9, 11, 12, 13]) {
+    // Across many seeds the unpinned slots must not all collapse to one
+    // course. The free list DERIVES from the pins so this test cannot rot
+    // when a venue-named event gains a home (it did, when event 5 got its
+    // Rivermouth) — and the season must always keep at least two free slots,
+    // or the pool has quietly become a table again.
+    const free = SEASON.filter(e => !e.pin && !e.venue).map(e => e.num - 1)
+    expect(free.length, 'the pool has become a table').toBeGreaterThanOrEqual(2)
+    for (const slot of free) {
       const seen = new Set(SEEDS.map(seed => assignCourses(seed)[slot]!))
-      if (slot === 0) expect(seen).toEqual(new Set(['rockdale'])) // only gentle course today
-      else expect(seen.size, `slot ${slot + 1} never varies`).toBeGreaterThan(1)
+      expect(seen.size, `slot ${slot + 1} never varies`).toBeGreaterThan(1)
     }
+  })
+
+  test('the opener rotates across the WHOLE gentle tier — batch 2 gap', () => {
+    // With one gentle course the opener was a constant; the old test pinned
+    // that fact and would have silently hidden a draw bug once the tier grew.
+    // Now it must (a) stay inside the tier and (b) actually visit all of it.
+    const gentle = new Set(COURSE_POOL.filter(id => COURSES[id].tier === 'gentle'))
+    const seen = new Set(SEEDS.map(seed => assignCourses(seed)[0]!))
+    for (const id of seen) expect(gentle).toContain(id)
+    expect(seen, 'some gentle course never opens a season').toEqual(gentle)
   })
 })
 

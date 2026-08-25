@@ -157,12 +157,21 @@ export const SALT_FLATS: readonly HoleSpec[] = [
     // the Bomb's pull — picture-doubt, on the lateral axis the planner and
     // the cone can actually see (REVIEW-6 §5's clause, obeyed). Its shadow
     // still falls on the mercy at 7, which can afford it.
+    // v8 (CHANGES-7): the depth engine that fixed The Crossing un-fixed this
+    // hole — 0.43/65 rigged-era-honest became 0.29/69 the night the planners
+    // learned to read depth, because the slab at 236–268 sat entirely SHORT
+    // of the Bomb's drawn rest band (264–290): every appetite could see the
+    // fly was safe, and the routes converged on it. One re-tune, the
+    // Crossing's own post-depth mechanism: slab 3 deeper and 1 bigger
+    // (240–270), so the Bomb's tail is honestly a quarter shaded — a drawn
+    // gamble the appetites can price apart — while the Mid Iron still lays
+    // 70 short of it and flies an owned 133 over.
     num: 6, par: 4, length: 300, name: 'The Mirage',
     corridor: [{ at: 0, half: 23 }, { at: 190, half: 19 }, { at: 300, half: 17 }],
     greenRadius: 13, greenSide: 12,
     hazards: [
       { surface: 'ob', at: { down: 270, side: -21 }, rDown: 42, rSide: 7 },
-      { surface: 'deep', at: { down: 252, side: 11 }, rDown: 16, rSide: 12 },
+      { surface: 'deep', at: { down: 255, side: 11 }, rDown: 15, rSide: 12 },
     ],
     note: 'Three hundred through the shimmer, and the shimmer is hiding something. Fly it all or go the long way round. The salt does not negotiate.',
   },
