@@ -157,7 +157,7 @@ export function App() {
         <p className="moneynote">
           Money List after event {next.after}: {money(next.need)}
           {short > 0 ? ` — ${money(short)} short` : ' — clear'}
-          {' · '}you are {moneyListRank(grossEarnings(s), Math.max(1, s.event - 1))}th
+          {' · '}you are {ordinal(moneyListRank(grossEarnings(s), Math.max(1, s.event - 1)))}
           {' of '}{TOUR_SIZE}
           {s.skipped > 0 && ` · ${s.skipped} week${s.skipped > 1 ? 's' : ''} sat out`}
         </p>
@@ -256,7 +256,7 @@ export function App() {
           {s.keptJob ? 'You keep your card' : 'You lose your card'}
         </h1>
         <p className="tagline">
-          {money(grossEarnings(s))} earned, {moneyListRank(grossEarnings(s), check.after)}th on the list.
+          {money(grossEarnings(s))} earned, {ordinal(moneyListRank(grossEarnings(s), check.after))} on the list.
           {' '}You needed {money(check.need)}.
         </p>
         <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
