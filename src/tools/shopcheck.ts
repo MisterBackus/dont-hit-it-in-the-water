@@ -18,7 +18,7 @@ import { PINE_HOLLOW, COURSE_PAR } from '../content/courses/pinehollow'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
-import { buildCone, maxFocus, focusRegen } from '../sim/effects'
+import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
@@ -40,29 +40,31 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: readonly Boost[], policy: Po
   let strokes = 0
   let redrawn = false
   const discount = boosts.reduce((n, b) => n + (b.sinkDiscount ?? 0), 0)
+  const gimme = gimmeRange(boosts)
+  const redrawCost = Math.max(0, REDRAW_COST - boosts.reduce((n, b) => n + (b.redrawDiscount ?? 0), 0))
 
   for (let i = 0; i < 14; i++) {
     if (lie === 'green') {
       const feet = Math.max(1, Math.round(toPin(hole, ball) * 3))
-      const raw = sinkCost(feet)
+      const raw = sinkCost(feet, gimme)
       // a free sink from the Lucky Ball Marker beats paying for it
-      const free = raw !== null && ctx.freeSinks > 0
+      const free = raw !== null && raw > 0 && ctx.freeSinks > 0
       const cost = raw === null ? null : Math.max(0, raw - discount)
-      const worth = cost !== null && baseputts(feet) > 1 && strokes + 1 <= hole.par - 1
+      const worth = cost !== null && baseputts(feet, gimme) > 1 && strokes + 1 <= hole.par - 1
         && (free || cost <= ctx.focus)
       if (worth) {
         if (free) ctx.freeSinks -= 1
         else ctx.focus -= cost!
       }
-      strokes += resolvePutting(feet, worth).strokes
+      strokes += resolvePutting(feet, worth, gimme).strokes
       break
     }
-    if (!redrawn && ctx.focus >= REDRAW_COST) {
+    if (!redrawn && ctx.focus >= redrawCost) {
       const reach = Math.max(...hand.map(id => CARD[id])
         .filter(c => !!c && c.kind === 'shot')
         .map(c => (c as { carry: number }).carry), PUNCH_OUT.carry)
       if (reach * Math.max(1, hole.par - 2) < toPin(hole, ball) * 0.85) {
-        ctx.focus -= REDRAW_COST
+        ctx.focus -= redrawCost
         ctx.discard.push(...hand)
         const rr = draw(HAND_SIZE, ctx.deck, ctx.discard, ctx.bank.draw)
         ctx.deck = rr.deck; ctx.discard = rr.discard
@@ -94,6 +96,7 @@ function seasonEarningsWithDeck(
   seed: number, policy: Policy, kit: readonly Boost[], startDeck: readonly string[],
 ): number {
   const ctx: Ctx = { bank: seedBank(seed), deck: [...startDeck], discard: [], focus: 5, freeSinks: 0 }
+  const cutBonus = kit.reduce((n, b) => n + (b.cutBonus ?? 0), 0)
   let earned = 0
   for (const ev of SEASON) {
     const boosts: Boost[] = [
@@ -115,6 +118,7 @@ function seasonEarningsWithDeck(
       - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
     const cut = rankCut(field, thru4, ev.advance)
     if (!cut.made) continue
+    earned += cutBonus   // sponsor money for the made cut (Boost.cutBonus)
     field = cut.field
     PINE_HOLLOW.slice(4).forEach((hole, i) => {
       holes.push(playHole(hole, ctx, boosts, policy))
@@ -243,6 +247,11 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
         - PINE_HOLLOW.slice(0, 4).reduce((a, h) => a + h.par, 0)
       const cut = rankCut(field, thru4, ev.advance)
       if (cut.made) {
+        // sponsor money for the made cut (Boost.cutBonus) — gross earnings,
+        // so it lands in the wallet AND on the Money List
+        const cutBonus = kit.reduce((n, b) => n + (b.cutBonus ?? 0), 0)
+        banked += cutBonus
+        earned += cutBonus
         field = cut.field
         PINE_HOLLOW.slice(4).forEach((hole, i) => {
           holes.push(playHole(hole, ctx, boosts, policy))
