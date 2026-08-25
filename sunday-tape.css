@@ -1,0 +1,58 @@
+/* ============================================================
+   SUNDAY TAPE — theme contract for Don't Hit It In The Water
+   Tour broadcast, 1978. Chosen 2026-08-24.
+
+   The contract: 14 colour tokens + 2 font slots. Components read
+   tokens ONLY — no literal colours in component styles. A future
+   theme (or the current yardage-book look as a dev fallback) is a
+   second block of the same names on another [data-theme] value.
+
+   Fonts, in index.html:
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+   ============================================================ */
+
+:root[data-theme="sunday-tape"] {
+  /* grounds */
+  --ground:  #0C120D;   /* Tape Black — page and screen ground            */
+  --panel:   #0A0F0B;   /* Panel — cards, chyrons, framed surfaces        */
+  --tube:    #060906;   /* Tube Black — outlines, cone casing             */
+
+  /* voices */
+  --ink:     #DCE8DA;   /* Tube White — body text, even-par scores        */
+  --ink-dim: #7A8A7C;   /* Dim — secondary, over-par, disabled            */
+  --phos:    #82E39B;   /* Phosphor — UI text, yardages, focus, under-par */
+  --gold:    #E3BC5F;   /* Chyron Gold — money, pin, selection, leader    */
+  --signal:  #C4523E;   /* Signal Red — penalty, cut line, danger ONLY    */
+
+  /* course */
+  --fairway: #20663A;   /* Tower Green                                    */
+  --rough:   #152F1E;   /* Overwatered Olive                              */
+  --bent:    #2A7A46;   /* Bentgrass — putting greens                     */
+  --sand:    #C7A360;   /* Bunker Amber                                   */
+  --water:   #1C5680;   /* Broadcast Blue                                 */
+
+  /* the mark */
+  --cone:    #F5F8EE;   /* Telestrator White — the cone and NOTHING else  */
+
+  /* type */
+  --font-display: 'Anton', 'Arial Narrow', sans-serif;      /* caps, tracking +3% */
+  --font-mono:    'IBM Plex Mono', ui-monospace, monospace; /* tabular-nums everywhere numeric */
+}
+
+/* ------------------------------------------------------------
+   Non-negotiables (enforced by review, not by the cascade):
+
+   1. CASING RULE — the cone is drawn twice: --tube at 4.5px under,
+      --cone at 2px over. Cone-over-sand is 2.2:1 without it.
+   2. OUTLINE RULE — every hazard shape carries a --tube outline.
+      Water vs fairway is 1.1:1 in luminance; the outline (and hue)
+      carry the map, including for colour-blind players.
+   3. ONE CHYRON, ONE BUG — nothing else sits on the picture.
+   4. ONLY THE CONE IS WHITE; glow only on wordmark, focus pips,
+      fresh under-par scores.
+   5. SIGNAL RED IS SPENT, NEVER DECORATES.
+   6. Scanlines: repeating 1px light (5.5%) / 2px dark (14%), blend
+      overlay. Vignette: one radial to 55% --tube. Flicker: one
+      frame per 6s, none under prefers-reduced-motion.
+   7. Motion is a hard cut — steps(), not easing.
+   ------------------------------------------------------------ */

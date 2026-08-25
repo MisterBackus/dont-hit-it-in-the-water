@@ -1,0 +1,105 @@
+# Don't Hit It In The Water — project rules
+
+A golf season roguelike deckbuilder. Read `DESIGN.md` and `ARCHITECTURE.md` before
+changing anything. Those two files are authoritative; this file is the short version.
+
+## The one architectural rule
+
+`src/sim/` and `src/content/` are PURE TypeScript. They do not know React, the DOM,
+or a screen exist.
+
+- NEVER import react, react-*, `src/ui/**`, or `src/platform/**` from `sim/` or `content/`.
+- NEVER use `window`, `document`, `localStorage`, `fetch`, or timers in `sim/`.
+- NEVER use `Math.random()` in `sim/`. Randomness comes from the seeded RNG carried
+  in state — see ARCHITECTURE.md §3.1.
+- NEVER use `Date.now()`, `new Date()`, `Math.sin`, `Math.cos`, or `Math.pow` in `sim/`.
+  Wall-clock time and transcendental functions both break replay determinism (§3.3).
+
+ESLint enforces all of the above. If a lint error points here, the fix is to change
+the code, never to disable the rule or add an eslint-disable comment.
+
+## Game rules live in one place
+
+- All state changes go through `Action` in `sim/actions.ts` and `reduce()` in
+  `sim/reducer.ts`. If the UI needs to change state and no action exists, ADD AN ACTION.
+- React components NEVER contain game rules. No scoring, no probability, no resolution
+  logic in `ui/`. Components read state via selectors and dispatch actions.
+- Reducers are synchronous and side-effect free. No console.log, no storage writes,
+  no async. To surface something to the player, append to `state.log`.
+
+## Content is data, not code
+
+- New shots, techniques, boosts, week options and courses go in `src/content/` as data
+  rows matching the existing types. Adding a card should touch ZERO logic files.
+- Card behaviour is expressed with the `Effect` op vocabulary in `sim/effects.ts`.
+  Prefer composing existing ops. Only add a new `op` for a genuinely new mechanic,
+  and add its `case` to the interpreter in the same change.
+- Do NOT create a class per card. Do NOT put effect logic in content files.
+
+## Units and scale
+
+- The sim works in YARDS. Never store pixels in sim state.
+- `ui/scale.ts` `project()` is the ONLY place yards become pixels. Every drawn
+  element — hole regions, cones, ball positions — must go through it.
+  A component computing its own pixel positions from yardages is a bug: it makes
+  the cone lie about the hole, which is the one thing the design cannot tolerate
+  (DESIGN.md §7.0).
+
+## Design constraints you must not quietly violate
+
+Read DESIGN.md §2 for the full pillars. The ones easiest to break by accident:
+
+- Playing a shot card costs a STROKE, and strokes are the player's score. The player
+  wants to play FEWER cards. Do not add mechanics that reward playing more cards.
+- Techniques cost FOCUS, not strokes. That cost distinction is the whole reason the
+  card types are separate. Do not blur it.
+- The word "dispersion" must never appear in player-facing text. In code the field is
+  `spread`; in the UI it is drawn as a cone, never printed as a number (§4.1).
+- Do not invent new golf jargon for systems. Systems get plain names; only cards and
+  places get golf's names, and only when the art already teaches the meaning (P6).
+- Do not invent new mechanics that contradict DESIGN.md §2. If a task seems to require
+  one, say so and stop rather than improvising.
+
+## Style
+
+- TypeScript strict. No `any` — use `unknown` and narrow.
+- No default exports except React components.
+- `readonly` on interface fields in `sim/`. Immer handles writes.
+- Named exports, `camelCase.ts` modules, `PascalCase.tsx` components.
+- Comments explain WHY, never WHAT. The types say what.
+- Match the surrounding file's existing patterns over any general preference.
+
+## Before you finish a change
+
+- `npm run typecheck && npm run lint && npm test` must pass.
+- If you changed any number that affects balance — card distances, spread, payouts,
+  Money List thresholds, focus regen — run `npm run balance` and report the output.
+  DESIGN.md §3.2 thresholds were calibrated by simulation, not by feel, and a change
+  that shifts them without re-running is a regression even if every test passes.
+
+
+## Calibrated numbers — the rule that has been broken most often
+
+Every number in `content/` that affects difficulty was derived by simulation, and
+the tool that derives it is named in a comment beside it. **Re-run the tool. Do
+not adjust by feel, and do not adjust to make a hole or a card feel right.**
+
+- Money List thresholds, boost prices, card-cut price → `tools/shopcheck.ts`
+- The cut curve (top N and ties) → `tools/cutcheck.ts`
+- Payout curve and where a season's money comes from → `tools/pursecheck.ts`
+- A course's scoring, spread and decisions → `tools/coursecheck.ts`
+
+**When a change makes the game fairer, pay for it.** Two fixes in one day — a
+guaranteed short shot, and a cone that no longer fans wider as it gets shorter —
+took ~0.7 strokes off a round and pushed season survival from 35% to 50%. Neither
+was a difficulty decision, so the difficulty was taken back on the Money List,
+deliberately, rather than left as a silent easing.
+
+## Two things a harness cannot do
+
+1. It cannot find a model error, because it is the model. It will happily "play"
+   a softlocked position and never notice a cone fanning 45° on a 21-yard chip.
+2. It is only as honest as its instrument. A policy that plans without the
+   player's own equipment will report that equipment is worthless.
+
+If a measurement disagrees with the screen, suspect the measurement first.

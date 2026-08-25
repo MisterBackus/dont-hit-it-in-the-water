@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Title Defense</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  :root{
+    --ground:#0C120D; --panel:#0A0F0B; --tube:#060906;
+    --ink:#DCE8DA; --ink-dim:#7A8A7C; --phos:#82E39B; --gold:#E3BC5F; --signal:#C4523E;
+    --hair:#223826;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:14.5px;line-height:1.65;margin:0;font-variant-numeric:tabular-nums}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+  p{margin:0 0 1em}
+  .measure{max-width:66ch}
+  b{font-weight:600;color:#F0F4EC}
+  em{font-style:italic}
+  h2{font-family:'Anton','Arial Narrow',sans-serif;font-weight:400;font-size:28px;letter-spacing:.03em;
+    text-transform:uppercase;color:#F0F4EC;margin:0 0 8px}
+  .kicker{font-size:11px;letter-spacing:.24em;color:var(--phos);text-transform:uppercase;margin-bottom:10px}
+  .sect{padding:50px 0 10px;border-top:1px solid var(--hair)}
+  .note{color:var(--ink-dim);font-size:12.5px}
+  .goldb{color:var(--gold)}
+
+  .hero{padding:70px 0 48px;text-align:center}
+  .hero h1{font-family:'Anton','Arial Narrow',sans-serif;font-weight:400;font-size:clamp(38px,6vw,58px);
+    letter-spacing:.04em;color:#F0F4EC;margin:0 0 14px;text-transform:uppercase}
+  .hero .bar{display:inline-block;border:1px solid rgba(227,188,95,.5);padding:14px 22px;
+    font-size:12.5px;max-width:60ch;text-align:left}
+  .hero .bar b{color:var(--gold)}
+
+  /* candidate blocks */
+  .cand{display:grid;grid-template-columns:300px minmax(0,1fr);gap:36px;align-items:start;
+    padding:34px 0;border-bottom:1px solid #16241A}
+  @media(max-width:800px){.cand{grid-template-columns:1fr}}
+  .tc{background:var(--panel);border:1px solid #2A4230;box-shadow:0 0 0 5px var(--tube);
+    padding:26px 14px;text-align:center}
+  .tc .card-inner{display:inline-block;border:1px solid rgba(227,188,95,.55);padding:16px 22px;min-width:200px}
+  .tc .a{font-family:'Anton','Arial Narrow',sans-serif;font-size:25px;line-height:1.08;letter-spacing:.04em;
+    color:#F0F4EC;text-transform:uppercase}
+  .tc .a.g{color:var(--phos);text-shadow:0 0 10px rgba(130,227,155,.5)}
+  .tc .sub{font-size:8.5px;letter-spacing:.3em;color:var(--gold);margin-top:8px}
+  .cand h3{font-family:'Anton','Arial Narrow',sans-serif;font-weight:400;font-size:19px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--gold);margin:0 0 8px}
+  .cand .body{font-size:13.5px;max-width:60ch}
+  table.score{border-collapse:collapse;font-size:12px;margin:12px 0 0;width:100%;max-width:520px}
+  table.score td{padding:4px 12px 4px 0;border-bottom:1px solid #16241A;vertical-align:top}
+  table.score td.t{width:9.5em;color:var(--ink-dim);letter-spacing:.08em;font-size:10.5px;text-transform:uppercase;padding-top:6px}
+  .pass{color:var(--phos)}
+  .fail{color:var(--signal)}
+  .mixed{color:var(--gold)}
+
+  .champ{border:1px solid rgba(227,188,95,.4);padding:26px 28px;margin:8px 0 10px;background:var(--panel)}
+
+  ul.kill{list-style:none;padding:0;margin:0;font-size:13px;max-width:70ch}
+  ul.kill li{padding:7px 0;border-bottom:1px solid #16241A}
+  ul.kill .n{color:#F0F4EC;font-weight:600}
+  ul.kill .why{color:var(--ink-dim)}
+
+  .verdict{border-left:2px solid var(--gold);padding:4px 0 4px 22px;margin:14px 0}
+  footer{padding:44px 0 60px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+  footer a{color:var(--ink-dim)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="kicker">Naming round · per the brief's standing invitation</div>
+  <h1>Title Defense</h1>
+  <div class="bar"><b>The bar, from the brief:</b> a person who has never watched a golf
+  tournament should understand it cold. Plus the tone rule every candidate inherits: if a
+  golfer would say <em>"oh no"</em>, it's right; if they'd say <em>"what?"</em>, it's wrong.
+  Four tests below: <b>COLD</b> (understood with zero golf), <b>REGISTER</b> (recognition,
+  not absurdity), <b>LOGIC</b> (what rule of the game it states for free), <b>CARD</b>
+  (how it sits in the Sunday Tape wordmark).</div>
+</div>
+
+<div class="wrap">
+  <section class="sect">
+    <div class="kicker">The champion</div>
+    <div class="cand" style="border-bottom:none;padding-top:12px">
+      <div class="tc"><div class="card-inner">
+        <div class="a">Don't Hit It</div>
+        <div class="a g">In The Water</div>
+        <div class="sub">FINAL ROUND · LIVE</div>
+      </div></div>
+      <div>
+        <h3>Don't Hit It In The Water</h3>
+        <div class="body">The incumbent, scored honestly. It states a third of the game's logic
+        before the menu loads, it's the sentence every golfer has said to themselves on an actual
+        tee, and the negative-instruction phrasing is distinctive in a genre full of nouns. Its
+        real weaknesses: five words, and it says nothing about the other two thirds — the season,
+        the job, the money.</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="pass">PASS — water is water; everyone has feared it</td></tr>
+          <tr><td class="t">Register</td><td class="pass">PASS — "oh no", verbatim</td></tr>
+          <tr><td class="t">Logic</td><td class="pass">States the hazard rule — the cone exists to serve this sentence</td></tr>
+          <tr><td class="t">Card</td><td class="pass">Stacks 2×2 with the payoff word in phosphor. Sits beautifully</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">The challengers</div>
+
+    <div class="cand">
+      <div class="tc"><div class="card-inner">
+        <div class="a">Keep Your</div>
+        <div class="a g">Head Down</div>
+        <div class="sub">14 EVENTS · ONE JOB</div>
+      </div></div>
+      <div>
+        <h3>Keep Your Head Down</h3>
+        <div class="body">The only challenger that clears the full bar <em>and</em> adds something.
+        It's golf's most universal piece of advice and, at the same time, the idiom for quietly
+        surviving at work — which is the whole season layer in four words. A non-golfer hears the
+        job; a golfer hears the swing thought; both are correct. What it trades away: the water,
+        and with it the free tutorial the current title performs. No game owns the name (a 2011
+        K-pop single is the only notable holder).</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="pass">PASS — common idiom, zero golf required</td></tr>
+          <tr><td class="t">Register</td><td class="pass">PASS — advice you give yourself, wincing</td></tr>
+          <tr><td class="t">Logic</td><td class="mixed">States the stakes (survive the season), not the hazard</td></tr>
+          <tr><td class="t">Card</td><td class="pass">2×2 stack, even line lengths — arguably the best-sitting of all</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="cand">
+      <div class="tc"><div class="card-inner">
+        <div class="a">That's In</div>
+        <div class="a g">The Water.</div>
+        <div class="sub">SUNBELT OPEN · ROUND 4</div>
+      </div></div>
+      <div>
+        <h3>That's In The Water.</h3>
+        <div class="body">The commentator's call — the game's signature failure in the broadcast's
+        own past tense, which makes it the most Sunday Tape title possible. It's funny the way the
+        game is funny: quiet, factual, terrible. But it announces the outcome rather than the
+        struggle, and a title that is itself the death message reads grim on a store page next to
+        the incumbent's warning.</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="pass">PASS — everyone understands a splash</td></tr>
+          <tr><td class="t">Register</td><td class="pass">PASS — the flattest possible "oh no"</td></tr>
+          <tr><td class="t">Logic</td><td class="mixed">States the consequence, not the rule</td></tr>
+          <tr><td class="t">Card</td><td class="pass">Short, stacks well; the period does real work</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="cand">
+      <div class="tc"><div class="card-inner">
+        <div class="a">Fourteen</div>
+        <div class="a g">Sundays</div>
+        <div class="sub">A SEASON ON TOUR</div>
+      </div></div>
+      <div>
+        <h3>Fourteen Sundays</h3>
+        <div class="body">The season as time — fourteen final rounds, fourteen chances. Handsome,
+        cold-legible, and very broadcast. But it states no rule, and it drifts out of register:
+        it sounds like a prestige drama about grief, not a comedy about a sponsor decal. Worth
+        keeping in the drawer as a name for something smaller — the soundtrack, a season recap
+        screen.</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="pass">PASS — it's just a number and a day</td></tr>
+          <tr><td class="t">Register</td><td class="fail">DRIFT — elegiac, not funny</td></tr>
+          <tr><td class="t">Logic</td><td class="mixed">States the season's length, nothing else</td></tr>
+          <tr><td class="t">Card</td><td class="pass">Two long words, clean stack</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="cand">
+      <div class="tc"><div class="card-inner">
+        <div class="a">Tour</div>
+        <div class="a g">Card</div>
+        <div class="sub">DON'T LOSE IT</div>
+      </div></div>
+      <div>
+        <h3>Tour Card</h3>
+        <div class="body">The cleverest pun on the table — the document that <em>is</em> your job,
+        in a game made of cards — and it fails the brief's one absolute test. A person who has
+        never watched golf does not know a tour card is employment; the double meaning only lands
+        <em>after</em> the game has taught it. The brief's bar exists precisely to kill this kind
+        of insider elegance. Killed, with respect.</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="fail">FAIL — the pun requires the knowledge the title should never require</td></tr>
+          <tr><td class="t">Register</td><td class="pass">PASS</td></tr>
+          <tr><td class="t">Logic</td><td class="pass">States the stakes perfectly — to those who already know</td></tr>
+          <tr><td class="t">Card</td><td class="mixed">Two short words; a little empty at title-card scale</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="cand" style="border-bottom:none">
+      <div class="tc"><div class="card-inner">
+        <div class="a">Playing For</div>
+        <div class="a g">The Weekend</div>
+        <div class="sub">THE CUT · FRIDAY NIGHT</div>
+      </div></div>
+      <div>
+        <h3>Playing For The Weekend</h3>
+        <div class="body">In golf, making the cut means you play the weekend; everyone else hears
+        the working-stiff idiom. The problem is that the two meanings disagree: the civilian
+        reading says <em>leisure is coming</em>, the golf reading says <em>survival</em>. A title
+        whose cold reading points the wrong way passes the letter of the bar and misses its
+        spirit.</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="mixed">Understood — but as the wrong promise</td></tr>
+          <tr><td class="t">Register</td><td class="pass">PASS</td></tr>
+          <tr><td class="t">Logic</td><td class="mixed">States the cut, only to golfers</td></tr>
+          <tr><td class="t">Card</td><td class="pass">Stacks fine</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">Late entry · from the designer</div>
+    <div class="cand" style="border-bottom:none;padding-top:12px">
+      <div class="tc"><div class="card-inner">
+        <div class="a" style="font-size:44px">FORE<span style="color:#82E39B;text-shadow:0 0 10px rgba(130,227,155,.5)">!</span></div>
+        <div class="sub">HEADS UP</div>
+      </div></div>
+      <div>
+        <h3>Fore!</h3>
+        <div class="body">The loudest card in the round, and thematically sharper than it first
+        looks — it's the sound a <em>miss</em> makes, and this is a game about the shape of the
+        miss. Register is a pure pass: "Fore!" is literally the shout of "oh no". But it stumbles
+        twice. The cold test is shakier than its fame suggests: civilians know it as <em>the golf
+        yell</em> without knowing it means "duck" — they understand the genre, not the meaning,
+        and said aloud it's "Four?". And the field is crowded: there is already a game called
+        <em>Fore!</em>, plus <em>Hot Shots Golf Fore!</em>, plus bundles and merchandise without
+        end — it is the airport-gift-shop golf word, generic where this game's humour is specific.
+        The paper-company-outing joke works because it's precise; "Fore!" is the mug that joke
+        would come printed on.</div>
+        <table class="score">
+          <tr><td class="t">Cold</td><td class="mixed">MIXED — famous as a sound, opaque as a meaning; homophone of "four" aloud</td></tr>
+          <tr><td class="t">Register</td><td class="pass">PASS — the canonical "oh no"</td></tr>
+          <tr><td class="t">Logic</td><td class="mixed">Announces the miss (on-theme), states no rule</td></tr>
+          <tr><td class="t">Card</td><td class="pass">One word at 100pt — the best-looking failure here</td></tr>
+          <tr><td class="t">Clear</td><td class="fail">FAIL — an existing game owns the exact name; Hot Shots Golf Fore! besides</td></tr>
+        </table>
+        <p class="note" style="margin-top:12px;max-width:60ch">Steal the energy anyway: a phosphor
+        <b>FORE</b> stamp when a shot finishes in the widest band of the cone is a free broadcast
+        joke, and it teaches what the word means — art first, term last, exactly per the brief.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">Killed at the door</div>
+    <h2>The short list that didn't survive the bar</h2>
+    <ul class="kill">
+      <li><span class="n">The Money List</span> — <span class="why">states the death rule, but dry as a tax form; nobody says "oh no" at it.</span></li>
+      <li><span class="n">Missed the Cut</span> — <span class="why">semi-jargon, and announces failure without the joke that earns it.</span></li>
+      <li><span class="n">Take Your Medicine</span> — <span class="why">right register inside golf; cold reading is pharmaceutical.</span></li>
+      <li><span class="n">Par Isn't Good Enough</span> — <span class="why">it's pillar P7 wearing a title's clothes; reads as a lecture.</span></li>
+      <li><span class="n">The Yips / Lay Up / Never Up, Never In</span> — <span class="why">jargon. The brief's "what?" test, failed instantly.</span></li>
+      <li><span class="n">Water on the Right</span> — <span class="why">the incumbent, but weaker and with less music.</span></li>
+      <li><span class="n">One Good Season</span> — <span class="why">could be any sports story ever told; owns nothing.</span></li>
+    </ul>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">Verdict</div>
+    <h2>The title holds</h2>
+    <div class="verdict">
+      <p class="measure"><b>Keep <em>Don't Hit It In The Water</em>.</b> Nothing on the table beats
+      a title that passes every test <em>and</em> teaches a third of the game before the first
+      card is drawn. The only real challenger, <b>Keep Your Head Down</b>, adds the job but drops
+      the water — and the water is the third the art is built around. A title change would also
+      re-open the wordmark for no gained ground.</p>
+      <p class="measure">The round still pays: <span class="goldb">Keep Your Head Down</span> is
+      the named successor if the title ever has to change (a publisher, a trademark, a sequel).
+      <span class="goldb">"That's in the water."</span> should be stolen immediately as the
+      water-ball result line in-game — it was always a flavour line auditioning as a title. And
+      <span class="goldb">Fourteen Sundays</span> goes in the drawer for the season-recap screen
+      or the soundtrack.</p>
+      <p class="note measure">Landscape check: the genre's named neighbours — <em>Golfie</em>,
+      <em>Cursed to Golf</em> — both lean whimsical/supernatural. A recognition-register title is
+      differentiated on sight, and no existing game holds any of the finalist names.</p>
+    </div>
+  </section>
+
+  <footer>Title Defense · Don't Hit It In The Water · Aug 2026 · Collision checks via web, no game found on any finalist</footer>
+</div>
+
+</body>
+</html>

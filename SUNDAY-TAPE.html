@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunday Tape</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+  /* SUNDAY TAPE — style guide. Single world, deliberately dark; every colour explicit. */
+  :root{
+    --ground:#0C120D; --panel:#0A0F0B; --ink:#DCE8DA; --ink-dim:#7A8A7C;
+    --phos:#82E39B; --gold:#E3BC5F; --signal:#C4523E;
+    --fairway:#20663A; --rough:#152F1E; --sand:#C7A360; --water:#1C5680;
+    --bent:#2A7A46; --cone:#F5F8EE; --tube:#060906;
+    --hair:#223826;
+    --fw:var(--fairway); --greenc:var(--bent); --pinc:var(--gold);
+    --cone-f:rgba(245,248,238,.15); --cone-s:var(--cone);
+    --grid:rgba(130,227,155,.28); --gridlab:rgba(130,227,155,.75);
+    --outline:rgba(6,9,6,.65); --linew:1.2;
+  }
+  body{background:var(--ground);color:var(--ink);font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:14.5px;line-height:1.65;margin:0;font-variant-numeric:tabular-nums}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px}
+  p{margin:0 0 1em}
+  .measure{max-width:68ch}
+  h2{font-family:'Anton','Arial Narrow',sans-serif;font-weight:400;font-size:30px;letter-spacing:.03em;
+    text-transform:uppercase;color:#F0F4EC;margin:0 0 6px}
+  .sect{padding:52px 0 8px;border-top:1px solid var(--hair)}
+  .kicker{font-size:11px;letter-spacing:.24em;color:var(--phos);text-transform:uppercase;margin-bottom:10px}
+  .note{color:var(--ink-dim);font-size:12.5px}
+  em{font-style:italic}
+  b{font-weight:600;color:#F0F4EC}
+  .goldb{color:var(--gold)}
+
+  /* hero */
+  .hero{padding:78px 0 56px;text-align:center}
+  .titlecard{display:inline-block;border:1px solid rgba(227,188,95,.55);padding:30px 48px}
+  .titlecard .l{font-family:'Anton','Arial Narrow',sans-serif;font-size:52px;line-height:1.04;letter-spacing:.04em;color:#F0F4EC}
+  .titlecard .l2{color:var(--phos);text-shadow:0 0 12px rgba(130,227,155,.55)}
+  .titlecard .sub{font-size:10px;letter-spacing:.34em;color:var(--gold);margin-top:12px}
+  .hero .chosen{margin-top:22px;font-size:11.5px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase}
+
+  /* two-col blocks */
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 372px;gap:44px;align-items:start;padding-bottom:44px}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  .fullcol{padding-bottom:44px}
+
+  /* palette table */
+  table.tok{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.tok th{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-dim);
+    text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--hair)}
+  table.tok td{padding:7px 10px 7px 0;border-bottom:1px solid #16241A;vertical-align:middle}
+  table.tok .swb{width:38px;height:22px;display:inline-block;vertical-align:middle;border:1px solid var(--hair)}
+  table.tok .tokname{color:var(--phos)}
+  table.tok .hex{color:var(--ink-dim)}
+
+  /* contrast table */
+  table.con{border-collapse:collapse;font-size:12.5px;width:100%}
+  table.con td{padding:5px 10px 5px 0;border-bottom:1px solid #16241A}
+  table.con td.r{text-align:right;color:var(--phos)}
+  table.con td.warn{color:var(--gold)}
+
+  /* type specimens */
+  .typebox{border:1px solid var(--hair);padding:22px 24px;margin-bottom:16px}
+  .typebox .lab{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:10px}
+  .anton-xl{font-family:'Anton','Arial Narrow',sans-serif;font-size:40px;line-height:1.06;letter-spacing:.03em;text-transform:uppercase;color:#F0F4EC}
+  .scale-row{display:flex;gap:26px;flex-wrap:wrap;align-items:baseline}
+
+  /* mock frame (hole view) */
+  .mock{position:relative;overflow:hidden;background:var(--panel);border:1px solid #2A4230;box-shadow:0 0 0 6px var(--tube)}
+  .mock svg.hole{display:block;width:100%;height:auto;margin-bottom:88px;font-family:'IBM Plex Mono',monospace}
+  .scan{position:absolute;inset:0;pointer-events:none;mix-blend-mode:overlay;
+    background:repeating-linear-gradient(to bottom,rgba(255,255,255,.055) 0 1px,rgba(0,0,0,.14) 1px 3px)}
+  .vig{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 120% 105% at 50% 45%,transparent 62%,rgba(4,8,5,.55) 100%)}
+  .bug{position:absolute;top:10px;left:10px;font-size:9.5px;letter-spacing:.12em;color:var(--phos);
+    background:rgba(6,10,7,.72);border:1px solid rgba(130,227,155,.35);padding:4px 8px}
+  .chyron{position:absolute;left:0;right:0;bottom:0;padding:26px 12px 10px;
+    background:linear-gradient(to bottom,rgba(7,11,8,.2),rgba(7,11,8,.92) 30%)}
+  .chyron .ttl{font-family:'Anton','Arial Narrow',sans-serif;font-size:11px;letter-spacing:.18em;color:var(--gold);margin-bottom:5px}
+  .lb{width:100%;border-collapse:collapse;font-size:11.5px;color:#E9F1E6}
+  .lb td{padding:2.5px 4px;background:rgba(10,17,12,.85);border-bottom:1px solid rgba(130,227,155,.18)}
+  .lb td.pos{width:2.2em;color:var(--gold);text-align:right}
+  .lb td.sc{text-align:right;width:3em;color:var(--phos)}
+  .lb td.sc.over{color:var(--ink-dim)}
+  .lb td.th{text-align:right;width:2.6em;color:var(--ink-dim)}
+  .lb tr.you td{background:rgba(227,188,95,.14)}
+  .lb tr.cut td{background:transparent;color:var(--signal);text-align:center;font-size:10px;
+    letter-spacing:.22em;border-bottom:1px dashed rgba(196,82,62,.5);padding:4px}
+  .speclist{font-size:12.5px;line-height:1.7}
+  .speclist li{margin-bottom:9px}
+  ul.speclist{padding-left:18px;margin:0}
+
+  /* cards */
+  .cardrow{display:flex;gap:18px;flex-wrap:wrap;align-items:stretch}
+  .gcard{width:158px;background:var(--panel);border:1px solid var(--hair);padding:12px 12px 10px;
+    display:flex;flex-direction:column;gap:6px}
+  .gcard .cname{font-family:'Anton','Arial Narrow',sans-serif;font-size:15px;letter-spacing:.06em;
+    text-transform:uppercase;color:#F0F4EC;text-align:center}
+  .gcard svg{display:block;margin:2px auto}
+  .gcard .cyds{font-size:26px;color:var(--phos);text-align:center;line-height:1}
+  .gcard .cyds small{font-size:10px;color:var(--ink-dim);letter-spacing:.14em}
+  .gcard .cflav{font-style:italic;font-size:10.5px;color:var(--ink-dim);text-align:center;line-height:1.4;margin-top:2px}
+  .gcard.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 6px 18px rgba(0,0,0,.5);transform:translateY(-4px)}
+  .gcard.sel .cname{color:var(--gold)}
+  .gcard.dis{opacity:.38}
+  .cardstate{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim);text-align:center;margin-top:8px}
+
+  /* HUD */
+  .hud{display:flex;justify-content:space-between;align-items:center;background:var(--panel);
+    border:1px solid var(--hair);padding:8px 12px;font-size:10px;letter-spacing:.05em;white-space:nowrap;gap:12px}
+  .hud .left{color:var(--phos)}
+  .hud .right{display:flex;gap:18px;align-items:center}
+  .hud .bank{color:var(--gold)}
+  .hud .pips span{display:inline-block;width:9px;height:9px;margin-left:3px;border:1px solid var(--phos)}
+  .hud .pips span.lit{background:var(--phos);box-shadow:0 0 6px rgba(130,227,155,.6)}
+
+  pre.code{background:var(--panel);border:1px solid var(--hair);padding:18px 20px;font-size:12px;
+    line-height:1.55;overflow-x:auto;color:var(--ink);margin:0 0 16px}
+  pre.code .c{color:var(--ink-dim)}
+  pre.code .k{color:var(--phos)}
+  pre.code .v{color:var(--gold)}
+
+  .rules li b{color:var(--gold);font-weight:600}
+  footer{padding:48px 0 64px;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-dim)}
+
+  @media (prefers-reduced-motion: no-preference){
+    .scan{animation:flick 6s steps(1) infinite}
+    @keyframes flick{0%,93%{opacity:1}94%,95%{opacity:.85}96%,100%{opacity:1}}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="hole7" viewBox="0 0 360 620">
+    <rect x="0" y="0" width="360" height="620" style="fill:var(--rough)"/>
+    <g style="stroke:var(--grid);stroke-width:1">
+      <line x1="0" y1="510" x2="360" y2="510"/><line x1="0" y1="440" x2="360" y2="440"/>
+      <line x1="0" y1="370" x2="360" y2="370"/><line x1="0" y1="300" x2="360" y2="300"/>
+      <line x1="0" y1="230" x2="360" y2="230"/><line x1="0" y1="160" x2="360" y2="160"/>
+      <line x1="0" y1="90"  x2="360" y2="90"/>
+    </g>
+    <g style="fill:var(--gridlab);font-size:9px" text-anchor="start">
+      <text x="6" y="506">50</text><text x="6" y="436">100</text><text x="6" y="366">150</text>
+      <text x="6" y="296">200</text><text x="6" y="226">250</text><text x="6" y="156">300</text>
+      <text x="6" y="86">350</text>
+    </g>
+    <path d="M152,445 Q140,290 134,160 Q131,120 128,95 L174,95 Q180,120 186,160 Q198,290 208,445 Q180,458 152,445 Z"
+      style="fill:var(--fw);stroke:var(--outline);stroke-width:var(--linew)"/>
+    <path d="M212,300 Q205,260 212,225 Q220,185 250,172 Q285,165 296,195 Q303,235 290,270 Q272,305 240,308 Q220,308 212,300 Z"
+      style="fill:var(--water);stroke:var(--outline);stroke-width:var(--linew)"/>
+    <path d="M100,238 Q102,226 116,226 Q130,228 128,242 Q124,252 110,250 Q100,248 100,238 Z"
+      style="fill:var(--sand);stroke:var(--outline);stroke-width:var(--linew)"/>
+    <path d="M96,55 Q98,45 112,46 Q124,48 122,60 Q119,69 106,67 Q96,65 96,55 Z"
+      style="fill:var(--sand);stroke:var(--outline);stroke-width:var(--linew)"/>
+    <path d="M150,26 Q178,30 176,56 Q174,80 148,78 Q124,76 124,50 Q126,28 150,26 Z"
+      style="fill:var(--greenc);stroke:var(--outline);stroke-width:var(--linew)"/>
+    <line x1="156" y1="52" x2="156" y2="38" style="stroke:var(--pinc);stroke-width:2"/>
+    <circle cx="156" cy="52" r="2.2" style="fill:var(--pinc)"/>
+    <rect x="171" y="572" width="18" height="10" rx="2" style="fill:none;stroke:var(--outline);stroke-width:var(--linew)"/>
+    <!-- cone: dark casing first, then telestrator white -->
+    <path d="M180,574 L139,232 Q176,176 218,242 Z" style="fill:none;stroke:var(--tube);stroke-width:4.5;opacity:.9"/>
+    <path d="M180,574 L139,232 Q176,176 218,242 Z" style="fill:var(--cone-f);stroke:var(--cone-s);stroke-width:2"/>
+    <line x1="180" y1="574" x2="175" y2="205" style="stroke:var(--cone-s);stroke-width:1;stroke-dasharray:2 5;opacity:.7"/>
+    <circle cx="180" cy="574" r="3.4" style="fill:var(--cone-s)"/>
+  </symbol>
+</svg>
+
+<div class="hero">
+  <div class="titlecard">
+    <div class="l">DON'T HIT IT</div>
+    <div class="l l2">IN THE WATER</div>
+    <div class="sub">FINAL ROUND · LIVE</div>
+  </div>
+  <div class="chosen">Sunday Tape · the visual world · chosen 24 Aug 2026</div>
+</div>
+
+<div class="wrap">
+  <section class="sect">
+    <div class="kicker">01 · The world</div>
+    <h2>The coverage of your season</h2>
+    <p class="measure">Tour broadcast, 1978. A tower camera holding on a par 4, phosphor numbers
+    burned into the corner of the tube, a leaderboard treated like scripture. Everything on
+    screen is something television actually put on screen: a bug, a chyron, a telestrator mark.
+    The interface never pretends to be grass — it is always <em>a picture of</em> the course,
+    which is exactly the honesty the cone needs. Dark ground, three light voices: phosphor for
+    information, gold for money and honour, white for the cone and nothing else.</p>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">02 · Palette</div>
+    <h2>Fourteen tokens, one discipline</h2>
+    <div class="cols">
+      <div>
+        <table class="tok">
+          <tr><th></th><th>Name</th><th>Token</th><th>Hex</th><th>Job</th></tr>
+          <tr><td><span class="swb" style="background:#0C120D"></span></td><td>Tape Black</td><td class="tokname">--ground</td><td class="hex">#0C120D</td><td>the room; page and screen ground</td></tr>
+          <tr><td><span class="swb" style="background:#0A0F0B"></span></td><td>Panel</td><td class="tokname">--panel</td><td class="hex">#0A0F0B</td><td>cards, chyrons, framed surfaces</td></tr>
+          <tr><td><span class="swb" style="background:#060906"></span></td><td>Tube Black</td><td class="tokname">--tube</td><td class="hex">#060906</td><td>outlines, cone casing, deepest edge</td></tr>
+          <tr><td><span class="swb" style="background:#DCE8DA"></span></td><td>Tube White</td><td class="tokname">--ink</td><td class="hex">#DCE8DA</td><td>body text, even-par scores</td></tr>
+          <tr><td><span class="swb" style="background:#7A8A7C"></span></td><td>Dim</td><td class="tokname">--ink-dim</td><td class="hex">#7A8A7C</td><td>secondary text, over-par, disabled</td></tr>
+          <tr><td><span class="swb" style="background:#82E39B"></span></td><td>Phosphor</td><td class="tokname">--phos</td><td class="hex">#82E39B</td><td>UI text, yardages, focus, under-par</td></tr>
+          <tr><td><span class="swb" style="background:#E3BC5F"></span></td><td>Chyron Gold</td><td class="tokname">--gold</td><td class="hex">#E3BC5F</td><td>money, pin, selection, the leader</td></tr>
+          <tr><td><span class="swb" style="background:#C4523E"></span></td><td>Signal Red</td><td class="tokname">--signal</td><td class="hex">#C4523E</td><td>penalty, cut line, danger — never decoration</td></tr>
+          <tr><td><span class="swb" style="background:#20663A"></span></td><td>Tower Green</td><td class="tokname">--fairway</td><td class="hex">#20663A</td><td>fairway</td></tr>
+          <tr><td><span class="swb" style="background:#152F1E"></span></td><td>Overwatered Olive</td><td class="tokname">--rough</td><td class="hex">#152F1E</td><td>rough</td></tr>
+          <tr><td><span class="swb" style="background:#2A7A46"></span></td><td>Bentgrass</td><td class="tokname">--bent</td><td class="hex">#2A7A46</td><td>putting greens</td></tr>
+          <tr><td><span class="swb" style="background:#C7A360"></span></td><td>Bunker Amber</td><td class="tokname">--sand</td><td class="hex">#C7A360</td><td>sand</td></tr>
+          <tr><td><span class="swb" style="background:#1C5680"></span></td><td>Broadcast Blue</td><td class="tokname">--water</td><td class="hex">#1C5680</td><td>water</td></tr>
+          <tr><td><span class="swb" style="background:#F5F8EE"></span></td><td>Telestrator White</td><td class="tokname">--cone</td><td class="hex">#F5F8EE</td><td>the cone. Nothing else may be this colour</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="typebox">
+          <div class="lab">Contrast, measured (WCAG ratio)</div>
+          <table class="con">
+            <tr><td>Phosphor on Tape Black</td><td class="r">12.1</td></tr>
+            <tr><td>Chyron Gold on Tape Black</td><td class="r">10.5</td></tr>
+            <tr><td>Tube White on Tape Black</td><td class="r">15.0</td></tr>
+            <tr><td>Cone on fairway / rough / water</td><td class="r">6.5 / 13.4 / 7.3</td></tr>
+            <tr><td>Cone on sand</td><td class="r warn">2.2 → casing rule</td></tr>
+            <tr><td>Water vs fairway (luminance)</td><td class="r warn">1.1 → outline rule</td></tr>
+          </table>
+        </div>
+        <p class="note"><b>Casing rule.</b> The cone is drawn twice: Tube Black at 4.5px underneath,
+        Telestrator White at 2px on top — the way a real telestrator line survived any picture.
+        This makes the cone legible over sand, and over anything.</p>
+        <p class="note"><b>Outline rule.</b> Water and fairway are hue-separated but luminance-flat,
+        so every hazard shape carries a Tube Black outline. The outline is load-bearing, not styling —
+        it is also what keeps the map readable for colour-blind players.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">03 · Typography</div>
+    <h2>Two faces, no exceptions</h2>
+    <div class="fullcol">
+      <div class="typebox">
+        <div class="lab">Anton — display. Event names, card names, chyron titles, the wordmark. Always caps, tracking +3%</div>
+        <div class="anton-xl">The Masters of Pine Hollow</div>
+      </div>
+      <div class="typebox">
+        <div class="lab">IBM Plex Mono — everything else. Numerals always tabular; flavour text in italic; labels caps, tracking +12–18%</div>
+        <div class="scale-row">
+          <span style="font-size:26px;color:var(--phos)">265</span>
+          <span style="font-size:18px;color:var(--gold)">$41,250</span>
+          <span style="font-size:14.5px">Round 4 at the Sunbelt Open, and the wind is doing something personal.</span>
+          <span style="font-size:11px;letter-spacing:.16em;color:var(--ink-dim)">THRU 14 · E</span>
+          <span style="font-size:10.5px;font-style:italic;color:var(--ink-dim)">The head cover was a gift.</span>
+        </div>
+      </div>
+      <p class="note measure">Scale: 40 / 26 / 18 / 14.5 / 11 / 10.5. No third face, no regular-width
+      sans anywhere. If a string contains a number the player compares — yardage, score, money —
+      it is Plex Mono with <b>tabular-nums</b>, so columns land, always.</p>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">04 · The hole view</div>
+    <h2>The picture, the mark, the chyron</h2>
+    <div class="cols">
+      <div>
+        <ul class="speclist">
+          <li><b>The plan is the picture.</b> Rough fills the frame; fairway, sand, water and green
+          sit on it as outlined shapes; phosphor gridlines every 50 yards with small left-edge labels.
+          Nothing is textured — surface identity comes from colour plus outline.</li>
+          <li><b>The cone is a telestrator mark.</b> White 2px over a 4.5px Tube Black casing,
+          15% white fill, dashed aim line, a white dot on the ball. It is the only white shape
+          in the frame, so the eye cannot miss it and never has to search.</li>
+          <li><b>One bug, one chyron.</b> Hole info top-left in a bordered phosphor bug; the
+          leaderboard chyron rises from the bottom over its own black band, never over the tee.
+          Nothing else may sit on the picture. When a third thing wants to exist, it replaces
+          the chyron; it does not join it.</li>
+          <li><b>Scanlines and vignette are one layer each,</b> at fixed recipe opacity — degradation
+          is set dressing, and set dressing never gets louder than the play.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="mock">
+          <svg class="hole" viewBox="0 0 360 620" role="img" aria-label="Hole 7, Sunday Tape"><use href="#hole7"/></svg>
+          <div class="scan"></div>
+          <div class="vig"></div>
+          <div class="bug">HOLE 7 · PAR 4 · 392</div>
+          <div class="chyron">
+            <div class="ttl">SUNBELT OPEN · ROUND 4 · DRIVER 235–285</div>
+            <table class="lb">
+              <tr><td class="pos">1</td><td>THACKERAY</td><td class="sc">−6</td><td class="th">F</td></tr>
+              <tr><td class="pos">2</td><td>PIKE</td><td class="sc">−4</td><td class="th">17</td></tr>
+              <tr class="you"><td class="pos">7</td><td>YOU</td><td class="sc">−2</td><td class="th">14</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">05 · Cards</div>
+    <h2>Frames, not illustrations</h2>
+    <div class="fullcol">
+      <p class="measure">Locked anatomy, restyled: name on top in Anton, the diagram in the middle,
+      yardage below in phosphor, one line of flavour in dim italic. The diagram is the card's own
+      cone at reference scale — wide card, wide wedge — so the art keeps teaching the mechanic
+      before any word does. Illustrations wait until the card list settles.</p>
+      <div class="cardrow">
+        <div>
+          <div class="gcard">
+            <div class="cname">Driver</div>
+            <svg width="90" height="70" viewBox="0 0 90 70">
+              <path d="M45,66 L16,14 Q45,2 74,14 Z" style="fill:rgba(245,248,238,.13);stroke:#060906;stroke-width:3.4"/>
+              <path d="M45,66 L16,14 Q45,2 74,14 Z" style="fill:none;stroke:#F5F8EE;stroke-width:1.6"/>
+            </svg>
+            <div class="cyds">265 <small>YDS</small></div>
+            <div class="cflav">The head cover was a gift.</div>
+          </div>
+          <div class="cardstate">Default</div>
+        </div>
+        <div>
+          <div class="gcard sel">
+            <div class="cname">Soft Wedge</div>
+            <svg width="90" height="70" viewBox="0 0 90 70">
+              <path d="M45,66 L31,22 Q45,15 59,22 Z" style="fill:rgba(245,248,238,.13);stroke:#060906;stroke-width:3.4"/>
+              <path d="M45,66 L31,22 Q45,15 59,22 Z" style="fill:none;stroke:#F5F8EE;stroke-width:1.6"/>
+            </svg>
+            <div class="cyds">118 <small>YDS</small></div>
+            <div class="cflav">Lands soft. Mostly.</div>
+          </div>
+          <div class="cardstate">Selected — gold keyline</div>
+        </div>
+        <div>
+          <div class="gcard dis">
+            <div class="cname">Punch Out</div>
+            <svg width="90" height="70" viewBox="0 0 90 70">
+              <path d="M45,66 L37,30 Q45,26 53,30 Z" style="fill:rgba(245,248,238,.13);stroke:#060906;stroke-width:3.4"/>
+              <path d="M45,66 L37,30 Q45,26 53,30 Z" style="fill:none;stroke:#F5F8EE;stroke-width:1.6"/>
+            </svg>
+            <div class="cyds">80 <small>YDS</small></div>
+            <div class="cflav">Back to the fairway. Again.</div>
+          </div>
+          <div class="cardstate">Unavailable — 38% opacity</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">06 · Leaderboard &amp; HUD</div>
+    <h2>Position · Name · Score · Thru</h2>
+    <div class="cols">
+      <div>
+        <table class="lb" style="font-size:12.5px">
+          <tr><td class="pos">1</td><td>THACKERAY</td><td class="sc">−6</td><td class="th">F</td></tr>
+          <tr><td class="pos">2</td><td>PIKE</td><td class="sc">−4</td><td class="th">17</td></tr>
+          <tr><td class="pos">3</td><td>NAKAMURA</td><td class="sc">−3</td><td class="th">15</td></tr>
+          <tr class="you"><td class="pos">7</td><td>YOU</td><td class="sc">−2</td><td class="th">14</td></tr>
+          <tr class="cut"><td colspan="4">— PROJECTED CUT +1 —</td></tr>
+          <tr><td class="pos">44</td><td>VOSS</td><td class="sc over">+2</td><td class="th">13</td></tr>
+        </table>
+        <p class="note" style="margin-top:14px">Under par is Phosphor, even is Tube White, over par
+        is Dim — worse scores literally fade. Your row carries a gold wash; the projected cut is a
+        Signal Red dashed line sitting <em>in</em> the table, because on this tour the cut is a
+        place you can be, not a message you receive.</p>
+      </div>
+      <div>
+        <div class="hud">
+          <span class="left">SUNBELT · RD 4 · H7/8</span>
+          <span class="right">
+            <span class="bank">BANK $132,410</span>
+            <span class="pips"><span class="lit"></span><span class="lit"></span><span class="lit"></span><span></span><span></span></span>
+          </span>
+        </div>
+        <p class="note" style="margin-top:14px">The HUD is one strip: event and position in
+        phosphor on the left; money in gold and focus as lit phosphor pips on the right. Focus
+        glows because it is the one resource you spend on purpose.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">07 · Texture, motion, discipline</div>
+    <h2>The rules that keep it honest</h2>
+    <div class="fullcol">
+      <ul class="speclist rules measure">
+        <li><b>One chyron, one bug.</b> The 1978 idiom fails by addition — tickers, double bugs,
+        replay stingers. Everything after the first chyron is clutter.</li>
+        <li><b>Only the cone is white. Only intent glows.</b> Text-shadow glow is permitted on
+        exactly three things: the wordmark, focus pips, and fresh under-par scores. Never on body text.</li>
+        <li><b>Degradation is fixed, not expressive.</b> Scanlines: 1px light / 2px dark at 5.5% / 14%,
+        blend overlay. Vignette: one radial, 55% Tube Black at the corners. One flicker every 6 seconds,
+        one frame long, and none at all under <span style="color:var(--phos)">prefers-reduced-motion</span>.</li>
+        <li><b>Motion is a hard cut.</b> Broadcast doesn't ease; it cuts. State changes land in
+        steps, leaderboard rows swap with a single flip, and the ball's result arrives like a replay:
+        cut, hold, chyron. No tweens softer than steps() — save true animation for where it earns
+        its place, later.</li>
+        <li><b>Signal Red is spent, never decorates.</b> Penalty strokes, the cut line, a ball in
+        the water. If red appears when nothing is wrong, red stops meaning something is wrong.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="sect">
+    <div class="kicker">08 · Drop-in</div>
+    <h2>The theme contract</h2>
+    <div class="fullcol">
+      <p class="measure">Shipped alongside this guide as <b>sunday-tape.css</b>. Components read
+      tokens only — no literal colours in component styles — so the current spare look survives as
+      a dev-toggle fallback (<span class="goldb">data-theme="yardage"</span>) and playtests can
+      A/B the two without a rebuild.</p>
+<pre class="code"><span class="c">/* fonts (index.html): Anton + IBM Plex Mono via Google Fonts, fallbacks 'Arial Narrow' / ui-monospace */</span>
+:root[data-theme=<span class="v">"sunday-tape"</span>]{
+  <span class="k">--ground</span>:<span class="v">#0C120D</span>;  <span class="k">--panel</span>:<span class="v">#0A0F0B</span>;  <span class="k">--tube</span>:<span class="v">#060906</span>;
+  <span class="k">--ink</span>:<span class="v">#DCE8DA</span>;     <span class="k">--ink-dim</span>:<span class="v">#7A8A7C</span>;
+  <span class="k">--phos</span>:<span class="v">#82E39B</span>;    <span class="k">--gold</span>:<span class="v">#E3BC5F</span>;   <span class="k">--signal</span>:<span class="v">#C4523E</span>;
+  <span class="k">--fairway</span>:<span class="v">#20663A</span>; <span class="k">--rough</span>:<span class="v">#152F1E</span>;  <span class="k">--bent</span>:<span class="v">#2A7A46</span>;
+  <span class="k">--sand</span>:<span class="v">#C7A360</span>;    <span class="k">--water</span>:<span class="v">#1C5680</span>;  <span class="k">--cone</span>:<span class="v">#F5F8EE</span>;
+  <span class="k">--font-display</span>:<span class="v">'Anton','Arial Narrow',sans-serif</span>;
+  <span class="k">--font-mono</span>:<span class="v">'IBM Plex Mono',ui-monospace,monospace</span>;
+}</pre>
+      <p class="note measure">Fourteen colour tokens and two font slots are the whole contract.
+      A future theme is a second block of the same fourteen names — nothing in the components changes.</p>
+    </div>
+  </section>
+
+  <footer>Sunday Tape · Don't Hit It In The Water · Aug 2026 · No real players, tours, or courses</footer>
+</div>
+
+</body>
+</html>
