@@ -104,7 +104,7 @@ function playSeason(seed: number, policy: Policy, spend = false): number[] {
       spreadScale: ev.sharpness * Math.pow(Number(process.env.KITPOW ?? 0.88), bought),
     }]
     ctx.focus = 5
-    let [field, fr] = makeField(ctx.bank.field)
+    let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
 
     const per: number[] = []
@@ -144,7 +144,7 @@ function playSeasonFreeKit(seed: number, policy: Policy): number[] {
       spreadScale: ev.sharpness * Math.pow(Number(process.env.KITPOW ?? 0.88), bought),
     }]
     ctx.focus = 5
-    let [field, fr] = makeField(ctx.bank.field)
+    let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
     const per: number[] = []
     PINE_HOLLOW.slice(0, 4).forEach((hole, i) => {

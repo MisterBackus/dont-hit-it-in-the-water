@@ -98,7 +98,7 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
       id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness * kit,
     }]
     ctx.focus = 5
-    let [field, fr] = makeField(ctx.bank.field)
+    let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength * Number(process.env.FSCALE ?? 1))
     ctx.bank = { ...ctx.bank, field: fr }
     let rel = 0
     // FOUR holes — the cut is judged here. No fieldEdge: the field is static.

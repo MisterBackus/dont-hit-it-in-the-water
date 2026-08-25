@@ -102,7 +102,7 @@ function seasonEarningsWithDeck(
     ]
     ctx.focus = maxFocus(5, boosts)
     ctx.freeSinks = kit.reduce((n, b) => n + (b.freeSinks ?? 0), 0)
-    let [field, fr] = makeField(ctx.bank.field)
+    let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
 
     const holes: number[] = []
@@ -230,7 +230,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
       ]
       ctx.focus = maxFocus(5, boosts)
       ctx.freeSinks = kit.reduce((n, b) => n + (b.freeSinks ?? 0), 0)
-      let [field, fr] = makeField(ctx.bank.field)
+      let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
       ctx.bank = { ...ctx.bank, field: fr }
 
       const holes: number[] = []
@@ -260,10 +260,8 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
 
   const SETS: number[][] = [
     MONEY_CHECKS.map(c => c.need),
-    [1_300_000, 4_000_000, 7_000_000],
-    [1_400_000, 4_200_000, 7_200_000],
     [1_400_000, 4_400_000, 7_600_000],
-    [1_500_000, 4_600_000, 8_000_000],
+    [1_400_000, 5_200_000, 9_200_000],
   ]
   const IDX = MONEY_CHECKS.map(c => c.after - 1)
 

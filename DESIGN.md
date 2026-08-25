@@ -97,12 +97,15 @@ This is the Balatro blind requirement, wearing a visor.
 > measured truth was worse: under momentum regen every boost had drifted to
 > 7–20× its price and the old thresholds killed almost nobody. Boosts are
 > repriced to ~2.0× measured value, and the thresholds below are superseded by
-> **$1.4M / $4.4M / $7.6M**, which send home 42% / 21% / 5% of arrivals
-> (mixed survival 43%; a mixed hoarder survives 16% against the shopper's 43%,
-> so the shop is now the difference between living and not). The late checks
-> sit under the kill intent and cannot be raised to it — equipped survivors
-> snowball past any static number — which is the field-response wall measured
-> from a fourth angle. Provenance in `content/season.ts`; re-derive with
+> **$1.4M / $4.8M / $8.4M** — re-derived a second time the same night once
+> FIELD RESPONSE landed (`FIELD-RESPONSE.md`: the field's skill floor now
+> rises through the season, so the late checks finally answer their dial).
+> They send home 42% / 28% / 8% of arrivals; survival is mixed 38%,
+> aggressive 46%, safe ~4% against the 36/45/3 intent, and a mixed hoarder
+> survives 10% against the shopper's 38%, so the shop is the difference
+> between living and not. The one residual — check 3 at 8% vs 14% intent —
+> is equipment snowball, and its dial is boost decay, not these numbers.
+> Provenance in `content/season.ts`; re-derive with
 > `npx tsx src/tools/shopcheck.ts`.
 
 | Check | After event | Threshold | Kills, of those who arrive |

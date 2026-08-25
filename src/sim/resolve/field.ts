@@ -26,9 +26,20 @@ export interface Standing {
 
 export const YOU = 'You'
 
-/** Build the week's field. Deterministic from the field RNG stream. */
-export function makeField(rng: RngState): readonly [FieldPlayer[], RngState] {
+/**
+ * Build the week's field. Deterministic from the field RNG stream.
+ *
+ * `floorLift` is FIELD RESPONSE (FIELD-RESPONSE.md): the skill floor rises
+ * through the season while the ceiling stays put. This is survivorship — the
+ * Money List sends the bottom of the tour home at 5, 9 and 12, so a late
+ * field is the players who kept their cards. The tour's best are the tour's
+ * best all year; what changes is how thick the crowd between you and them is.
+ * Without it, the player improves on three axes against a field that
+ * improves on none, and every seasonal difficulty dial measured as a fake.
+ */
+export function makeField(rng: RngState, floorLift = 0): readonly [FieldPlayer[], RngState] {
   let r = rng
+  const lo = 0.25 + floorLift
   const used = new Set<string>()
   const out: FieldPlayer[] = []
   while (out.length < FIELD_SIZE) {
@@ -38,7 +49,7 @@ export function makeField(rng: RngState): readonly [FieldPlayer[], RngState] {
     if (used.has(name)) continue
     used.add(name)
     // most of the field is decent; a few are hot and a few are not
-    out.push({ name, skill: 0.25 + c * 0.6, total: 0, thru: 0, cut: false })
+    out.push({ name, skill: lo + c * (0.85 - lo), total: 0, thru: 0, cut: false })
   }
   return [out, r] as const
 }

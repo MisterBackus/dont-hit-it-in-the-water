@@ -100,7 +100,7 @@ function playSeason(seed: number, policy: Policy, pay: Payout, purses: Purses): 
       id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness,
     }]
     ctx.focus = 5
-    let [field, fr] = makeField(ctx.bank.field)
+    let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
 
     const holes: number[] = []

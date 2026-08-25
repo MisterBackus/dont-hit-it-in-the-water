@@ -5,7 +5,7 @@ import {
   COURSE, CUT_AFTER_HOLE, MAX_FOCUS, currentEvent, currentHole, freshHole,
   initialState, parThrough,
 } from './state'
-import { EVENT_COUNT, checkAfter, payout } from '../content/season'
+import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import { advanceField, makeField, rankCut, standings, yourPlace } from './resolve/field'
 import { CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
@@ -212,7 +212,7 @@ function startEvent(state: GameState): GameState {
       - state.focusPenalty)
     d.freeSinks = state.boosts.reduce((n, id) => n + (BOOST[id]!.freeSinks ?? 0), 0)
     d.log = []
-    const [field, r] = makeField(d.rng.field)
+    const [field, r] = makeField(d.rng.field, SEASON[d.event - 1]!.fieldStrength)
     d.field = field
     d.rng = { ...d.rng, field: r }
   })

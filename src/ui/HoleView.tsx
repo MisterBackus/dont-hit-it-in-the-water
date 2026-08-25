@@ -89,8 +89,11 @@ export function HoleView({
           fill={FILL[h.surface] ?? 'var(--rough)'} />
       })}
 
-      {/* green */}
-      <ellipse cx={gp.x} cy={gp.y} rx={hole.greenRadius} ry={hole.greenRadius * 0.85}
+      {/* green — a full circle, because surfaceAt tests a full circle. The
+          old ry×0.85 "perspective" squash drew the green two yards smaller
+          than it played: a boundary that decides shots must be drawn where
+          the sim believes it is (the terrain half of "the cone never lies"). */}
+      <ellipse cx={gp.x} cy={gp.y} rx={hole.greenRadius} ry={hole.greenRadius}
         fill="var(--green)" stroke="var(--greenline)" strokeWidth="1.5"
         vectorEffect="non-scaling-stroke" />
 

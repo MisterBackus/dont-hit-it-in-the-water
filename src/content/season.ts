@@ -13,6 +13,13 @@ export interface EventSpec {
   readonly advance: number
   /** global multiplier on every cone — you start loose and tighten */
   readonly sharpness: number
+  /**
+   * FIELD RESPONSE: how far the field's skill floor has risen this week
+   * (see FIELD-RESPONSE.md and makeField). 0 in the spring; by the finale
+   * the bottom of the tour has gone home and stayed there. This is the dial
+   * a course will also pull when the schedule work lands.
+   */
+  readonly fieldStrength: number
   readonly purse: number
 }
 
@@ -42,6 +49,17 @@ const MAJORS = new Set([4, 7, 11, 14])
  */
 const ADVANCE_CURVE = [44, 41, 39, 36, 34, 31, 28, 26, 23, 21, 18, 15, 13, 10] as const
 
+/**
+ * How far the field's skill floor rises by the finale. Derived by cutcheck
+ * sweep (FIELD-RESPONSE.md §5,§6) over F ∈ {0.10..0.30}: before field
+ * response, make-cut at a fixed line CLIMBED ~75% → ~91% across the season;
+ * at 0.30 the live advance curve measures 87 71 70 69 52 56 59 54 56 46 38
+ * 43 39 31 (mixed, kit ×1) — the squeeze the intro screen always promised,
+ * ending a hair over the 28% ambition with equipment still to be earned on
+ * top of it.
+ */
+const FIELD_LIFT = 0.30
+
 export const SEASON: readonly EventSpec[] = NAMES.map((name, i) => {
   const num = i + 1
   const major = MAJORS.has(num)
@@ -50,6 +68,7 @@ export const SEASON: readonly EventSpec[] = NAMES.map((name, i) => {
     advance: ADVANCE_CURVE[i]!,
     // ×1.40 at event 1 → ×0.80 at event 14
     sharpness: Math.round((1.40 - (num - 1) / (NAMES.length - 1) * 0.60) * 100) / 100,
+    fieldStrength: Math.round(FIELD_LIFT * (num - 1) / (NAMES.length - 1) * 1000) / 1000,
     purse: major ? 20_000_000 : 9_000_000,
   }
 })
@@ -85,24 +104,31 @@ export const EVENT_COUNT = SEASON.length
  * longer keeps up with a field that is trying to beat you. That is P7
  * arriving in full. Re-derive with `npx tsx src/tools/shopcheck.ts`.
  *
- * RE-ANCHORED 25 Aug 2026, for three changes at once: momentum regen made
- * every season richer, the list moved to GROSS earnings (spending no longer
- * lowers the number the check reads), and the shop was repriced to ~2.0x.
- * These send home 42% / 21% / 5% of the players who arrive at them —
- * survival: mixed 43%, aggressive 55%, safe 4%, and a mixed hoarder who
- * never shops survives 16% where the shopper gets 43%. The shop is no longer
- * a crossover argument; it is the difference between living and not.
+ * RE-ANCHORED 25 Aug 2026, twice in one night. First for three changes at
+ * once — momentum regen made every season richer, the list moved to GROSS
+ * earnings (spending no longer lowers the number the check reads), and the
+ * shop was repriced to ~2.0x. Then again when FIELD RESPONSE landed
+ * (FIELD-RESPONSE.md): with the field's skill floor rising through the
+ * season, the late checks finally answer their dial — under the static
+ * field, check 2's kill was pinned near 20% no matter the number; under the
+ * responding field it tracked its bar 20% -> 28% -> 32%.
  *
- * The late checks sit below the 29% / 14% kill intent and CANNOT be pushed
- * there by raising numbers: equipped survivors snowball past any static
- * threshold (check 3's kill moved 3% -> 6% while its bar rose $1.4M). That
- * residual is the field-response wall, measured from a fourth angle, and it
- * is assigned there — not to this dial.
+ * These send home 42% / 28% / 8% of the players who arrive at them.
+ * Survival: mixed 38%, aggressive 46%, safe ~4% — against the 36/45/3
+ * intent, which the first two hit within noise. A mixed hoarder who never
+ * shops survives 10% where the shopper gets 38%: the shop is not a
+ * crossover argument any more, it is the difference between living and not.
+ *
+ * The one residual: check 3 kills 8% against a 14% intent, and raising its
+ * bar past $8.4M starts starving the win-pays-the-final-leg invariant
+ * (deck.test.ts) before it buys much kill. What snowballs past the last
+ * check is EQUIPMENT scaling, not field statics — if 14% ever matters, the
+ * next dial is boost effect decay, not this number.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
   { after: 5, need: 1_400_000 },
-  { after: 9, need: 4_400_000 },
-  { after: 12, need: 7_600_000 },
+  { after: 9, need: 4_800_000 },
+  { after: 12, need: 8_400_000 },
 ]
 
 export function checkAfter(event: number) {
