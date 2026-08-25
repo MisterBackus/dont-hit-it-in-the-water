@@ -35,6 +35,14 @@ const FILL: Record<string, string> = {
  *
  * The cone is exempt from art styling (GRAPHICS-PROPOSAL.md §3.4): both
  * looks draw this exact shape, and it always sits above the terrain.
+ *
+ * DEPTH IN THE PICTURE (DEPTH-DECISION.md): the wedge stays the wedge, but
+ * its far edge is now the PITCH BAND — carry ± the same jitter resolution
+ * rolls, drawn solid and darker; the band water and OB read. A shot with
+ * run-out grows a lighter hatched TAIL — the pitch band displaced by the
+ * roll; the band the crust, the green and the collar read. No roll, no
+ * tail. Two tones only, both var(--cone) — the glance test is unchanged:
+ * is any part of the trouble inside anything shaded?
  */
 function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Cone }) {
   const { dir, perp } = aimFrame(hole, from)
@@ -44,15 +52,55 @@ function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Co
   })
   const o = cone.aimOffset
   const a = project(from, hole)
-  const l = project(at(cone.carry, o - cone.spread), hole)
-  const r = project(at(cone.carry, o + cone.spread), hole)
   const mid = project(at(cone.carry, o), hole)
   const near = project(at(cone.carry * 0.94, o), hole)
+  // one edge arc per depth: full lateral width — a ball pitching short still
+  // scatters the full spread, so the bands are strips, not a narrowing wedge
+  const edge = (fwd: number) => ({
+    l: project(at(fwd, o - cone.spread), hole),
+    r: project(at(fwd, o + cone.spread), hole),
+  })
+  const arc = (sweep: 0 | 1) => `A ${cone.spread} ${cone.spread * 0.35} 0 0 ${sweep}`
+  // strip between two depths, arced like the classic far edge on both sides
+  const strip = (nearFwd: number, farFwd: number) => {
+    const n = edge(nearFwd), f = edge(farFwd)
+    return `M ${n.l.x},${n.l.y} ${arc(1)} ${n.r.x},${n.r.y} ` +
+      `L ${f.r.x},${f.r.y} ${arc(0)} ${f.l.x},${f.l.y} Z`
+  }
+  const pn = edge(cone.pitchNear)
+  const pf = edge(cone.pitchFar)
+  const hasTail = cone.restFar > cone.pitchFar
   return (
     <g className="cone">
+      {hasTail && (
+        <defs>
+          <pattern id="coneHatch" patternUnits="userSpaceOnUse" width="6" height="6"
+            patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="var(--cone)" strokeWidth="1.8"
+              opacity="0.55" />
+          </pattern>
+        </defs>
+      )}
+      {/* run-out tail — under the bands, so its overlap with the pitch band
+          hides and only the honest extension shows (the Stinger's long skid) */}
+      {hasTail && (
+        <path d={strip(cone.restNear, cone.restFar)} fill="url(#coneHatch)"
+          stroke="var(--cone)" strokeWidth="1" vectorEffect="non-scaling-stroke"
+          strokeOpacity=".45" />
+      )}
+      {/* the wedge body, up to the shortest the ball can pitch */}
       <path
-        d={`M ${a.x},${a.y} L ${l.x},${l.y} A ${cone.spread} ${cone.spread * 0.35} 0 0 1 ${r.x},${r.y} Z`}
-        fill="var(--cone)" fillOpacity="0.34" stroke="var(--cone)"
+        d={`M ${a.x},${a.y} L ${pn.l.x},${pn.l.y} ${arc(1)} ${pn.r.x},${pn.r.y} Z`}
+        fill="var(--cone)" fillOpacity="0.34"
+      />
+      {/* pitch band — solid and darker: every depth the ball can pitch at */}
+      <path d={strip(cone.pitchNear, cone.pitchFar)}
+        fill="var(--cone)" fillOpacity="0.55" stroke="var(--cone)"
+        strokeWidth="1.2" vectorEffect="non-scaling-stroke" strokeOpacity=".9" />
+      {/* the wedge silhouette, dashed as it always was, out to the far pitch */}
+      <path
+        d={`M ${a.x},${a.y} L ${pf.l.x},${pf.l.y} ${arc(1)} ${pf.r.x},${pf.r.y} Z`}
+        fill="none" stroke="var(--cone)"
         strokeWidth="1.6" strokeDasharray="7 5" vectorEffect="non-scaling-stroke"
       />
       <line x1={a.x} y1={a.y} x2={near.x} y2={near.y}

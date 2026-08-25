@@ -101,6 +101,24 @@ export interface Cone {
   readonly spread: number
   readonly aimOffset: number
   readonly roll: number
+  /**
+   * DEPTH IN THE PICTURE (DEPTH-DECISION.md). Resolution rolls the carried
+   * distance in carry ± CARRY_JITTER; these four numbers put that doubt in
+   * the drawn shape instead of hiding it in the dice.
+   *
+   * Pitch band [pitchNear, pitchFar]: every depth the ball can PITCH at —
+   * the band water and OB read. Rounded outward so the band always contains
+   * the roll (P8: the ball never arrives outside the shape shown).
+   */
+  readonly pitchNear: number
+  readonly pitchFar: number
+  /**
+   * Run-out tail [restNear, restFar]: the pitch band displaced by the shot's
+   * roll — the band the crust, the green and the collar read. Equal to the
+   * pitch band when the shot has no roll (no tail is drawn).
+   */
+  readonly restNear: number
+  readonly restFar: number
 }
 
 /**

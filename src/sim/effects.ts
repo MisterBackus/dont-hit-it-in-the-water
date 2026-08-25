@@ -1,5 +1,6 @@
 import type { Boost, Cone, ShotCard, ShotPlan, Surface, TechniqueCard } from './types'
 import { LIE } from './geometry'
+import { CARRY_JITTER } from './resolve/shot'
 import { TAP_IN_FEET } from './resolve/putt'
 
 /** Aim shifts the cone's centreline sideways, in yards. */
@@ -139,12 +140,26 @@ export function buildCone(
   const reach = played + roll
   const capped = Math.min(spread * spreadMult, reach * MAX_CONE_TANGENT)
 
+  // DEPTH EXTENTS, from the same jitter resolution rolls (CARRY_JITTER —
+  // resolve/shot.ts). Rounded OUTWARD, so the drawn band always contains
+  // every carry the dice can produce: the picture may be a hair generous,
+  // never a hair short. The tail is the pitch band displaced by the roll;
+  // no roll, no tail (restNear === pitchNear, restFar === pitchFar).
+  const carryR = Math.round(played)
+  const rollR = Math.round(roll)
+  const pitchNear = Math.floor(carryR * (1 - CARRY_JITTER))
+  const pitchFar = Math.ceil(carryR * (1 + CARRY_JITTER))
+
   return {
     cone: {
-      carry: Math.round(played),
+      carry: carryR,
       spread: Math.max(1, Math.round(capped)),
       aimOffset: aimOffset(plan.aim, boosts),
-      roll: Math.round(roll),
+      roll: rollR,
+      pitchNear,
+      pitchFar,
+      restNear: pitchNear + rollR,
+      restFar: pitchFar + rollR,
     },
     ctx: { ignoreHazards, lowFlight: plan.shot.rules.lowFlight === true },
   }

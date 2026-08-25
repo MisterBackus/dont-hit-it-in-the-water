@@ -12,7 +12,7 @@ import { CARD, freeShot } from '../content/cards'
 import { buildCone } from '../sim/effects'
 import { whyNotPlayable } from '../sim/effects'
 import { LIE, surfaceAt, toPin } from '../sim/geometry'
-import { aimFrame } from '../sim/resolve/shot'
+import { CARRY_JITTER, aimFrame, rollAfterPitch } from '../sim/resolve/shot'
 import type { AimChoice, Boost, HoleSpec, Point, ShotCard, Surface, TechniqueCard } from '../sim/types'
 
 export type Policy = 'safe' | 'mixed' | 'aggressive'
@@ -20,6 +20,20 @@ export type Policy = 'safe' | 'mixed' | 'aggressive'
 const AIMS: readonly AimChoice[] = ['pin', 'left', 'right']
 const AIM_DX = { pin: 0, left: -14, right: 14 } as const
 const SAMPLES = 11
+
+/**
+ * DEPTH IN THE PICTURE (DEPTH-DECISION.md): the appetites read the cone's
+ * depth band, not just its width. Each lateral sample is taken at three
+ * depths — the short edge, the centre and the long edge of the pitch band,
+ * the same ± CARRY_JITTER resolution rolls (uniformly, so the edges are as
+ * real as the middle). Water and OB are then judged where the sample
+ * PITCHES, the crust / green / collar where it RESTS — exactly the two
+ * arrival points resolveShot keeps. Which end of that spread of outcomes a
+ * policy optimises is already its appetite (safe 80th, aggressive 25th):
+ * safe now sees the dunk on the short die, aggressive sees the carry on the
+ * long one, and a naked carry is finally something they can disagree about.
+ */
+const DEPTHS = [-CARRY_JITTER, 0, CARRY_JITTER] as const
 
 function putts(feet: number): number {
   const make = feet <= 3 ? 0.95 : feet <= 8 ? 0.52 : feet <= 15 ? 0.26
@@ -94,16 +108,28 @@ export function chooseShot(
         for (let i = 0; i < SAMPLES; i++) {
           const t = (i / (SAMPLES - 1)) * 2 - 1
           const lat = AIM_DX[aim] + t * cone.spread
-          const fwd = cone.carry + cone.roll * 0.7
-          const p: Point = {
-            down: ball.down + fr.dir.down * fwd + fr.perp.down * lat,
-            side: ball.side + fr.dir.side * fwd + fr.perp.side * lat,
-          }
-          let sf = surfaceAt(hole, p)
-          if (ctx.ignoreHazards && (sf === 'water' || sf === 'ob')) sf = 'rough'
           const w = 1 - Math.abs(t)
-          const score = evalPos(hole, p, sf)
-          for (let k = 0; k < Math.max(1, Math.round(w * 3)); k++) outcomes.push(score)
+          for (const jit of DEPTHS) {
+            // mirror resolveShot exactly: pitch at the jittered carry, roll
+            // attenuated by the pitch surface, hazards judged per arrival
+            // point — pitch for a low ball's water/OB, rest for everything
+            const fwd = cone.carry * (1 + jit)
+            const pitch: Point = {
+              down: ball.down + fr.dir.down * fwd + fr.perp.down * lat,
+              side: ball.side + fr.dir.side * fwd + fr.perp.side * lat,
+            }
+            const pitchSf = surfaceAt(hole, pitch)
+            const rolled = rollAfterPitch(pitchSf, cone.roll)
+            const p: Point = rolled === 0 ? pitch : {
+              down: pitch.down + fr.dir.down * rolled,
+              side: pitch.side + fr.dir.side * rolled,
+            }
+            let sf = surfaceAt(hole, p)
+            if (ctx.lowFlight && (pitchSf === 'water' || pitchSf === 'ob')) sf = pitchSf
+            if (ctx.ignoreHazards && (sf === 'water' || sf === 'ob')) sf = 'rough'
+            const score = evalPos(hole, p, sf)
+            for (let k = 0; k < Math.max(1, Math.round(w * 3)); k++) outcomes.push(score)
+          }
         }
         const score = policy === 'safe' ? percentile(outcomes, 0.80)
           : policy === 'aggressive' ? percentile(outcomes, 0.25)

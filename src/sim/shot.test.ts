@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { CARD } from '../content/cards'
 import { MAX_CONE_TANGENT, whyNotPlayable, buildCone } from './effects'
-import { resolveShot } from './resolve/shot'
+import { CARRY_JITTER, resolveShot } from './resolve/shot'
 import { makeRng, next, seedBank } from './rng'
 import { greenCentre, toPin } from './geometry'
 import type { Point } from './types'
@@ -110,6 +110,62 @@ describe('the cone is the whole truth (P8)', () => {
       rng = r
       // lateral offset can never exceed the cone's half-width
       expect(Math.abs(out.landing.side)).toBeLessThanOrEqual(cone.spread + 0.001)
+    }
+  })
+})
+
+describe('depth in the picture (DEPTH-DECISION.md)', () => {
+  test('the pitch band is carry ± the exact jitter resolution rolls', () => {
+    const { cone } = buildCone(
+      { shot: CARD['bomb'] as never, techniques: [], aim: 'pin' }, 'tee', 520,
+    )
+    // derived from the SAME constant — rounded outward, never inward
+    expect(cone.pitchNear).toBe(Math.floor(cone.carry * (1 - CARRY_JITTER)))
+    expect(cone.pitchFar).toBe(Math.ceil(cone.carry * (1 + CARRY_JITTER)))
+    // the tail is the pitch band displaced by the roll
+    expect(cone.restNear).toBe(cone.pitchNear + cone.roll)
+    expect(cone.restFar).toBe(cone.pitchFar + cone.roll)
+  })
+
+  test('no roll, no tail — a wedge is the wedge with a thick far edge', () => {
+    const { cone } = buildCone(
+      { shot: CARD['fullwedge'] as never, techniques: [], aim: 'pin' }, 'fairway', 999,
+    )
+    expect(cone.roll).toBe(0)
+    expect(cone.restNear).toBe(cone.pitchNear)
+    expect(cone.restFar).toBe(cone.pitchFar)
+  })
+
+  test('Let It Chase stretches the tail; Dead Ball deletes it', () => {
+    const stinger = { shot: CARD['stinger'] as never, aim: 'pin' as const }
+    const bare = buildCone({ ...stinger, techniques: [] }, 'tee', 999).cone
+    expect(bare.restFar - bare.pitchFar).toBe(30)  // the Stinger's long skid
+    const chased = buildCone(
+      { ...stinger, techniques: [CARD['chase'] as never] }, 'tee', 999,
+    ).cone
+    expect(chased.restFar - chased.pitchFar).toBe(55)
+    const dead = buildCone({ ...stinger, techniques: [] }, 'tee', 999,
+      [{ id: 'db', name: '', icon: '', blurb: '', price: 0, killRoll: true }]).cone
+    expect(dead.roll).toBe(0)
+    expect(dead.restFar).toBe(dead.pitchFar)
+  })
+
+  test('the ball always pitches inside the band and rests inside the tail', () => {
+    for (const id of ['bomb', 'stinger', 'fullwedge']) {
+      const { cone, ctx } = buildCone(
+        { shot: CARD[id] as never, techniques: [], aim: 'pin' }, 'tee', 520,
+      )
+      let rng = makeRng(7)
+      for (let i = 0; i < 2000; i++) {
+        const [out, r] = resolveShot(hole, { down: 0, side: 0 }, cone, ctx, rng)
+        rng = r
+        // pitch depth: never outside the solid band the player was shown
+        expect(out.carried).toBeGreaterThanOrEqual(cone.pitchNear)
+        expect(out.carried).toBeLessThanOrEqual(cone.pitchFar)
+        // rest depth: never past the tail (roll only ever attenuates)
+        expect(out.carried + out.rolled).toBeGreaterThanOrEqual(cone.restNear - cone.roll)
+        expect(out.carried + out.rolled).toBeLessThanOrEqual(cone.restFar)
+      }
     }
   })
 })

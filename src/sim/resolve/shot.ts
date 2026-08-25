@@ -4,6 +4,26 @@ import { range, triangular } from '../rng'
 import { greenCentre, surfaceAt, toPin } from '../geometry'
 import type { ConeContext } from '../effects'
 
+/**
+ * Depth doubt, as a fraction of carry: resolution rolls the carried distance
+ * uniformly in carry × (1 ± CARRY_JITTER). Exported because the cone's pitch
+ * band (sim/effects.ts) and the harness policies (tools/policy.ts) must be
+ * derived from THE SAME number — the picture and the dice share one source of
+ * truth, or the preview lies (P8, DEPTH-DECISION.md).
+ */
+export const CARRY_JITTER = 0.05
+
+/**
+ * How much of a shot's run-out survives the surface it PITCHES on. Shared with
+ * the policy sampler for the same reason as CARRY_JITTER: a planner that
+ * assumes full skid through the rough is planning a different game.
+ */
+export function rollAfterPitch(pitchSurface: Surface, roll: number): number {
+  return pitchSurface === 'green' ? Math.round(roll * 0.3)
+    : pitchSurface === 'rough' || pitchSurface === 'deep' ? Math.round(roll * 0.4)
+    : roll
+}
+
 export interface ShotOutcome {
   readonly landing: Point
   /** where it first hit the ground, BEFORE any run-out */
@@ -42,7 +62,7 @@ export function resolveShot(
   rng: RngState,
 ): readonly [ShotOutcome, RngState] {
   const [tri, r1] = triangular(rng)
-  const [carryJitter, r2] = range(r1, -0.05, 0.05)
+  const [carryJitter, r2] = range(r1, -CARRY_JITTER, CARRY_JITTER)
 
   const { dir, perp } = aimFrame(hole, from)
   const carried = cone.carry * (1 + carryJitter)
@@ -56,9 +76,7 @@ export function resolveShot(
   }
   const pitchSurface = surfaceAt(hole, pitch)
 
-  const rolled = pitchSurface === 'green' ? Math.round(cone.roll * 0.3)
-    : pitchSurface === 'rough' || pitchSurface === 'deep' ? Math.round(cone.roll * 0.4)
-    : cone.roll
+  const rolled = rollAfterPitch(pitchSurface, cone.roll)
   const landing: Point = rolled === 0 ? pitch : {
     down: pitch.down + dir.down * rolled,
     side: pitch.side + dir.side * rolled,
