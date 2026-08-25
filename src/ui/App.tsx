@@ -137,8 +137,11 @@ export function App() {
 
   if (s.phase === 'schedule') {
     const ev = currentEvent(s)
-    const next = MONEY_CHECKS.find(c => c.after >= s.event)!
-    const short = next.need - grossEarnings(s)
+    // There is NO next check at events 13-14 — "they cannot end you" (intro).
+    // The old non-null assertion here black-screened the first player who
+    // ever survived to 13. Found live, the hard way, 25 Aug 2026.
+    const next = MONEY_CHECKS.find(c => c.after >= s.event)
+    const short = next ? next.need - grossEarnings(s) : 0
     return (
       <div className="shell intro">
         <div className="mini-eyebrow">
@@ -166,8 +169,11 @@ export function App() {
           ))}
         </div>
         <p className="moneynote">
-          Money List after event {next.after}: {money(next.need)}
-          {short > 0 ? ` — ${money(short)} short` : ' — clear'}
+          {next
+            ? <>Money List after event {next.after}: {money(next.need)}
+              {short > 0 ? ` — ${money(short)} short` : ' — clear'}</>
+            : <>The Money List is done with you — nothing left can end this season,
+              only decide where it lands</>}
           {' · '}you are {ordinal(moneyListRank(grossEarnings(s), Math.max(1, s.event - 1)))}
           {' of '}{TOUR_SIZE}
           {s.skipped > 0 && ` · ${s.skipped} week${s.skipped > 1 ? 's' : ''} sat out`}
@@ -284,8 +290,9 @@ export function App() {
   }
 
   if (s.phase === 'shop') {
-    const next = MONEY_CHECKS.find(c => c.after >= s.event)!
-    const short = next.need - grossEarnings(s)
+    // undefined past event 12 — see the schedule screen's note on the same line
+    const next = MONEY_CHECKS.find(c => c.after >= s.event)
+    const short = next ? next.need - grossEarnings(s) : 0
     return (
       <div className="shell intro">
         <div className="mini-eyebrow">
@@ -294,9 +301,11 @@ export function App() {
         <h1 className="small">{money(s.earnings)}</h1>
         <p className="tagline">
           The Money List counts what you win, not what you keep — spending here cannot touch it.
-          {short > 0
-            ? ` You have earned ${money(grossEarnings(s))} of the ${money(next.need)} event ${next.after} demands.`
-            : ` You are clear of event ${next.after}'s line — the rest is investment.`}
+          {!next
+            ? ' The list is closed for the year. Whatever you buy now, you keep the card either way.'
+            : short > 0
+              ? ` You have earned ${money(grossEarnings(s))} of the ${money(next.need)} event ${next.after} demands.`
+              : ` You are clear of event ${next.after}'s line — the rest is investment.`}
         </p>
         <div className="offer">
           {s.offer.map((item, i) => {
