@@ -64,6 +64,10 @@ export function seedBank(seed: number): RngBank {
     // salt 8: the pro shop (SHOP-SUPPLY.md) — the weekly tier draw, the
     // within-tier stock picks and the card shelf all live here, so a reroll
     // can never perturb what the deck deals on the next tee.
+    // Salts 10 and 11 belong to THE FULL SCORECARD (resolve/field.ts,
+    // FIELD-SPREAD.md): the field's 36-hole extension and the player's
+    // remainder — per-event one-shot derived streams, consumed at settle,
+    // never in the bank. 9 remains free.
     shop: makeRng(hash(seed, 8)),
   }
 }

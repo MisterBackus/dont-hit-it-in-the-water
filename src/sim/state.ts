@@ -152,6 +152,14 @@ export interface GameState {
    */
   readonly recentCutRels: readonly number[]
   /**
+   * Your 36-hole rel for the event that just settled — THE FULL SCORECARD
+   * (FIELD-SPREAD.md §8): the played 8 plus the salt-11 rolled remainder,
+   * written at settle beside the extended field, read by the payout
+   * screen's final board. Null until a settle, and null on a missed cut
+   * (you have no weekend, so you have no 36-hole number). v11.
+   */
+  readonly finalRel: number | null
+  /**
    * The season as it was actually played, one entry per settled event —
    * where you finished, what it paid, how many shared the cheque, and which
    * of the run's stars you beat. Written only at settle, read only by the
@@ -241,6 +249,7 @@ export function initialState(seed: number): GameState {
     cutsMissed: 0,
     spent: 0,
     recentCutRels: [],
+    finalRel: null,
     seasonRecord: [],
   }
 }

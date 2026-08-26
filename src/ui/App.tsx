@@ -22,7 +22,7 @@ import { SURFACE_LABEL, toPin } from '../sim/geometry'
 import { baseputts } from '../sim/resolve/putt'
 import { HoleView } from './HoleView'
 import { Leaderboard } from './Leaderboard'
-import { standings, starNamesFor } from '../sim/resolve/field'
+import { FULL_HOLES, standings, starNamesFor } from '../sim/resolve/field'
 import { STARS } from '../content/players'
 import { ShotButton, TechButton, DeckPanel } from './Cards'
 import { SAVE_VERSION, archiveRun, loadArchive, loadSave, persistSave } from '../platform/storage'
@@ -306,15 +306,21 @@ export function App() {
   }
 
   if (s.phase === 'payout') {
-    const total = s.scores.reduce((a, b) => a + b, 0)
-    const rel = total - parThrough(s, s.scores.length)
+    const rel = toPar(s)
     const made = s.madeCut !== false
+    // THE FULL SCORECARD (FIELD-SPREAD.md §8): settle finished the week —
+    // the field's totals are 36-hole numbers now, and finalRel is yours
+    // (played 8 plus the rolled remainder). The final board lives in that
+    // space; the tagline says so, or the totals read inflated.
+    const rel36 = s.finalRel ?? rel
+    const finalBoard = standings(s.field, rel36, FULL_HOLES, !made)
     // the event just settled is the last line of the season record — the
-    // tie count lives there. Only a tie for FIRST splits the cheque (owner
-    // ruling: split at the top only), so only a tied win gets the line.
+    // tie count lives there. Every tied group splits its cheque now (the
+    // full real-tour rule), so any tied finish gets the line.
     const rec = s.seasonRecord[s.seasonRecord.length - 1]
     const tied = made && rec && rec.event === s.event ? rec.tied : 1
     const splitWin = made && s.lastPlace === 1 && tied > 1
+    const splitPlace = made && s.lastPlace > 1 && tied > 1
     const ways = ['', '', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
     const way = ways[tied] ?? String(tied)
     return (
@@ -322,15 +328,19 @@ export function App() {
         <div className="mini-eyebrow">{currentEvent(s).name}</div>
         <h1 className={`small ${made ? 'good' : 'bad'}`}>
           {made
-            ? splitWin ? 'Tied 1st' : `${ordinal(s.lastPlace)} place`
+            ? splitWin ? 'Tied 1st'
+              : splitPlace ? `Tied ${ordinal(s.lastPlace)}`
+                : `${ordinal(s.lastPlace)} place`
             : 'Missed the cut'}
         </h1>
         <p className="tagline">
           {!made
             ? `${relStr(rel)} through ${s.scores.length}. No cheque this week.`
             : splitWin
-              ? `${total} strokes, ${relStr(rel)} — a ${way}-way tie at the top. It still counts as a win; the cheque splits ${way} ways, and ${money(s.lastPaid)} of it is yours.`
-              : `${total} strokes, ${relStr(rel)}. That is ${money(s.lastPaid)}.`}
+              ? `${relStr(rel36)} for the 36-hole week — a ${way}-way tie at the top. It still counts as a win; the cheque splits ${way} ways, and ${money(s.lastPaid)} of it is yours.`
+              : splitPlace
+                ? `${relStr(rel36)} for the 36-hole week — a ${way}-way tie. The cheque pools the ${way} places it covers and splits; ${money(s.lastPaid)} of it is yours.`
+                : `${relStr(rel36)} for the 36-hole week, ${relStr(rel)} across your ${s.scores.length} played. That is ${money(s.lastPaid)}.`}
         </p>
         <div className="evfacts">
           <div><b>{money(grossEarnings(s))}</b><span>season earnings</span></div>
@@ -339,8 +349,8 @@ export function App() {
         <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
           {s.event >= EVENT_COUNT ? 'How the year went' : made ? 'To the bag' : 'On to the next one'}
         </button>
-        <Leaderboard rows={board} window={8} thruTotal={holeCount(s)}
-          title="Final leaderboard" />
+        <Leaderboard rows={finalBoard} window={8} thruTotal={FULL_HOLES}
+          title="Final leaderboard · 36 holes" />
       </div>
     )
   }

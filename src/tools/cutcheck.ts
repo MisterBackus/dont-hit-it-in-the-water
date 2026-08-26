@@ -29,8 +29,8 @@ import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
 import {
-  makeField, advanceField, overlayStars, standings, starNamesFor, starTarget,
-  yourPlace, type StarDials,
+  FULL_HOLES, makeField, advanceField, extendField, overlayStars, standings,
+  starNamesFor, starTarget, yourPlace, type StarDials,
 } from '../sim/resolve/field'
 import {
   STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
@@ -93,6 +93,16 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: Boost[], policy: Policy) {
 const N = Number(process.env.N ?? 400)
 /** Equipment bought over a season, as a cone multiplier. 1.0 = buys nothing. */
 const KIT = Number(process.env.KIT ?? 1)
+/**
+ * THE FULL SCORECARD's knob (FIELD-SPREAD.md §9-1): extension holes beyond
+ * the real 8, default the shipped 28; EXT=0 is the pre-spread world. The
+ * cut is judged thru 4 in REAL holes, so every number this tool prints
+ * must be DIGIT-IDENTICAL at any EXT — the extension physically runs here
+ * (below, after the 8th hole, from its one-shot salt-10 stream) precisely
+ * so that a leak into the cut would show up as moved digits. That
+ * identity is prediction (b)'s receipt, re-runnable forever.
+ */
+const EXT = Number(process.env.EXT ?? FULL_HOLES - 8)
 /** THE MARQUEE RAMP (FIELD-CEILING.md §6): STARS=0 off; K/RAMP/BETA/CAP sweep. */
 const STARS_ON = process.env.STARS !== '0'
 const K = Number(process.env.K ?? STAR_COUNT)
@@ -149,6 +159,15 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
       const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
+    // THE FULL SCORECARD: the field finishes its week from the salt-10
+    // one-shot stream, exactly as settle does. The result is deliberately
+    // unread — placeAtCut was snapshotted at hole 4, in real holes — so
+    // if any digit above ever moves with EXT, the extension has leaked
+    // into the cut and that is a bug, not a tuning problem.
+    if (EXT > 0) {
+      field = extendField(field, course.holes.map(h => h.par), seed, ev.num,
+        course.fieldShift, course.holes.length + EXT)
+    }
     // feed the band's lagged window when this week would have made the cut
     if (placeAtCut <= ev.advance) {
       recent.push(rel8)
@@ -164,7 +183,8 @@ const pct = (v: number[], p: number) => [...v].sort((a, b) => a - b)[Math.floor(
 for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
   const seasons = Array.from({ length: N }, (_, i) => seasonPlaces(120_000 + i, policy))
   console.log(`\nWHERE YOU STAND AFTER FOUR HOLES · ${policy} · ${N} seasons · kit ×${KIT}` +
-    ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}`)
+    ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}` +
+    ` · EXT ${EXT}`)
   console.log('  ev   p25   median   p75      make-cut if the line is top-…')
   console.log('       ' + '-'.repeat(78))
   for (let ev = 0; ev < SEASON.length; ev++) {
@@ -190,7 +210,7 @@ const CURVES: { label: string; n: number[] }[] = [
 ]
 
 console.log('\nCANDIDATE CUT CURVES · make-cut per event · kit ×' + KIT +
-  ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp}` : 'OFF'}`)
+  ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp}` : 'OFF'} · EXT ${EXT}`)
 for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
   const seasons = Array.from({ length: N }, (_, i) => seasonPlaces(120_000 + i, policy))
   console.log(`\n  ${policy}`)

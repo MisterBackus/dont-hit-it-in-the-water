@@ -222,6 +222,141 @@ export function advanceField(
   return [out, r] as const
 }
 
+/* ------------------------------------------------------------------ *
+ * THE FULL SCORECARD (FIELD-SPREAD.md §8). Every score in this game was
+ * a sum of eight draws from a four-value integer table, so 71 players
+ * landed on about nine distinct numbers and every finish was a fight
+ * over ties. The fix is DESIGN.md §3.3's own tournament, finally
+ * simulated: the event is 36 holes, your 8 played holes are the holes
+ * that mattered, and the rest of the week is simmed at settle —
+ *   - the FIELD finishes its week from a one-shot derived stream
+ *     (salt 10), pars cycling the course's own sequence, fieldShift and
+ *     eliteEdge exactly as the week set them (advanceField itself rolls
+ *     the holes, so the arithmetic cannot drift from the played game);
+ *   - YOUR remainder rolls from its own stream (salt 11), two rolls a
+ *     hole, at a bias fitted so your EXPECTED pace equals the pace you
+ *     actually played this week — the played holes steer the mean, the
+ *     noise is the same noise the field breathes. A scaled (unrolled)
+ *     remainder is forbidden: pace would amplify ×4.5 while field luck
+ *     grew ×√4.5 and the win contest would collapse into a parade
+ *     (FIELD-SPREAD §6, the trap).
+ * DETERMINISM: both streams are pure functions of (seed, event) in the
+ * family of the schedule's salt 5 and the roster's 7 — no bank stream
+ * consumed, no draw count changed anywhere in the played game, so the
+ * cut (judged thru 4, real holes) is byte-identical by construction.
+ * Salt registry: bank 1–4 · schedule 5 · encounters 6 · stars 7 ·
+ * shop 8 · 9 free · field extension 10 · player remainder 11.
+ * ------------------------------------------------------------------ */
+
+/** the week, in the fiction and now in the arithmetic (DESIGN.md §3.3) */
+export const FULL_HOLES = 36
+/** the field's extension stream — one-shot derived, consumed at settle */
+export const FIELD_EXT_SALT = 10
+/** your remainder's stream — same family, its own salt */
+export const PLAYER_EXT_SALT = 11
+
+/** the per-(seed, event) one-shot stream for a given extension salt */
+function extSeed(seed: number, salt: number, event: number): RngState {
+  return makeRng(hash(hash(seed, salt), event))
+}
+
+/**
+ * The field finishes its week: survivors play on to hole `to`, pars
+ * cycling the course's own sequence, from the caller's stream. The rolls
+ * are advanceField's own — same thresholds, same two-per-player-per-hole
+ * diet — so a cut player stays frozen and the extension cannot mean
+ * anything different from the golf that was played.
+ */
+export function extendFieldWith(
+  field: readonly FieldPlayer[], pars: readonly number[], rng: RngState,
+  courseShift = 0, to = FULL_HOLES,
+): readonly [FieldPlayer[], RngState] {
+  const live = field.filter(p => !p.cut)
+  if (live.length === 0) return [[...field], rng] as const
+  let f: readonly FieldPlayer[] = field
+  let r = rng
+  // survivors share a thru by construction — the field advances together
+  for (let h = live[0]!.thru; h < to; h++) {
+    const [f2, r2] = advanceField(f, pars[h % pars.length]!, r, courseShift)
+    f = f2; r = r2
+  }
+  return [[...f], r] as const
+}
+
+/** The game's field extension: the salt-10 one-shot stream, at settle. */
+export function extendField(
+  field: readonly FieldPlayer[], pars: readonly number[],
+  seed: number, event: number, courseShift = 0, to = FULL_HOLES,
+): FieldPlayer[] {
+  return extendFieldWith(field, pars, extSeed(seed, FIELD_EXT_SALT, event), courseShift, to)[0]
+}
+
+/** P(roll < t) for advanceField's roll — the mean of two uniforms. */
+function rollCdf(t: number): number {
+  if (t <= 0) return 0
+  if (t >= 1) return 1
+  return t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t)
+}
+
+/** Expected strokes-vs-par of one advanceField hole at a given bias. */
+function expectedShot(bias: number): number {
+  const c1 = rollCdf(bias - 0.30)
+  const c2 = rollCdf(bias + 0.28)
+  const c3 = rollCdf(bias + 0.52)
+  return -c1 + (c3 - c2) + 2 * (1 - c3)
+}
+
+/**
+ * Your remainder, from the caller's stream: the holes from `played` to
+ * `to` (pars cycling), rolled with advanceField's exact thresholds at a
+ * bias fitted by bisection so the EXPECTED extension pace equals the
+ * pace you played (rel / played per hole). Monotone, bounded, pure
+ * arithmetic — the fit is deterministic to the bit.
+ */
+export function extendPlayerRelWith(
+  rel: number, played: number, pars: readonly number[], rng: RngState,
+  courseShift = 0, to = FULL_HOLES,
+): readonly [number, RngState] {
+  // per-hole bias adjustments — the same terms advanceField applies
+  const adjs: number[] = []
+  for (let h = played; h < to; h++) {
+    adjs.push((pars[h % pars.length]! === 5 ? 0.08 : 0) - courseShift)
+  }
+  if (adjs.length === 0) return [rel, rng] as const
+  const target = (rel / Math.max(1, played)) * adjs.length
+  // expectedShot is strictly decreasing in bias; bracket the whole range
+  let lo = -2
+  let hi = 3
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    const e = adjs.reduce((a, adj) => a + expectedShot(mid + adj), 0)
+    if (e > target) lo = mid
+    else hi = mid
+  }
+  const bias = (lo + hi) / 2
+  let r = rng
+  let total = rel
+  for (const adj of adjs) {
+    const [a, r1] = next(r)
+    const [b, r2] = next(r1)
+    r = r2
+    const roll = (a + b) / 2
+    const bb = bias + adj
+    total += roll < bb - 0.30 ? -1 : roll < bb + 0.28 ? 0 : roll < bb + 0.52 ? 1 : 2
+  }
+  return [total, r] as const
+}
+
+/** The game's player remainder: the salt-11 one-shot stream, at settle. */
+export function extendPlayerRel(
+  rel: number, played: number, pars: readonly number[],
+  seed: number, event: number, courseShift = 0, to = FULL_HOLES,
+): number {
+  return extendPlayerRelWith(
+    rel, played, pars, extSeed(seed, PLAYER_EXT_SALT, event), courseShift, to,
+  )[0]
+}
+
 export interface CutResult {
   readonly field: FieldPlayer[]
   readonly made: boolean

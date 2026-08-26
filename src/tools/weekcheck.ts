@@ -45,7 +45,7 @@
 import { COURSES } from '../content/courses'
 import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
-import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
+import { SEASON, MONEY_CHECKS, payout, tiePayout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import {
   BOOST_TIERS, EARLY_SHOP_UNTIL, PREMIUM_BOOST, SHOP_BUDGET,
@@ -58,8 +58,9 @@ import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
 import {
-  makeField, advanceField, overlayStars, rankCut, standings, starNamesFor,
-  starTarget, yourPlace, type FieldPlayer, type StarDials,
+  FULL_HOLES, makeField, advanceField, extendField, extendPlayerRel,
+  overlayStars, rankCut, standings, starNamesFor, starTarget, yourPlace,
+  type FieldPlayer, type StarDials,
 } from '../sim/resolve/field'
 import {
   STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
@@ -380,9 +381,22 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
         field = f2; ctx.bank = { ...ctx.bank, field: r2 }
       })
       const rel8 = holes.reduce((a, b) => a + b, 0) - course.par
-      recent.push(rel8)
+      recent.push(rel8)   // the band chases REAL played pace, as GameState does
       if (recent.length > 3) recent.shift()
-      const cheque = payout(ev.purse, yourPlace(standings(field, rel8, 8, false)))
+      // THE FULL SCORECARD settle (FIELD-SPREAD.md §8) at EXT>0, exactly as
+      // reducer.ts pays it; EXT=0 keeps this instrument's pre-spread lineage
+      let cheque: number
+      if (EXT > 0) {
+        const pars = course.holes.map(h => h.par)
+        const to = pars.length + EXT
+        const f = extendField(field, pars, seed, ev.num, course.fieldShift, to)
+        const rel = extendPlayerRel(rel8, pars.length, pars, seed, ev.num, course.fieldShift, to)
+        const rows = standings(f, rel, to, false)
+        const place = yourPlace(rows)
+        cheque = tiePayout(ev.purse, place, rows.filter(r => r.place === place).length)
+      } else {
+        cheque = payout(ev.purse, yourPlace(standings(field, rel8, 8, false)))
+      }
       banked += cheque
       earned += cheque
     }
@@ -399,6 +413,8 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
 const N = Number(process.env.N ?? 250)
 const POLICY = (process.env.POLICY ?? 'mixed') as Policy
 const SEED0 = Number(process.env.SEED0 ?? 800_000)
+/** THE FULL SCORECARD: extension holes beyond the real 8 (0 = pre-spread). */
+const EXT = Number(process.env.EXT ?? FULL_HOLES - 8)
 const SHOP = process.env.SHOP !== '0'
 const VICTIM = process.env.VICTIM ?? 'smooth'
 const CHECK_IDX = MONEY_CHECKS.map(c => c.after - 1)
@@ -445,7 +461,8 @@ const pp = (n: number) => (n < 0 ? '-' : '+') + Math.abs(Math.round(n * 100)) + 
 
 console.log(`\nIS A WEEK OFF EVER WORTH AN EVENT?  ${N} seasons per row · ${POLICY} play` +
   ` · ${SHOP ? 'shopper' : 'non-shopper'} · seeds ${SEED0}+` +
-  ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}`)
+  ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}` +
+  ` · EXT ${EXT}`)
 
 /* ------------------------------------------------------------------ *
  * 1 · OPPORTUNITY COST — what an average played event yields at each

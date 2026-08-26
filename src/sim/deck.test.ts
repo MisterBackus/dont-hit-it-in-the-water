@@ -14,7 +14,10 @@ import { baseputts, resolvePutting, sinkCost } from './resolve/putt'
 import { LESSON_FEE } from '../content/weeks'
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { dropPoint } from './resolve/shot'
-import { standings, rankCut, type FieldPlayer } from './resolve/field'
+import {
+  FULL_HOLES, extendField, extendPlayerRel, rankCut, standings, yourPlace,
+  type FieldPlayer,
+} from './resolve/field'
 import { MAX_FOCUS, courseOf, currentHole } from './state'
 import { toPin, greenCentre } from './geometry'
 import { buildCone, focusRegen, whyNotPlayable } from './effects'
@@ -416,44 +419,110 @@ describe('the season', () => {
     expect(tiePayout(purse, 65, 2)).toBe(Math.round(payout(purse, 65) / 2))
   })
 
-  test('settle splits only a tied WIN, and a T1 is still a win', () => {
+  test('settle settles the 36-hole week and pays the full split at every rank', () => {
+    // THE FULL SCORECARD (FIELD-SPREAD.md §8): settle finishes the field's
+    // week from the salt-10 stream and rolls your remainder from salt 11,
+    // then pays tiePayout at whatever place the 36-hole board says. The
+    // receipt is an independent recomputation from the exported extension
+    // functions — settle's place, tie count and cheque must be exactly
+    // that arithmetic, on every seed tried. (A T1 stays a win by the same
+    // wiring: standings gives a shared lead place 1, and settle passes
+    // the place through untouched.)
+    const outcomes: { place: number; tied: number }[] = []
+    for (const seed of [9, 10, 11, 12, 13, 14, 15, 16]) {
+      const teed = reduce(reduce(initialState(seed), { type: 'START' }), { type: 'NEXT' })
+      const course = courseOf(teed)
+      const pars = course.holes.map(h => h.par)
+      const rival = (name: string, total: number, star = false, cut = false): FieldPlayer =>
+        ({ name, skill: 0.5, total, thru: 8, cut, star })
+      const field = [
+        rival('Cyrus Vail', -3, true),
+        rival('Kaz Ito', 2, true, true),          // cut Friday — frozen
+        ...Array.from({ length: 12 }, (_, i) => rival(`Filler ${i}`, (i % 5) - 2)),
+      ]
+      const done = reduce({ ...teed, scores: pars, phase: 'holed' as const,
+        madeCut: true, field }, { type: 'NEXT' })
+      expect(done.phase).toBe('payout')
+
+      // the independent recomputation, straight from the salts
+      const extField = extendField(field, pars, seed, 1, course.fieldShift)
+      const rel36 = extendPlayerRel(0, pars.length, pars, seed, 1, course.fieldShift)
+      expect(done.finalRel).toBe(rel36)
+      expect(done.field.map(p => p.total)).toEqual(extField.map(p => p.total))
+      // survivors finished the week; the cut man is frozen where he fell
+      expect(done.field.filter(p => !p.cut).every(p => p.thru === FULL_HOLES)).toBe(true)
+      expect(done.field.find(p => p.name === 'Kaz Ito')).toMatchObject({ total: 2, thru: 8 })
+
+      const rows = standings(extField, rel36, FULL_HOLES, false)
+      const place = yourPlace(rows)
+      const tied = rows.filter(r => r.place === place).length
+      expect(done.lastPlace).toBe(place)
+      expect(done.lastPaid).toBe(tiePayout(9_000_000, place, tied))
+      const rec = done.seasonRecord[done.seasonRecord.length - 1]!
+      expect(rec).toMatchObject({ event: 1, madeCut: true, place, tied })
+      expect(rec.aheadOf).toContain('Kaz Ito')     // you outlasted him
+      outcomes.push({ place, tied })
+    }
+    // across the seeds the split must actually ENGAGE below first place at
+    // least once — the cheque the top-only compromise never divided. This
+    // is deterministic: fixed seeds, fixed extension streams.
+    expect(outcomes.some(o => o.tied > 1 && o.place > 1)).toBe(true)
+    // and the spread world spreads: places differ across seeds
+    expect(new Set(outcomes.map(o => o.place)).size).toBeGreaterThan(1)
+  })
+
+  test('a missed cut still watches the field finish its week', () => {
     const teed = reduce(reduce(initialState(9), { type: 'START' }), { type: 'NEXT' })
-    const pars = courseOf(teed).holes.map(h => h.par)
-    const rival = (name: string, total: number, star = false, cut = false): FieldPlayer =>
-      ({ name, skill: 0.5, total, thru: 8, cut, star })
-    const filler = Array.from({ length: 10 }, (_, i) => rival(`Filler ${i}`, 6 + (i % 3)))
-
-    // you at level par, two rivals level, a star three clear, a star cut
-    // Friday — a NON-FIRST tie, which keeps the pre-existing rule: the
-    // whole group takes the best place's full cheque (owner ruling,
-    // split at the top only)
+    const rival = (name: string, total: number, cut = false): FieldPlayer =>
+      ({ name, skill: 0.5, total, thru: 4, cut })
     const field = [
-      rival('Wes Hollis', 0), rival('Bo Pike', 0),
-      rival('Cyrus Vail', -3, true),
-      rival('Kaz Ito', 2, true, true),
-      ...filler,
+      rival('Wes Hollis', -2), rival('Bo Pike', 0),
+      rival('Dead Weight', 6, true),               // cut alongside you
     ]
-    const done = reduce({ ...teed, scores: pars, phase: 'holed' as const,
-      madeCut: true, field }, { type: 'NEXT' })
+    const done = reduce({ ...teed, scores: [5, 5, 5, 5], madeCut: false,
+      phase: 'cut' as const, field }, { type: 'NEXT' })
     expect(done.phase).toBe('payout')
-    expect(done.lastPlace).toBe(2)                            // Vail is 1st
-    expect(done.lastPaid).toBe(payout(9_000_000, 2))          // full 2nd money
-    const rec = done.seasonRecord[done.seasonRecord.length - 1]!
-    expect(rec).toMatchObject({ event: 1, madeCut: true, place: 2, tied: 3 })
-    expect(rec.behind).toEqual(['Cyrus Vail'])                // he beat you
-    expect(rec.aheadOf).toContain('Kaz Ito')                  // you outlasted him
+    expect(done.lastPaid).toBe(0)
+    expect(done.finalRel).toBe(null)               // you have no weekend
+    // the survivors played to the 36th hole; the cut are frozen thru 4
+    expect(done.field.filter(p => !p.cut).every(p => p.thru === FULL_HOLES)).toBe(true)
+    expect(done.field.find(p => p.name === 'Dead Weight')).toMatchObject({ total: 6, thru: 4 })
+  })
 
-    // the same week without Vail: a three-way T1 — lastPlace is still 1,
-    // the win still counts, and THIS is the one cheque that divides
-    const won = reduce({ ...teed, scores: pars, phase: 'holed' as const,
-      madeCut: true, field: [rival('Wes Hollis', 0), rival('Bo Pike', 0), ...filler] },
-      { type: 'NEXT' })
-    expect(won.lastPlace).toBe(1)
-    expect(won.lastPaid).toBe(tiePayout(9_000_000, 1, 3))
-    expect(won.lastPaid).not.toBe(payout(9_000_000, 1))       // it really split
-    // and a split win still out-earns everyone below it
-    expect(won.lastPaid).toBeGreaterThan(payout(9_000_000, 2))
-    expect(won.seasonRecord[won.seasonRecord.length - 1]!.place).toBe(1)
+  test('the extension cannot touch the cut, the bank, or a played digit', () => {
+    // FIELD-SPREAD.md §8 prediction (b): zero cut movement, by construction
+    // — and the construction, verified. The reducer's own rankCut fires at
+    // hole 4; settle then finishes the week from one-shot derived streams.
+    // The line, the overflow, the membership and every bank stream must
+    // read exactly what the cut phase wrote.
+    for (const seed of [31, 32, 33]) {
+      const teed = reduce(reduce(initialState(seed), { type: 'START' }), { type: 'NEXT' })
+      const pars = courseOf(teed).holes.map(h => h.par)
+      const rival = (name: string, total: number): FieldPlayer =>
+        ({ name, skill: 0.4 + (total + 3) * 0.03, total, thru: 4, cut: false })
+      // sixty players spread −3..+8 thru 4, so the rank cut really cuts
+      const field = Array.from({ length: 60 }, (_, i) => rival(`P${i}`, (i % 12) - 3))
+      const atCut = reduce({ ...teed, field, scores: pars.slice(0, 4),
+        phase: 'holed' as const }, { type: 'NEXT' })
+      expect(atCut.phase).toBe('cut')
+      const line = atCut.cutLine
+      const advanced = atCut.cutAdvanced
+      const membership = atCut.field.map(p => p.cut)
+      const bank = atCut.rng
+
+      // finish the event from the cut field and let settle roll the week
+      const done = reduce({ ...atCut, scores: pars, phase: 'holed' as const },
+        { type: 'NEXT' })
+      expect(done.phase).toBe('payout')
+      expect(done.cutLine).toBe(line)                       // the digit receipt
+      expect(done.cutAdvanced).toBe(advanced)
+      expect(done.field.map(p => p.cut)).toEqual(membership)
+      expect(done.rng).toEqual(bank)                        // no bank stream consumed
+      // the cut players are frozen at their real-hole totals
+      done.field.forEach((p, i) => {
+        if (p.cut) expect(p.total).toBe(atCut.field[i]!.total)
+      })
+    }
   })
 
   test('the cut is judged on the front four, so they must be a real test', () => {
@@ -1207,15 +1276,16 @@ describe('the encounters', () => {
     ...teed(seed), phase: 'encounter' as const, encounterOffer: id, earnings: cash,
   })
 
-  test('the save version gate turned for the junk spread floor', () => {
-    // v8: a tied WIN pays the mean of the covered places (season.ts
-    // tiePayout). v9: the season boost budget makes a seventh BUY illegal
-    // on replay, and the tiered stock draws from the new shop rng stream
-    // (SHOP-SUPPLY.md) — a v8 log's shop offers replay differently.
-    // v10: the junk spread floor (JUNK-VERDICT.md SHIPPED) — buildCone
-    // imposes a 12-yard minimum scatter on the four junk lies, so every
-    // jungle shot in a v9 log resolves from a wider cone on replay.
-    expect(SAVE_VERSION).toBe(10)
+  test('the save version gate turned for the full scorecard', () => {
+    // v9: the season boost budget makes a seventh BUY illegal on replay,
+    // and the tiered stock draws from the new shop rng stream
+    // (SHOP-SUPPLY.md). v10: the junk spread floor (JUNK-VERDICT.md) —
+    // buildCone imposes a 12-yard minimum scatter on the four junk lies.
+    // v11: THE FULL SCORECARD (FIELD-SPREAD.md SHIPPED) — settle finishes
+    // the 36-hole week (salts 10/11) and pays the full real-tour tie
+    // split at every rank, so a v10 log replays with different money
+    // from the first settle.
+    expect(SAVE_VERSION).toBe(11)
   })
 
   test('who shows up is decided by the seed, at roughly one cut in three', () => {

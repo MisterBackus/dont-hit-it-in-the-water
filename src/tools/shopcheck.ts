@@ -29,8 +29,9 @@ import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
 import {
-  makeField, advanceField, overlayStars, rankCut, standings, starNamesFor,
-  starTarget, yourPlace, type FieldPlayer, type StarDials,
+  FULL_HOLES, makeField, advanceField, extendField, extendPlayerRel,
+  overlayStars, rankCut, standings, starNamesFor, starTarget, yourPlace,
+  type FieldPlayer, type StarDials,
 } from '../sim/resolve/field'
 import {
   STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
@@ -99,6 +100,39 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: readonly Boost[], policy: Po
   return strokes
 }
 
+/**
+ * THE FULL SCORECARD (FIELD-SPREAD.md §8): EXT extension holes beyond the
+ * real 8 — default the shipped 28 (a 36-hole week), EXT=0 the pre-spread
+ * world (8-hole standings, split at the top only). settleWeek below is the
+ * reducer's settle, mirrored: salt-10 field extension, salt-11 player
+ * remainder, full tiePayout at every rank.
+ */
+const EXT = Number(process.env.EXT ?? FULL_HOLES - 8)
+
+/** The cheque and place for a made cut, exactly as reducer.ts settle pays it. */
+function settleWeek(
+  field: FieldPlayer[], rel8: number, seed: number, evNum: number,
+  purse: number, pars: readonly number[], shift: number,
+): { cheque: number; place: number; tied: number; field: FieldPlayer[]; rel: number } {
+  if (EXT > 0) {
+    const to = pars.length + EXT
+    const f = extendField(field, pars, seed, evNum, shift, to)
+    const rel = extendPlayerRel(rel8, pars.length, pars, seed, evNum, shift, to)
+    const rows = standings(f, rel, to, false)
+    const place = yourPlace(rows)
+    const tied = rows.filter(r => r.place === place).length
+    return { cheque: tiePayout(purse, place, tied), place, tied, field: f, rel }
+  }
+  // the pre-spread world: 8-hole standings, split at the top only
+  const rows = standings(field, rel8, pars.length, false)
+  const place = yourPlace(rows)
+  const tied = rows.filter(r => r.place === place).length
+  return {
+    cheque: place === 1 ? tiePayout(purse, 1, tied) : payout(purse, place),
+    place, tied, field, rel: rel8,
+  }
+}
+
 /** THE MARQUEE RAMP (FIELD-CEILING.md §6): STARS=0 off; K/RAMP/BETA/CAP sweep. */
 const STARS_ON = process.env.STARS !== '0'
 const STAR_K = Number(process.env.K ?? STAR_COUNT)
@@ -161,14 +195,11 @@ function seasonEarningsWithDeck(
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
     const rel = holes.reduce((a, b) => a + b, 0) - course.par
-    recent.push(rel)
+    recent.push(rel)   // the band chases REAL played pace, as GameState does
     if (recent.length > 3) recent.shift()
-    // split at the top only, exactly as settle pays it (reducer.ts)
-    const rows = standings(field, rel, 8, false)
-    const place = yourPlace(rows)
-    earned += place === 1
-      ? tiePayout(ev.purse, 1, rows.filter(r => r.place === 1).length)
-      : payout(ev.purse, place)
+    // the full scorecard settle, exactly as reducer.ts pays it
+    earned += settleWeek(field, rel, seed, ev.num, ev.purse,
+      course.holes.map(h => h.par), course.fieldShift).cheque
   }
   return earned
 }
@@ -178,7 +209,7 @@ const POLICY = (process.env.POLICY ?? 'mixed') as Policy
 const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length
 
 const base = mean(Array.from({ length: N }, (_, i) => seasonEarnings(600_000 + i, POLICY, [])))
-console.log(`\nWHAT EACH BOOST IS WORTH · ${N} seasons each · ${POLICY} play`)
+console.log(`\nWHAT EACH BOOST IS WORTH · ${N} seasons each · ${POLICY} play · EXT ${EXT}`)
 console.log(`  bare season earns ${money(Math.round(base))}\n`)
 console.log('  boost                              price     season +      ×price   verdict')
 console.log('  ' + '-'.repeat(78))
@@ -336,10 +367,14 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     readonly played: boolean
     /** your finishing place when you made the cut, else 0 */
     readonly place: number
-    /** your full-event rel when you made the cut, else null */
+    /** players sharing your place on the final board (1 = solo) */
+    readonly tied: number
+    /** your REAL played rel (8 holes) when you made the cut, else null */
     readonly rel8: number | null
     /** a star posted (or shared) the field's best total this week */
     readonly starWon: boolean
+    /** you won AND a star sits on your winning total (the shared-lead read) */
+    readonly starShared: boolean
   }
 
   function shoppingSeason(
@@ -459,24 +494,31 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
           field = f2; ctx.bank = { ...ctx.bank, field: r2 }
         })
         const rel8 = holes.reduce((a, b) => a + b, 0) - course.par
-        recent.push(rel8)
+        recent.push(rel8)   // the band chases REAL played pace, as GameState does
         if (recent.length > 3) recent.shift()
-        const rows = standings(field, rel8, 8, false)
-        const place = yourPlace(rows)
-        // split at the top only, exactly as settle pays it (reducer.ts)
-        const cheque = place === 1
-          ? tiePayout(ev.purse, 1, rows.filter(r => r.place === 1).length)
-          : payout(ev.purse, place)
-        banked += cheque
-        earned += cheque
+        // the full scorecard settle, exactly as reducer.ts pays it
+        const settled = settleWeek(field, rel8, seed, ev.num, ev.purse,
+          course.holes.map(h => h.par), course.fieldShift)
+        banked += settled.cheque
+        earned += settled.cheque
         if (perEvent) {
-          const live = field.filter(p => !p.cut)
+          // the star reads use the FINAL board — 36-hole totals under EXT
+          const live = settled.field.filter(p => !p.cut)
           const best = Math.min(...live.map(p => p.total))
-          const starWon = place > 1 && live.some(p => p.total === best && p.star === true)
-          perEvent.push({ played: true, place, rel8, starWon })
+          const starWon = settled.place > 1
+            && live.some(p => p.total === best && p.star === true)
+          const starShared = settled.place === 1
+            && live.some(p => p.total === settled.rel && p.star === true)
+          perEvent.push({
+            played: true, place: settled.place, tied: settled.tied, rel8,
+            starWon, starShared,
+          })
         }
       } else if (perEvent) {
-        perEvent.push({ played: false, place: 0, rel8: null, starWon: false })
+        perEvent.push({
+          played: false, place: 0, tied: 1, rel8: null,
+          starWon: false, starShared: false,
+        })
       }
       running.push(earned)
     }
@@ -498,7 +540,8 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
 
   console.log(`  THE MONEY LIST vs A PLAYER WHO SHOPS · ${R} seasons per policy` +
     `${DROPS ? '' : ' · DROPS OFF'}` +
-    ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}`)
+    ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}` +
+    ` · EXT ${EXT}`)
   console.log(FULLSHELF
     ? `  supply: FULL SHELF (legacy validation model) · budget ${BUDGET}\n`
     : `  supply: offer stream · budget ${BUDGET} · weights ${TW.rack}/${TW.special}/${TW.tour}` +
@@ -543,7 +586,17 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     const lateLost = slice(10, 14).filter(r => r.played && r.place > 1)
     const starShare = lateLost.length
       ? lateLost.filter(r => r.starWon).length / lateLost.length * 100 : NaN
+    // THE FULL SCORECARD's registered texture (FIELD-SPREAD.md §10-1):
+    // wins are solo, and a star on the winning total goes rare
+    const allWins = slice(1, 14).filter(r => r.played && r.place === 1)
+    const soloWins = allWins.filter(r => r.tied === 1)
+    const finWins = slice(14, 14).filter(r => r.played && r.place === 1)
+    const finShared = finWins.filter(r => r.starShared)
     console.log(`  WIN RATE · mixed shopper · ${R} seasons`)
+    console.log(`    wins that are SOLO, all season    ${allWins.length
+      ? (soloWins.length / allWins.length * 100).toFixed(0) : '--'}% of ${allWins.length}` +
+      `   · finale wins with a star on your total ${finWins.length
+        ? (finShared.length / finWins.length * 100).toFixed(0) : '--'}% of ${finWins.length}`)
     console.log('    win% by event: ' + SEASON.map((_, e) => {
       const r = rate(per.map(s => s[e]!).filter(Boolean))
       return r.pct.toFixed(0).padStart(3)

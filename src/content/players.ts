@@ -66,8 +66,16 @@ export const STARS: readonly Star[] = [
  */
 /** stars carried per run — sweep A (k) */
 export const STAR_COUNT = 4
-/** finale ramp-equivalent effective skill — sweep A (R) */
-export const STAR_RAMP_END = 1.4
+/**
+ * finale ramp-equivalent effective skill — sweep A (R), RE-SWEPT under
+ * THE FULL SCORECARD (FIELD-SPREAD.md §8, sweep B re-run): the 36-hole
+ * extension rewards pace, so at the old 1.4 the late-season win rate had
+ * drifted 51% → 58%. 1.55 restores it to 49% (finale 55%, hot weeks kept
+ * at 100% in every cell — β < 1 and the CAP untouched), dead inside the
+ * registered 1.55 ± 0.05. Winner tail texture in real-hole space stays
+ * honest at this setting: p10 −7, 9.3% of finales ≤ −8.
+ */
+export const STAR_RAMP_END = 1.55
 /** fraction of the player's trailing sub-par pace the band chases — sweep B (β) */
 export const STAR_BAND_BETA = 0.8
 /** skill-equivalent cap on the band above the ramp — sweep B (CAP) */

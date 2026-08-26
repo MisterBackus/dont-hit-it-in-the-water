@@ -14,9 +14,12 @@
  */
 import { COURSES, COURSE_POOL } from '../content/courses'
 import {
-  makeField, advanceField, overlayStars, starTarget, type StarDials,
+  FIELD_EXT_SALT, FULL_HOLES, PLAYER_EXT_SALT, makeField, advanceField,
+  extendFieldWith, extendPlayerRelWith, overlayStars, rankCut, starTarget,
+  type StarDials,
 } from '../sim/resolve/field'
-import { makeRng, type RngState } from '../sim/rng'
+import { SEASON, payout } from '../content/season'
+import { hash, makeRng, type RngState } from '../sim/rng'
 import {
   STARS, STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
 } from '../content/players'
@@ -66,8 +69,9 @@ const TARGET: Record<string, number> = {
 }
 
 // WINNERGAP=only skips the coupling table and its sweep — sweep A's loop
-// only needs the winner-gap section below.
-if (process.env.WINNERGAP !== 'only') {
+// only needs the winner-gap section below. TIES=only skips everything but
+// the ties probe (sweep C's loop).
+if (process.env.WINNERGAP !== 'only' && process.env.TIES !== 'only') {
 
 const base = fieldMean(parsOf('pinehollow'), 0)
 console.log(`\nFIELD COUPLING · ${N} fields per cell · floorLift ${F}`)
@@ -115,7 +119,7 @@ console.log()
  * ordinary player, band asleep) · GRID=1 prints the sweep-A K×RAMP grid ·
  * WINNERGAP=only skips the coupling sections above.
  * ------------------------------------------------------------------ */
-{
+if (process.env.TIES !== 'only') {
   const WGN = Number(process.env.WGN ?? 3000)
   const K = Number(process.env.K ?? STAR_COUNT)
   const DIALS: StarDials = {
@@ -172,6 +176,163 @@ console.log()
         const t = starTarget(14, 0, { ...DIALS, ramp })
         console.log(`  finale  F=.30   ${k} stars @${t.toFixed(2)}              ${probe(0.30, k, t)}`)
       }
+    }
+  }
+  console.log()
+}
+
+/* ------------------------------------------------------------------ *
+ * THE TIES PROBE (FIELD-SPREAD.md §3, promoted — house law: no number
+ * ships from a scratchpad). Group structure, distinct totals, the
+ * solo|win grid and the purse subsidy of THE FULL SCORECARD, at EXT
+ * extension holes beyond the real 8 (0 = the pre-spread world; the
+ * default is the shipped 28 — a 36-hole week). Methodology exactly as
+ * registered there: live makeField/overlayStars/advanceField, Pine
+ * Hollow pars, no courseShift, seed 13371337; star targets from the
+ * live starTarget; the extension rolls per trial through the SHIPPED
+ * functions (extendFieldWith / extendPlayerRelWith — the fitted-bias
+ * remainder, never a scaled one; §6's trap stays fenced).
+ *
+ * Knobs: EXT holes beyond 8 · TN fields per stage (default 2000) ·
+ * TIES=only runs just this section (sweep C's loop).
+ * ------------------------------------------------------------------ */
+{
+  const EXT = Number(process.env.EXT ?? FULL_HOLES - 8)
+  const TN = Number(process.env.TN ?? 2000)
+  const pars = parsOf('pinehollow')
+  const to = pars.length + EXT
+  const PURSE = 9_000_000
+
+  interface Stage {
+    readonly label: string
+    readonly F: number
+    readonly k: number
+    readonly target: number
+    readonly adv: number
+    /** the solo|win grid's rel-8 paces, when this stage prints one */
+    readonly paces: readonly number[]
+  }
+  const stages: Stage[] = [
+    {
+      label: 'ev1   F=0    no stars ', F: SEASON[0]!.fieldStrength, k: 0,
+      target: 0, adv: SEASON[0]!.advance, paces: [-1, -2, -3, -4],
+    },
+    {
+      label: `ev8   F=.16  stars@${starTarget(8, 0).toFixed(2)}`,
+      F: SEASON[7]!.fieldStrength, k: STAR_COUNT,
+      target: starTarget(8, 0), adv: SEASON[7]!.advance, paces: [],
+    },
+    {
+      label: `ev14  F=.30  stars@${starTarget(14, 0).toFixed(2)}`,
+      F: SEASON[13]!.fieldStrength, k: STAR_COUNT,
+      target: starTarget(14, 0), adv: SEASON[13]!.advance,
+      paces: [-4, -5, -6, -7, -8],
+    },
+  ]
+
+  console.log(`\nTHE TIES PROBE · EXT ${EXT} (${to}-hole week) · ${TN} fields per stage` +
+    ' · Pine Hollow pars · seed 13371337')
+  console.log('  stage                        winner group        distinct  med-fin      thru-4        purse')
+  console.log('                               med  mean  solo%     totals   grp  max    line   adv     subsidy')
+  console.log('  ' + '-'.repeat(100))
+
+  for (const st of stages) {
+    let rng: RngState = makeRng(13371337)
+    const names = STARS.slice(0, st.k).map(s => s.name)
+    const winGroup: number[] = []
+    let winSolo = 0
+    const distinct: number[] = []
+    const medGroup: number[] = []
+    let maxGroup = 0
+    let lineSum = 0
+    let advSum = 0
+    let liveCost = 0    // the top-only rule's total payout
+    let uniqueCost = 0  // unique places (= the full split, which conserves)
+    const wins = st.paces.map(() => 0)
+    const solos = st.paces.map(() => 0)
+
+    for (let t = 0; t < TN; t++) {
+      let [field, r] = makeField(rng, st.F)
+      rng = r
+      if (st.k > 0) field = overlayStars(field, names, st.target)
+      for (let h = 0; h < 4; h++) {
+        const [f2, r2] = advanceField(field, pars[h]!, rng, 0)
+        field = f2; rng = r2
+      }
+      // the cut, exactly as the game judges it (you parked far below it)
+      const cut = rankCut(field, 999, st.adv)
+      field = cut.field
+      lineSum += cut.line
+      advSum += cut.advanced       // your +999 never advances
+      for (let h = 4; h < pars.length; h++) {
+        const [f2, r2] = advanceField(field, pars[h]!, rng, 0)
+        field = f2; rng = r2
+      }
+      if (EXT > 0) {
+        // one-shot derived stream per trial, exactly the game's construction
+        // (salt 10) — the main stream's consumption is EXT-invariant, so the
+        // thru-4 line and overflow print IDENTICAL DIGITS in every EXT row
+        const [f2] = extendFieldWith(field, pars,
+          makeRng(hash(t + 1, FIELD_EXT_SALT)), 0, to)
+        field = f2
+      }
+      const totals = field.filter(p => !p.cut).map(p => p.total).sort((a, b) => a - b)
+      // group structure of the final board
+      const groups = new Map<number, number>()
+      for (const v of totals) groups.set(v, (groups.get(v) ?? 0) + 1)
+      const best = totals[0]!
+      const wg = groups.get(best)!
+      winGroup.push(wg)
+      if (wg === 1) winSolo++
+      distinct.push(groups.size)
+      medGroup.push(groups.get(totals[Math.floor(totals.length / 2)]!)!)
+      maxGroup = Math.max(maxGroup, ...groups.values())
+      // the purse, under the top-only rule vs unique places (the full
+      // split pays exactly the unique total, by construction of the mean)
+      let place = 1
+      for (const [, k] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+        if (place === 1) {
+          // a tied win pools the covered cheques: total cost = their sum
+          for (let i = 0; i < k; i++) liveCost += payout(PURSE, 1 + i)
+        } else {
+          // every other tied group takes the best place's FULL cheque, each
+          liveCost += k * payout(PURSE, place)
+        }
+        place += k
+      }
+      for (let n = 0; n < totals.length; n++) uniqueCost += payout(PURSE, n + 1)
+      // solo|win grid — the shipped fitted-bias remainder, rolled per
+      // trial from its own derived stream (salt 11), main stream untouched
+      st.paces.forEach((p, i) => {
+        let me = p
+        if (EXT > 0) {
+          me = extendPlayerRelWith(p, pars.length, pars,
+            makeRng(hash(t * 16 + i + 1, PLAYER_EXT_SALT)), 0, to)[0]
+        }
+        if (me <= best) {
+          wins[i]!++
+          if (me < best) solos[i]!++
+        }
+      })
+    }
+
+    const med = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)]!
+    const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length
+    console.log(
+      `  ${st.label.padEnd(26)}  ${String(med(winGroup)).padStart(3)}` +
+      ` ${mean(winGroup).toFixed(2).padStart(5)} ${(winSolo / TN * 100).toFixed(0).padStart(4)}%` +
+      `  ${med(distinct).toString().padStart(7)}   ${String(med(medGroup)).padStart(4)} ${String(maxGroup).padStart(4)}` +
+      `  ${(lineSum / TN).toFixed(2).padStart(6)} ${(advSum / TN).toFixed(1).padStart(6)}` +
+      `  ${((liveCost / uniqueCost - 1) * 100).toFixed(0).padStart(5)}%`,
+    )
+    if (st.paces.length > 0) {
+      console.log(
+        '        solo|win by rel-8: ' +
+        st.paces.map((p, i) => `${p}: ${wins[i]! > 0
+          ? (solos[i]! / wins[i]! * 100).toFixed(0) : '--'}%`).join('  ') +
+        '   (win%: ' + st.paces.map((_, i) =>
+          `${(wins[i]! / TN * 100).toFixed(0)}%`).join(' ') + ')',
+      )
     }
   }
   console.log()

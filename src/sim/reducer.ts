@@ -5,11 +5,11 @@ import {
   CUT_AFTER_HOLE, MAX_FOCUS, courseOf, currentEvent, currentHole, focusPenaltyOf,
   freshHole, holeCount, initialState, parThrough, trailingPace,
 } from './state'
-import { EVENT_COUNT, SEASON, checkAfter, payout, tiePayout } from '../content/season'
+import { EVENT_COUNT, SEASON, checkAfter, tiePayout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import {
-  advanceField, makeField, overlayStars, rankCut, standings, starNamesFor,
-  starTarget, yourPlace,
+  FULL_HOLES, advanceField, extendField, extendPlayerRel, makeField,
+  overlayStars, rankCut, standings, starNamesFor, starTarget, yourPlace,
 } from './resolve/field'
 import { BAG_CAP, CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
 import {
@@ -344,6 +344,7 @@ function startEvent(state: GameState): GameState {
   const withReset = produce(state, d => {
     d.scores = []
     d.madeCut = null
+    d.finalRel = null
     d.focus = Math.max(1,
       MAX_FOCUS + boostsOf(state).reduce((n, b) => n + (b.maxFocusBonus ?? 0), 0)
       - focusPenaltyOf(state))
@@ -728,11 +729,22 @@ function tickSponsors(d: Draft<GameState>): void {
 /** Settle the event: where you finished, and what it paid. */
 function settle(state: GameState, madeCut: boolean): GameState {
   const ev = currentEvent(state)
+  const pars = courseOf(state).holes.map(h => h.par)
+  const shift = courseOf(state).fieldShift
   return produce(state, d => {
     tickSponsors(d)
+    // THE FULL SCORECARD (FIELD-SPREAD.md §8): the field finishes its
+    // 36-hole week here, from the salt-10 one-shot stream — pars cycling
+    // the course's own sequence, fieldShift and eliteEdge as the week set
+    // them. No bank stream is consumed and no draw count changes, so the
+    // cut (already decided, thru 4, real holes) is untouched by
+    // construction. The final board, places and cheques live in 36-hole
+    // space from here on.
+    d.field = extendField(d.field, pars, state.seed, state.event, shift)
     if (!madeCut) {
       d.lastPlace = 0
       d.lastPaid = 0
+      d.finalRel = null
       // the record still gets its line: stars who played the weekend
       // finished ahead of you; a star cut alongside you is a wash
       d.seasonRecord.push({
@@ -743,18 +755,24 @@ function settle(state: GameState, madeCut: boolean): GameState {
     } else {
       const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(d, d.scores.length)
       // the trailing window the marquee band reads — last three made cuts,
-      // written here so it is only ever visible to the NEXT event's field
+      // REAL played holes (the band chases the pace you played, not the
+      // simmed weekend), written here so it is only ever visible to the
+      // NEXT event's field
       d.recentCutRels = [...d.recentCutRels, rel].slice(-3)
-      const rows = standings(d.field, rel, d.scores.length, false)
+      // your remainder: the salt-11 stream, two rolls a hole, at a bias
+      // fitted so your expected pace equals the pace you actually played
+      const rel36 = extendPlayerRel(rel, d.scores.length, pars, state.seed, state.event, shift)
+      d.finalRel = rel36
+      const rows = standings(d.field, rel36, FULL_HOLES, false)
       const place = yourPlace(rows)
-      // SPLIT AT THE TOP ONLY (season.ts tiePayout, owner ruling 26 Aug
-      // 2026): a tie for FIRST pools the covered cheques and divides them —
-      // a T1 is still a win, lastPlace is still 1, only the money splits.
-      // Every other tied rank keeps the pre-existing rule: the whole group
-      // takes the best place's full cheque. The blanket split measured
-      // 35% → 17% survival, because everything here ties (see season.ts).
+      // THE FULL REAL-TOUR SPLIT (FIELD-SPREAD.md §8-4): every tied group
+      // pools the cheques for the places it covers and divides them — the
+      // real tour's rule, at every rank. Shippable now because the spread
+      // field thinned the groups (the top-only compromise was pricing a
+      // world of twenty-deep stacks; see season.ts tiePayout). A T1 is
+      // still a win — lastPlace stays 1, only the money splits.
       const tied = rows.filter(r => r.place === place).length
-      const paid = place === 1 ? tiePayout(ev.purse, 1, tied) : payout(ev.purse, place)
+      const paid = tiePayout(ev.purse, place, tied)
       d.lastPlace = place
       d.lastPaid = paid
       d.earnings += paid
