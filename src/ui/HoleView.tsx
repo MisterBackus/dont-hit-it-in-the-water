@@ -5,9 +5,11 @@ import { corridorHalf, greenCentre } from '../sim/geometry'
 import { aimFrame } from '../sim/resolve/shot'
 import { HALF_WIDTH, RUNOUT, project, totalDepth, viewBox, windowFrom } from './scale'
 import {
-  DEEP_BAND, DEEP_BEYOND, ROUGH_BAND, TREES_BAND,
-  holeEdgeBand, holeEdgeCorridor, holeEdgeEllipse, obEdge, scatterInEllipse,
+  DEEP_BAND, DEEP_BEYOND, ROUGH_BAND, TREES_BAND, SUN,
+  cartPathD, holeEdgeBand, holeEdgeCorridor, holeEdgeEllipse, obEdge,
+  teeMarkerD, treeArt, treeline, treesInEllipse, trueEllipse, trueGreen,
 } from './holeArt'
+import './holeart.css'
 
 function corridorPath(hole: HoleSpec): string {
   const step = 20
@@ -173,20 +175,26 @@ function SafeTint({ hole, from, cone, tape }: {
   )
 }
 
-/** Shared yardage grid — identical in both looks; only the tokens change. */
+/**
+ * Shared yardage grid — identical in both looks; only the tokens change.
+ *
+ * The rules are ONE path with a subpath per gridline rather than one <line>
+ * element each. Same picture, a third of the nodes; the budget freed here is
+ * what pays for the decoration layer below.
+ */
 function YardGrid({ hole }: { hole: HoleSpec }) {
+  const marks = Array.from({ length: Math.floor(hole.length / 50) }, (_, i) => (i + 1) * 50)
+  const rules = marks
+    .map(d => `M ${-HALF_WIDTH} ${project({ down: d, side: 0 }, hole).y.toFixed(1)} H ${HALF_WIDTH}`)
+    .join(' ')
   return (
     <>
-      {Array.from({ length: Math.floor(hole.length / 50) }, (_, i) => (i + 1) * 50).map(d => {
-        const p = project({ down: d, side: 0 }, hole)
-        return (
-          <g key={d}>
-            <line x1={-HALF_WIDTH} y1={p.y} x2={HALF_WIDTH} y2={p.y}
-              stroke="var(--grid)" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity=".35" />
-            <text x={-HALF_WIDTH + 4} y={p.y - 3} className="gridlabel">{d}</text>
-          </g>
-        )
-      })}
+      <path d={rules} fill="none" stroke="var(--grid)" strokeWidth="1"
+        vectorEffect="non-scaling-stroke" opacity=".35" />
+      {marks.map(d => (
+        <text key={d} x={-HALF_WIDTH + 4} y={project({ down: d, side: 0 }, hole).y - 3}
+          className="gridlabel">{d}</text>
+      ))}
     </>
   )
 }
@@ -244,12 +252,10 @@ const TAPE_FILL: Record<string, string> = {
  *   rendered as undifferentiated rough
  */
 function TapeCourse({ hole }: { hole: HoleSpec }) {
-  const g = greenCentre(hole)
-  const gp = project(g, hole)
   const depth = totalDepth(hole)
   const teeY = project({ down: 0, side: 0 }, hole).y
   const deepY = project({ down: hole.length + DEEP_BEYOND, side: 0 }, hole).y
-  const fwEnd = hole.length + 20
+  const id = `h${hole.num}`
 
   const art = useMemo(() => ({
     fairway: holeEdgeCorridor(hole),
@@ -262,12 +268,69 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
     obLineL: obEdge(hole, -1),
     obLineR: obEdge(hole, 1),
     green: holeEdgeEllipse(hole, 50, greenCentre(hole), hole.greenRadius, hole.greenRadius),
+    // DECORATION (§2b). A whole treeline in three merged paths; see holeArt.
+    trees: treeArt(hole, treeline(hole)),
+    cart: cartPathD(hole),
+    tees: teeMarkerD(hole, 1.5),
+    // the canopies inside each trees HAZARD, keyed by hazard index. Memoised
+    // with everything else: the figure re-renders on every card the player
+    // hovers, and none of this depends on the cone.
+    wood: hole.hazards.map((h, i) => h.surface === 'trees'
+      ? treeArt(hole, treesInEllipse(hole, 220 + i, h.at, h.rDown, h.rSide))
+      : null),
   }), [hole])
 
   const obTeeHalf = corridorHalf(hole, 0) + TREES_BAND
+  const teeShoulder = corridorHalf(hole, 0) + ROUGH_BAND
+  const g = trueGreen(hole)
 
   return (
     <>
+      <defs>
+        {/* mow bands: one tiling pattern instead of a rect per stripe.
+            Cut ACROSS the hole, so they never line up with the vertical
+            lie bands and can't be mistaken for one. */}
+        <pattern id={`${id}-mow`} patternUnits="userSpaceOnUse"
+          x="0" y={teeY} width="8" height="60">
+          <rect x="0" y="0" width="8" height="30" fill="var(--ha-mow)" opacity=".2" />
+          <rect x="0" y="30" width="8" height="30" fill="var(--tube)" opacity=".07" />
+        </pattern>
+        {/* the green is cut the other way — the classic cross-mow */}
+        <pattern id={`${id}-gmow`} patternUnits="userSpaceOnUse"
+          x="0" y="0" width="9" height="8">
+          <rect x="0" y="0" width="4.5" height="8" fill="var(--ha-gmow)" opacity=".2" />
+        </pattern>
+        {/* water: depth toward the middle, and a tiling ripple */}
+        <radialGradient id={`${id}-deepwater`}>
+          <stop offset="0" stopColor="var(--ha-deepwater)" />
+          <stop offset="1" stopColor="var(--water)" />
+        </radialGradient>
+        <pattern id={`${id}-ripple`} patternUnits="userSpaceOnUse" width="11" height="8">
+          <path d="M 1 2.5 h 4 M 6.5 6 h 3" stroke="var(--ha-shallow)" strokeWidth="0.7"
+            strokeLinecap="round" opacity=".55" fill="none" />
+        </pattern>
+        <clipPath id={`${id}-fw`}><path d={art.fairway} /></clipPath>
+        <clipPath id={`${id}-gr`}>
+          <ellipse cx={g.cx} cy={g.cy} rx={g.rx} ry={g.ry} />
+        </clipPath>
+        {/*
+          THE TREELINE CLIP — belt and braces on boundary honesty. Every tree
+          was already checked against surfaceAt when it was placed; this clip
+          is the drawn trees and OB ground itself, so a canopy physically
+          cannot overhang onto ground that plays as grass.
+        */}
+        <clipPath id={`${id}-wood`}>
+          <path d={art.treesL} />
+          <path d={art.treesR} />
+          <path d={art.obL} />
+          <path d={art.obR} />
+          <rect x={-HALF_WIDTH} y={teeY} width={HALF_WIDTH - teeShoulder}
+            height={Math.max(depth - teeY, 0)} />
+          <rect x={teeShoulder} y={teeY} width={HALF_WIDTH - teeShoulder}
+            height={Math.max(depth - teeY, 0)} />
+        </clipPath>
+      </defs>
+
       {/* base ground = the rough band (everything between corridor and deep) */}
       <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={depth} fill="var(--rough)" />
 
@@ -286,21 +349,26 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
       <rect x={-HALF_WIDTH} y={teeY} width={HALF_WIDTH * 2} height={Math.max(depth - teeY, 0)}
         fill="var(--ob-field)" />
 
+      {/* THE TREELINE — the stand that frames the hole. Three paths for the
+          whole wood, clipped to the trees and OB ground it is allowed to
+          stand on, drawn UNDER everything that decides a shot. */}
+      <g className="wood" clipPath={`url(#${id}-wood)`}>
+        <path d={art.trees.shadow} fill="var(--tube)" opacity=".5" />
+        <path d={art.trees.canopy} fill="var(--ha-canopy)" />
+        <path d={art.trees.light} fill="var(--ha-lit)" opacity=".5" />
+      </g>
+
+      {/* THE CART PATH — furniture, not an obstacle. It runs inside the deep
+          band, four clear yards from either edge of it, and it is drawn
+          before the hazards so a bunker that reaches the band covers it. */}
+      <path d={art.cart} fill="none" stroke="var(--ha-path)" strokeWidth="2.6"
+        strokeLinecap="round" opacity=".5" />
+
       {/* fairway, with mowline banding clipped to its own drawn shape */}
-      <defs>
-        <clipPath id={`h${hole.num}-fw`}><path d={art.fairway} /></clipPath>
-      </defs>
       <path d={art.fairway} fill="var(--fairway)" stroke="var(--tube)" strokeWidth="1"
         vectorEffect="non-scaling-stroke" />
-      {Array.from({ length: Math.ceil(fwEnd / 60) }, (_, k) => k).map(k => {
-        const a = k * 60 + 30
-        const b = Math.min(k * 60 + 60, fwEnd)
-        if (a >= b) return null
-        const y1 = project({ down: b, side: 0 }, hole).y
-        const y2 = project({ down: a, side: 0 }, hole).y
-        return <rect key={k} x={-HALF_WIDTH} y={y1} width={HALF_WIDTH * 2} height={y2 - y1}
-          fill="var(--bent)" opacity=".13" clipPath={`url(#h${hole.num}-fw)`} />
-      })}
+      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={depth}
+        fill={`url(#${id}-mow)`} clipPath={`url(#${id}-fw)`} />
 
       {/* yardage grid — phosphor via scoped tokens */}
       <YardGrid hole={hole} />
@@ -308,26 +376,28 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
       {/* hazards: wobbled fills, textures clipped to the TRUE ellipse,
           and every shape outlined in tube ink (outline rule, sunday-tape.css) */}
       {hole.hazards.map((h, i) => {
-        const c = project(h.at, hole)
+        const t = trueEllipse(hole, h.at, h.rDown, h.rSide)
         const blob = holeEdgeEllipse(hole, 100 + i, h.at, h.rDown, h.rSide)
-        const clipId = `h${hole.num}-hz${i}`
+        const clipId = `${id}-hz${i}`
         if (h.surface === 'water') {
           return (
             <g key={i}>
               <defs>
-                <clipPath id={clipId}><ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} /></clipPath>
+                <clipPath id={clipId}>
+                  <ellipse cx={t.cx} cy={t.cy} rx={t.rx} ry={t.ry} />
+                </clipPath>
               </defs>
-              <path d={blob} fill="var(--water)" />
+              <path d={blob} fill={`url(#${id}-deepwater)`} />
               <g clipPath={`url(#${clipId})`}>
-                <path d={holeEdgeEllipse(hole, 160 + i, h.at, h.rDown * 0.62, h.rSide * 0.62)}
-                  fill="none" stroke="var(--ink)" strokeOpacity=".14" strokeWidth="1"
+                {/* the shallows: one pale line just inside the shore */}
+                <path d={holeEdgeEllipse(hole, 160 + i, h.at, h.rDown * 0.86, h.rSide * 0.86)}
+                  fill="none" stroke="var(--ha-shallow)" strokeOpacity=".38" strokeWidth="1.4"
                   vectorEffect="non-scaling-stroke" />
-                <path d={holeEdgeEllipse(hole, 190 + i, h.at, h.rDown * 0.32, h.rSide * 0.32)}
-                  fill="none" stroke="var(--ink)" strokeOpacity=".14" strokeWidth="1"
-                  vectorEffect="non-scaling-stroke" />
+                <rect x={t.cx - t.rx} y={t.cy - t.ry} width={t.rx * 2} height={t.ry * 2}
+                  fill={`url(#${id}-ripple)`} opacity=".7" />
               </g>
               {/* water costs a stroke — its true edge is drawn crisp, exactly */}
-              <ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} fill="none"
+              <ellipse cx={t.cx} cy={t.cy} rx={t.rx} ry={t.ry} fill="none"
                 stroke="var(--tube)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
             </g>
           )
@@ -336,29 +406,40 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
           return (
             <g key={i}>
               <defs>
-                <clipPath id={clipId}><ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} /></clipPath>
+                <clipPath id={clipId}>
+                  <ellipse cx={t.cx} cy={t.cy} rx={t.rx} ry={t.ry} />
+                </clipPath>
               </defs>
               <path d={blob} fill="var(--sand)" stroke="var(--tube)" strokeWidth="1"
                 vectorEffect="non-scaling-stroke" />
-              <g clipPath={`url(#${clipId})`} fill="var(--tube)" opacity=".22">
-                {scatterInEllipse(hole, 130 + i, h.at, h.rDown, h.rSide, 12, 0.4, 0.9, 0.75)
-                  .map((p, k) => <circle key={k} cx={p.x} cy={p.y} r={p.r} />)}
+              <g clipPath={`url(#${clipId})`} fill="none" stroke="var(--tube)">
+                {/* the lip, then the rake — two strokes where twelve stippled
+                    circles used to sit, and it reads as sand now. The lip
+                    scales with the bunker: a fixed 3-yard band turned a small
+                    greenside pot into a lump of rock. */}
+                <path d={holeEdgeEllipse(hole, 128 + i, h.at, h.rDown * 0.9, h.rSide * 0.9)}
+                  strokeWidth={Math.min(2.4, Math.min(h.rDown, h.rSide) * 0.28)} opacity=".18" />
+                <path d={holeEdgeEllipse(hole, 132 + i, h.at, h.rDown * 0.52, h.rSide * 0.52)}
+                  strokeWidth="1" opacity=".2" vectorEffect="non-scaling-stroke" />
               </g>
             </g>
           )
         }
         if (h.surface === 'trees') {
-          const blobs = Math.max(8, Math.round((h.rDown * h.rSide) / 40))
+          const wood = art.wood[i]!
           return (
             <g key={i}>
               <defs>
-                <clipPath id={clipId}><ellipse cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} /></clipPath>
+                <clipPath id={clipId}>
+                  <ellipse cx={t.cx} cy={t.cy} rx={t.rx} ry={t.ry} />
+                </clipPath>
               </defs>
               <path d={blob} fill="var(--band-trees)" stroke="var(--tube)" strokeWidth="1"
                 vectorEffect="non-scaling-stroke" />
-              <g clipPath={`url(#${clipId})`} fill="var(--fairway)" opacity=".28">
-                {scatterInEllipse(hole, 220 + i, h.at, h.rDown, h.rSide, blobs, 3, 6.5, 0.95)
-                  .map((p, k) => <circle key={k} cx={p.x} cy={p.y} r={p.r} />)}
+              <g clipPath={`url(#${clipId})`}>
+                <path d={wood.shadow} fill="var(--tube)" opacity=".55" />
+                <path d={wood.canopy} fill="var(--ha-canopy)" />
+                <path d={wood.light} fill="var(--ha-lit)" opacity=".5" />
               </g>
             </g>
           )
@@ -370,19 +451,26 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
       {/* green: bentgrass fill with edge character, true circle drawn crisp
           (full circle — surfaceAt tests a full circle; keep it that way) */}
       <path d={art.green} fill="var(--green)" />
-      <ellipse cx={gp.x} cy={gp.y} rx={hole.greenRadius} ry={hole.greenRadius} fill="none"
+      <rect x={g.cx - g.rx} y={g.cy - g.ry} width={g.rx * 2} height={g.ry * 2}
+        fill={`url(#${id}-gmow)`} clipPath={`url(#${id}-gr)`} />
+      <ellipse cx={g.cx} cy={g.cy} rx={g.rx} ry={g.ry} fill="none"
         stroke="var(--tube)" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
-      <circle cx={gp.x} cy={gp.y} r={hole.greenRadius * 0.55} fill="none"
+      <circle cx={g.cx} cy={g.cy} r={hole.greenRadius * 0.55} fill="none"
         stroke="var(--tube)" strokeWidth="1" opacity=".18" vectorEffect="non-scaling-stroke" />
 
       {/* OB — two strokes. Signal red is spent here and nowhere decorative. */}
-      <path d={art.obLineL} fill="none" stroke="var(--signal)" strokeWidth="1.4"
-        strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".85" />
-      <path d={art.obLineR} fill="none" stroke="var(--signal)" strokeWidth="1.4"
-        strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".85" />
+      <path d={`${art.obLineL} ${art.obLineR}`} fill="none" stroke="var(--signal)"
+        strokeWidth="1.4" strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".85" />
       <line x1={-obTeeHalf} y1={teeY} x2={obTeeHalf} y2={teeY}
         stroke="var(--signal)" strokeWidth="1.4" strokeDasharray="7 5"
         vectorEffect="non-scaling-stroke" opacity=".6" />
+
+      {/* TEE MARKERS — two blocks at the depth the ball actually starts from.
+          They decide nothing; they say "you stand here", which the picture
+          has never said out loud. Their shadows come from the same sun. */}
+      <path d={art.tees} fill="var(--tube)" opacity=".55"
+        transform={`translate(${(SUN.side * 1.9).toFixed(2)} ${(-SUN.down * 1.9).toFixed(2)})`} />
+      <path d={art.tees} fill="var(--ha-tee)" />
     </>
   )
 }
@@ -501,10 +589,19 @@ export function HoleView({
         {/* cone — identical in both looks, always above the terrain */}
         {showCone && cone && <ConeShape hole={hole} from={ball} cone={cone} />}
 
-        {/* pin */}
+        {/* pin — the stick's shadow falls the way every other shadow does,
+            the cup gives the flag somewhere to actually be, and the cloth
+            flutters on a hard cut (holeart.css; stilled under
+            prefers-reduced-motion). None of it moves the pin's POSITION,
+            which is the only thing here that means anything. */}
+        <line x1={gp.x} y1={gp.y} x2={gp.x + 15 * mk * SUN.side} y2={gp.y - 15 * mk * SUN.down}
+          stroke="var(--tube)" strokeWidth="1.6" opacity=".3"
+          vectorEffect="non-scaling-stroke" />
+        <circle cx={gp.x} cy={gp.y} r={1.6 * mk} fill="var(--tube)" opacity=".7" />
         <line x1={gp.x} y1={gp.y} x2={gp.x} y2={gp.y - 26 * mk}
           stroke="var(--ink)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
-        <polygon points={`${gp.x},${gp.y - 26 * mk} ${gp.x + 15 * mk},${gp.y - 20 * mk} ${gp.x},${gp.y - 14 * mk}`}
+        <polygon className="flag"
+          points={`${gp.x},${gp.y - 26 * mk} ${gp.x + 15 * mk},${gp.y - 20 * mk} ${gp.x},${gp.y - 14 * mk}`}
           fill="var(--pin)" />
 
         {/* ball */}

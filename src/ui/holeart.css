@@ -1,0 +1,81 @@
+/* ============================================================
+   THE DECORATION LAYER — GRAPHICS-PROPOSAL.md §2(b)
+   Imported by HoleView.tsx only. Everything here is scoped to
+   .holewrap.tape, so the classic yardage-book look stays the
+   untouched control the art toggle exists to compare against.
+
+   These are NEW token names (--ha-*), never redefinitions of
+   the shared palette in styles.css. Decoration reads --water,
+   --sand, --tube and friends; it never rewrites them.
+
+   Every colour below is chosen to sit BELOW the cone in
+   contrast. The picture reads because it is plain; the job of
+   this file is to make the margins of the frame feel like a
+   golf course without ever asking for the eye that the cone
+   needs. If the cone reads worse, this file is wrong.
+   ============================================================ */
+
+.holewrap.tape {
+  /* the wood — a shade up from --band-trees (#0C1911), a shade
+     down from --fairway (#20663A): present, never bright. It has
+     to clear the trees ground it stands on by enough to read as
+     canopies inside a trees HAZARD, where the player needs to
+     recognise the lie, and still sit under the cone in contrast. */
+  --ha-canopy:    #1A4526;
+  --ha-lit:       #2F7644;   /* the sunlit crown */
+
+  /* mown stripes. The tape greens are all close cousins, so the
+     stripe needs a real step up from Tower Green (#20663A) to
+     read at all — the old 13% of Bentgrass was invisible. Still
+     an order of magnitude under the cone's contrast. */
+  --ha-mow:       #3C8A55;   /* fairway, cut across the hole */
+  --ha-gmow:      #46A468;   /* green, cross-cut the other way */
+
+  /* the cart path — worn concrete under a tape camera, desaturated
+     so it never competes with sand for "this is a hazard" */
+  --ha-path:      #4B564B;
+
+  /* water, given depth: dark in the middle, a pale line at the shore */
+  --ha-deepwater: #0E3552;
+  --ha-shallow:   #4E93BE;
+
+  /* the tee blocks — amber, but a full step under Bunker Amber
+     (#C7A360) so two 3-yard squares can never read as sand */
+  --ha-tee:       #9A7C42;
+}
+
+/* Long shadows are cheap depth and expensive attention. Keep the wood
+   soft-edged and low-contrast: it is scenery at the edge of the frame. */
+.holewrap.tape .wood { opacity: .92 }
+
+/* ------------------------------------------------------------
+   THE FLAG — the one animation in the hole view.
+
+   ART-BRIEF.md: animation "later, and only where it earns its
+   place". A flag earns it: it is the single object on a golf
+   hole that is always moving, and it tells you the hole is
+   alive without telling you anything you have to act on.
+
+   Three rules it obeys:
+   - it never moves the pin's POSITION, only the cloth's width,
+     so nothing that decides a shot is animated;
+   - motion is a hard cut, steps() not easing (sunday-tape.css
+     non-negotiable #7 — this is 1978 videotape, not CSS);
+   - it stops dead under prefers-reduced-motion.
+   ------------------------------------------------------------ */
+.holewrap.tape .flag {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: ha-flutter 2.4s steps(1, end) infinite;
+}
+
+@keyframes ha-flutter {
+  0%   { transform: scaleX(1) }
+  25%  { transform: scaleX(.84) }
+  50%  { transform: scaleX(.96) }
+  75%  { transform: scaleX(.88) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holewrap.tape .flag { animation: none }
+}
