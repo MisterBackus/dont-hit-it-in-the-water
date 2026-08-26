@@ -510,18 +510,25 @@ function MiniMap({ hole, ball, winDepth }: { hole: HoleSpec; ball: Point; winDep
 
 const ART_KEY = 'water-art'
 
+/**
+ * Sunday Tape is the house look (owner's call, 25 Aug 2026) and since 26 Aug
+ * it is what the game opens on — the decoration layer lives here, so shipping
+ * classic-by-default meant nobody ever saw it. Classic stays one tap away and
+ * is remembered; a player who chose 'tape' under the old flag still reads as
+ * tape, so nobody's preference was rewritten by the flip.
+ */
 function readArtFlag(): boolean {
   try {
-    return window.localStorage.getItem(ART_KEY) === 'tape'
+    return window.localStorage.getItem(ART_KEY) !== 'classic'
   } catch {
-    return false
+    return true
   }
 }
 
 function writeArtFlag(on: boolean): void {
   try {
-    if (on) window.localStorage.setItem(ART_KEY, 'tape')
-    else window.localStorage.removeItem(ART_KEY)
+    if (on) window.localStorage.removeItem(ART_KEY)
+    else window.localStorage.setItem(ART_KEY, 'classic')
   } catch {
     /* storage unavailable — the toggle still works for this session */
   }
