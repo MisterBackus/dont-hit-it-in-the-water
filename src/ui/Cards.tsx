@@ -30,6 +30,19 @@ export function CardCone({ carry, spread, roll, dim }: {
   )
 }
 
+/**
+ * A SHOT CARD. The anatomy is locked (ART-BRIEF): name at the top, the cone in
+ * the middle, the yardage below it, one line of flavour under that. All four
+ * are still here in that order, and the "leaves 40" verdict line still sits
+ * between the yardage and the flavour where it was.
+ *
+ * What the design pass changed is only WEIGHT. The yardage is now the biggest
+ * thing on the face after the picture, because it is what the player is
+ * actually comparing; the blocked reason no longer shares a typeface and a
+ * grey with the flavour it replaces (a card you cannot play should not look
+ * like a card with a sad blurb); and being selected is a filled state rather
+ * than a one-pixel ring you had to hunt for among six.
+ */
 export function ShotButton({
   shot, selected, blocked, carry, spread, roll, dist, greenRadius, always, onClick,
 }: {
@@ -42,31 +55,42 @@ export function ShotButton({
   // which is how a solvable hole reads as a broken one.
   const total = carry + roll
   const gap = dist - total
+  const onGreen = Math.abs(gap) <= greenRadius
   const leave =
-    Math.abs(gap) <= greenRadius ? 'on the green'
+    onGreen ? 'on the green'
     : gap > 0 ? `leaves ${Math.round(gap)}`
     : `${Math.round(-gap)} past`
-  const onGreen = Math.abs(gap) <= greenRadius
 
   return (
     <button className={`shot ${selected ? 'sel' : ''} ${blocked ? 'off' : ''} ${always ? 'always' : ''}`}
-      onClick={onClick} disabled={!!blocked} title={blocked ?? shot.blurb}>
+      onClick={onClick} disabled={!!blocked} aria-pressed={selected}
+      title={blocked ?? shot.blurb}>
       <span className="shot-name">{shot.name}</span>
       <CardCone carry={carry} spread={spread} roll={roll} dim={!!blocked} />
-      <span className="shot-num">{carry}{roll > 2 && <i>+{roll}</i>}</span>
-      {!blocked && <span className={`shot-leave ${onGreen ? 'hot' : ''}`}>{leave}</span>}
-      <span className="shot-blurb">{blocked ?? shot.blurb}</span>
+      <span className="shot-num">{carry}{roll > 2 && <i>+{roll}</i>}<em>yds</em></span>
+      {blocked
+        ? <span className="shot-block">{blocked}</span>
+        : <>
+          <span className={`shot-leave ${onGreen ? 'hot' : ''}`}>{leave}</span>
+          <span className="shot-blurb">{shot.blurb}</span>
+        </>}
       {always && <span className="shot-tag">always</span>}
     </button>
   )
 }
 
+/**
+ * A TECHNIQUE. Same three-part read as a shot — what it is, what it does, what
+ * it costs — but the cost is focus, so the cost is drawn in focus's colour and
+ * armed is a filled state rather than an outline.
+ */
 export function TechButton({ tech, selected, disabled, onClick }: {
   tech: TechniqueCard; selected: boolean; disabled: boolean; onClick(): void
 }) {
   return (
     <button className={`tech ${selected ? 'sel' : ''} ${disabled ? 'off' : ''}`}
-      onClick={onClick} disabled={disabled}>
+      onClick={onClick} disabled={disabled} aria-pressed={selected}
+      title={tech.blurb}>
       <span className="tech-name">{tech.name}</span>
       <span className="tech-blurb">{tech.blurb}</span>
       <span className="tech-cost">{tech.focus === 0 ? 'free' : '◆'.repeat(tech.focus)}</span>
@@ -92,18 +116,30 @@ export function OfferCard({ card, onClick }: {
   )
 }
 
-/** A compact read-out of everything currently in the bag. */
+/**
+ * A compact read-out of everything currently in the bag. Shots carry their
+ * yardage and techniques their focus cost, so the bag can be read as a bag
+ * rather than as a list of names you have to remember the meaning of.
+ */
 export function DeckPanel({ ids }: { ids: readonly string[] }) {
   const counts = new Map<string, number>()
   for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
   const rows = [...counts.entries()]
   return (
     <div className="deckpanel">
-      {rows.map(([id, n]) => (
-        <span key={id} className={`chip ${CARDS[id]?.kind === 'technique' ? 'tech' : ''}`}>
-          {CARDS[id]?.name ?? id}{n > 1 && <b>×{n}</b>}
-        </span>
-      ))}
+      {rows.map(([id, n]) => {
+        const c = CARDS[id]
+        const tech = c?.kind === 'technique'
+        return (
+          <span key={id} className={`chip ${tech ? 'tech' : ''}`} title={c?.blurb}>
+            {c?.name ?? id}
+            {c && <i>{tech
+              ? (c.focus === 0 ? 'free' : '◆'.repeat(c.focus))
+              : `${c.carry}y`}</i>}
+            {n > 1 && <b>×{n}</b>}
+          </span>
+        )
+      })}
     </div>
   )
 }

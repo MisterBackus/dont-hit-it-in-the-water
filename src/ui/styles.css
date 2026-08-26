@@ -1,11 +1,66 @@
+/* ============================================================================
+   DON'T HIT IT IN THE WATER — the interface.
+   Information design pass, 26 Aug 2026.
+
+   THE SYSTEM, in one paragraph. Three typefaces doing three jobs and never
+   each other's: ARCHIVO for anything that names a thing (screen titles, card
+   names, buttons), IBM PLEX MONO for every number and every label, IBM PLEX
+   SANS for prose and prose only. Numbers are never set in Sans, and every
+   number in the game is tabular, so a column of yardages, a column of scores
+   and a column of money all line up (ART-BRIEF's requirement). Eight type
+   sizes, seven spacing steps, one radius. Colour is semantic and rationed:
+   green means under par, red means measured danger, blue means focus and
+   armed, gold means a major or a piece of equipment, and everything else is
+   ink, soft, faint and paper.
+
+   TOKEN OWNERSHIP. The terrain and surface colours below (--fairway, --rough,
+   --sand, --water, --green, --greenline, --trees, --pin, --cone, --grid) are
+   the HOLE PICTURE's, shared with it by contract; nothing in this file may
+   remove or repurpose one. The interface used to borrow them for its own
+   semantics — majors were --sand, focus was --cone, the special-order tier was
+   --water — which meant re-tuning the colour of a bunker silently re-coloured
+   half the UI. It now has its OWN semantic tokens (--accent, --gold, --silver
+   and friends), seeded from the same values so nothing changed on screen,
+   but free to move independently from here on.
+   ============================================================================ */
+
 :root{
+  /* ---- THE COURSE. Owned by the hole picture. Do not remove or repurpose. */
   --paper:#EDEFE8; --panel:#F7F8F3; --ink:#14211C; --soft:#4C5C53; --faint:#8B9992;
   --line:#C7CDC0; --fairway:#9DBE79; --rough:#5E7C4A; --trees:#3E5A33;
   --green:#BEDC96; --greenline:#6E8F4E; --sand:#DFCC98; --water:#5E97AE;
   --pin:#C4453A; --cone:#0F3D57; --grid:#2b3a30; --good:#3C7A2E; --bad:#B0402F;
   --star:#A07B2A;
-  --fd:"Archivo",system-ui,sans-serif; --fb:"IBM Plex Sans",system-ui,sans-serif;
-  --fm:"IBM Plex Mono",ui-monospace,monospace;
+
+  /* ---- THE INTERFACE. Added 26 Aug 2026; the UI's own semantics. */
+  --accent:#0F3D57;      /* focus, armed, selected, the interactive edge */
+  --gold:#A07B2A;        /* majors, equipment, tour issue, marquee names */
+  --silver:#5E97AE;      /* the middle rarity — special order */
+  --sunk:#E4E7DE;        /* a recessed well: table rows, bars, scorecard */
+  --hairline:#C7CDC0;    /* == --line, named for what it does */
+  --tint-accent:color-mix(in srgb, var(--accent) 12%, transparent);
+  --tint-good:color-mix(in srgb, var(--good) 13%, transparent);
+  --tint-bad:color-mix(in srgb, var(--bad) 11%, transparent);
+  --tint-gold:color-mix(in srgb, var(--gold) 15%, transparent);
+  --on-ink:#EDEFE8;      /* text on an ink-filled control */
+
+  /* ---- TYPE. Three faces, eight sizes, and nothing between them. */
+  --fd:"Archivo",system-ui,sans-serif;
+  --fb:"IBM Plex Sans",system-ui,sans-serif;
+  --fm:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --t-micro:10px;   /* mono caps labels — the mobile floor, never smaller */
+  --t-fine:11px;    /* chips, tags, secondary micro */
+  --t-small:12px;
+  --t-body:13px;    /* card blurbs, dense prose */
+  --t-read:15px;    /* prose you actually read */
+  --t-lede:17px;    /* taglines */
+  --n-s:15px; --n-m:20px; --n-l:28px; --n-x:36px;   /* the numeral steps */
+  --ls-caps:.13em;  /* the tracking that makes 10px mono caps a label */
+
+  /* ---- SPACE. Seven steps. If a gap isn't one of these, it's a mistake. */
+  --s1:4px; --s2:6px; --s3:10px; --s4:14px; --s5:20px; --s6:28px; --s7:40px;
+  --r:3px;          /* one radius, everywhere */
+  --r-stamp:2px;    /* except a stamped badge, which is squarer */
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
   --paper:#0E1613; --panel:#18241F; --ink:#E5EAE2; --soft:#A0B0A6; --faint:#6C7D74;
@@ -13,57 +68,553 @@
   --green:#7FA45C; --greenline:#A8C583; --sand:#A8955F; --water:#3F6E82;
   --pin:#D4574C; --cone:#9AD8F5; --grid:#C7E0D2; --good:#7BA860; --bad:#D4574C;
   --star:#C9A84C;
+
+  --accent:#9AD8F5; --gold:#C9A84C; --silver:#7FB6CC;
+  --sunk:#101A16; --hairline:#2A3A33; --on-ink:#0E1613;
 }}
+
+/* ============================================================ base */
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--paper);color:var(--ink);font-family:var(--fb);
+  font-size:var(--t-read);line-height:1.5;
+  /* EVERY number in the game lines up, including the ones inside sentences */
+  font-variant-numeric:tabular-nums;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;
-  -webkit-tap-highlight-color:transparent}
+  font-variant-numeric:tabular-nums;-webkit-tap-highlight-color:transparent}
 button:disabled{cursor:not-allowed}
-button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--soft);text-decoration-color:var(--hairline);text-underline-offset:3px}
+@media(hover:hover){a:hover{color:var(--ink)}}
 
+/* ============================================================ the shells */
 .shell{max-width:1180px;margin:0 auto;
   padding:16px max(18px,env(safe-area-inset-right))
     calc(40px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}
-.intro{max-width:620px;padding-top:9vh;text-align:left}
-.intro h1{font-family:var(--fd);font-weight:900;font-size:clamp(38px,7vw,64px);
-  line-height:.94;letter-spacing:-.03em;margin:0 0 14px;text-transform:uppercase}
+.intro{max-width:640px;padding-top:6vh;padding-top:6dvh;text-align:left}
+
+/* ============================================================ headlines
+   A screen title is a NAME, not a sentence: display face, uppercase, tight.
+   The hairline under it is what makes a screen feel like a page of a book
+   rather than a div with a big word in it. */
+.intro h1{font-family:var(--fd);font-weight:900;font-size:clamp(34px,6.4vw,58px);
+  line-height:.94;letter-spacing:-.03em;margin:0 0 var(--s3);text-transform:uppercase;
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--s3)}
+.intro h1.small{font-size:clamp(27px,4.4vw,40px)}
 .intro h1.good{color:var(--good)} .intro h1.bad{color:var(--bad)}
-.intro h1 .rel{font-family:var(--fm);font-size:.45em;color:var(--faint)}
-.tagline{color:var(--soft);font-size:18px;margin:0 0 26px}
-.rules{padding-left:20px;color:var(--soft);line-height:1.65;margin:0 0 30px;max-width:56ch}
-.rules strong{color:var(--ink)}
-.big{display:block;width:100%;background:var(--ink);color:var(--paper);border:0;
-  border-radius:3px;padding:14px;font-family:var(--fd);font-weight:700;font-size:16px;
-  letter-spacing:.02em;text-transform:uppercase;margin-top:12px}
-.big:disabled{background:var(--line);color:var(--faint)}
+.intro h1.major{color:var(--gold)}
+.eyebrow{font-family:var(--fm);font-size:var(--t-fine);letter-spacing:var(--ls-caps);
+  text-transform:uppercase;color:var(--faint);margin-bottom:var(--s3);
+  padding-bottom:var(--s2);border-bottom:1px solid var(--hairline)}
+.tagline{color:var(--soft);font-size:var(--t-lede);line-height:1.45;
+  margin:0 0 var(--s5);max-width:54ch}
+
+/* ============================================================ labels
+   Ten pixels, mono, tracked, faint. This is the ONLY label style in the game;
+   if something wants to be a heading and isn't a screen title, it is this. */
+.lbl{font-family:var(--fm);font-size:var(--t-micro);letter-spacing:var(--ls-caps);
+  text-transform:uppercase;color:var(--faint);margin:var(--s5) 0 var(--s2);
+  display:block}
+.lbl:first-child{margin-top:0}
+.lbl em{font-style:normal;text-transform:none;letter-spacing:0;
+  font-family:var(--fb);font-size:var(--t-small);color:var(--faint);opacity:.9}
+.lbl em b{font-family:var(--fm);font-weight:600;color:var(--soft)}
+
+/* prose that is quieter than the tagline but is still prose */
+.quietnote{font-size:var(--t-body);color:var(--faint);line-height:1.5;
+  margin:var(--s2) 0 0;max-width:60ch}
+.weeknote{font-size:var(--t-body);color:var(--soft);line-height:1.5;
+  margin:var(--s2) 0 0;max-width:60ch}
+.finalenote{border-left:2px solid var(--gold);padding-left:var(--s3);color:var(--ink)}
+.note{font-size:var(--t-body);color:var(--soft);font-style:italic;
+  margin-top:var(--s2);line-height:1.45}
+
+/* ============================================================ badges
+   A stamped word. Never more than two, never a sentence. */
+.badge{display:inline-block;font-family:var(--fm);font-size:9.5px;font-weight:600;
+  letter-spacing:var(--ls-caps);text-transform:uppercase;border-radius:var(--r-stamp);
+  padding:3px 6px 2px;border:1px solid currentColor;line-height:1;color:var(--faint)}
+.badge.gold{color:var(--gold);background:var(--tint-gold)}
+.badge.shot{color:var(--soft)}
+.badge.tech{color:var(--accent);background:var(--tint-accent)}
+.badge.tier-rack{color:var(--faint)}
+.badge.tier-special{color:var(--silver)}
+.badge.tier-tour{color:var(--gold);background:var(--tint-gold)}
+h1 .badge{font-size:10px;transform:translateY(-.15em)}
+
+/* ============================================================ buttons */
+.big{display:block;width:100%;background:var(--ink);color:var(--on-ink);border:0;
+  border-radius:var(--r);padding:15px;font-family:var(--fd);font-weight:700;
+  font-size:15px;letter-spacing:.06em;text-transform:uppercase;
+  margin-top:var(--s4);min-height:48px}
+.big:disabled{background:var(--sunk);color:var(--faint);box-shadow:inset 0 0 0 1px var(--hairline)}
 .big.commit{background:var(--good);color:#fff}
-.big.commit:disabled{background:var(--line);color:var(--faint)}
+.big.commit:disabled{background:var(--sunk);color:var(--faint)}
+.big.danger{background:var(--bad);color:#fff}
+.big.teeoff{margin-top:var(--s6)}
 
-.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;
-  flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:16px}
-.hz{display:flex;align-items:center;gap:12px}
-.hnum{font-family:var(--fd);font-weight:900;font-size:38px;line-height:1;color:var(--faint)}
-.hname{font-family:var(--fd);font-weight:700;font-size:19px;letter-spacing:-.01em}
-.hmeta{font-family:var(--fm);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.stats{display:flex;gap:22px}
-.stat{text-align:right}
-.stat b{display:block;font-family:var(--fm);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
-.stat span{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
-.stat.focus b{color:var(--cone);letter-spacing:1px}
-.stat.focus i{opacity:.3;font-style:normal}
+.ghost{display:block;width:100%;background:none;border:1px dashed var(--hairline);
+  border-radius:var(--r);padding:12px 14px;color:var(--soft);font-size:var(--t-body);
+  margin-top:var(--s4);min-height:44px;text-align:left}
+.ghost:disabled{opacity:.4}
+@media(hover:hover){.ghost:hover:not(:disabled){border-color:var(--soft);color:var(--ink)}}
 
-/* The board now has four children — figure, cockpit (situation + aim),
-   panel, actionbar — so the mobile frame can pin the first two and the
-   last while only the panel scrolls. On desktop: figure left, cockpit
-   over panel right, actionbar hidden; row-gap matches the panel's old
-   internal 10px so the desktop picture is unchanged. */
+/* ============================================================ facts
+   "Here are three numbers" — the row that opens half the screens. Rule-
+   separated so the numbers read as a table, and the numbers are the only
+   thing at full contrast. */
+.facts{display:flex;flex-wrap:wrap;gap:0;margin:0 0 var(--s5);
+  border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
+.fact{padding:var(--s3) var(--s5) var(--s3) 0;margin-right:var(--s5);
+  border-right:1px solid var(--hairline);flex:0 0 auto}
+.fact:last-child{border-right:0;margin-right:0;padding-right:0}
+.fact b{display:block;font-family:var(--fm);font-size:var(--n-m);font-weight:600;
+  line-height:1.15;letter-spacing:-.01em}
+.fact span{display:block;font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--faint);
+  margin-top:3px}
+.fact.tone-good b{color:var(--good)} .fact.tone-bad b{color:var(--bad)}
+.fact.tone-gold b{color:var(--gold)} .fact.tone-accent b{color:var(--accent)}
+/* five facts don't fit a row at 620px — they get a grid instead of a rag */
+.facts-wide{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr))}
+.facts-wide .fact{margin-right:0;padding-right:var(--s3)}
+.facts-wide .fact:last-child{padding-right:var(--s3)}
+
+/* ============================================================ money list
+   The one number the season is about, finally set as a number. */
+.moneylist{background:var(--panel);border:1px solid var(--hairline);
+  border-radius:var(--r);padding:var(--s4) var(--s4) var(--s3);margin:0 0 var(--s5)}
+.moneylist header{display:flex;justify-content:space-between;align-items:baseline;
+  gap:var(--s3);margin-bottom:var(--s3)}
+.ml-title{font-family:var(--fm);font-size:var(--t-micro);letter-spacing:var(--ls-caps);
+  text-transform:uppercase;color:var(--faint)}
+.ml-rank{font-family:var(--fm);font-size:var(--t-body);font-weight:600;color:var(--soft)}
+.ml-rank i{font-style:normal;font-weight:400;color:var(--faint)}
+.ml-bar{position:relative;height:8px;background:var(--sunk);border-radius:1px;
+  overflow:hidden;box-shadow:inset 0 0 0 1px var(--hairline)}
+.ml-fill{position:absolute;inset:0 auto 0 0;background:var(--bad);
+  transition:width .3s ease}
+.moneylist.is-clear .ml-fill{background:var(--good)}
+.ml-read{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 var(--s2);
+  margin-top:var(--s3)}
+.ml-read b{font-family:var(--fm);font-size:var(--n-s);font-weight:600}
+.ml-earned{color:var(--ink)}
+.ml-need{color:var(--soft)}
+.ml-of{font-family:var(--fm);font-size:var(--t-micro);letter-spacing:.08em;
+  text-transform:uppercase;color:var(--faint);margin-right:var(--s3)}
+.ml-verdict{margin-left:auto;font-family:var(--fm);font-size:var(--t-small);
+  font-weight:600}
+.ml-verdict.ok{color:var(--good)} .ml-verdict.no{color:var(--bad)}
+.ml-verdict.ml-done{font-weight:400;color:var(--soft);margin-left:0}
+
+/* ============================================================ the ladder
+   Fourteen rungs, with the three Money List bars drawn ON them — the calendar
+   and the demand were two readings of one fact and the player was holding
+   both in their head. */
+.ladderwrap{margin:0 0 var(--s4)}
+.ladder{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--s1)}
+.rungslot{display:flex;align-items:center;gap:var(--s1)}
+.rung{width:28px;height:28px;display:grid;place-items:center;
+  border:1px solid var(--hairline);border-radius:var(--r-stamp);
+  font-family:var(--fm);font-size:var(--t-fine);color:var(--faint);background:var(--paper)}
+.rung.done{background:var(--sunk);color:var(--soft)}
+.rung.now{background:var(--ink);border-color:var(--ink);color:var(--on-ink);font-weight:600}
+.rung.maj{border-color:var(--gold);color:var(--gold)}
+.rung.maj.done{background:var(--tint-gold)}
+.rung.maj.now{background:var(--gold);border-color:var(--gold);color:var(--paper)}
+/* the bar itself: a marker standing between two events */
+.checkmark{font-family:var(--fm);font-size:9px;letter-spacing:.04em;color:var(--bad);
+  border-left:2px solid var(--bad);padding-left:3px;margin:0 1px 0 2px;line-height:1.1;
+  align-self:center;white-space:nowrap}
+.checkmark.past{color:var(--faint);border-left-color:var(--hairline)}
+.big-ladder .rung{width:34px;height:34px;font-size:var(--t-small)}
+.laddercap{font-family:var(--fm);font-size:var(--t-small);color:var(--soft);
+  margin-top:var(--s2);display:flex;align-items:baseline;gap:var(--s2)}
+.laddercap b{font-weight:600;color:var(--ink)}
+.majbadge{font-size:9.5px;letter-spacing:var(--ls-caps);text-transform:uppercase;
+  color:var(--gold);border:1px solid var(--gold);border-radius:var(--r-stamp);
+  padding:1px 5px;background:var(--tint-gold)}
+
+/* ============================================================ the intro */
+.introscreen .wordmark{border-bottom:2px solid var(--ink);padding-bottom:var(--s4);
+  margin-bottom:var(--s5)}
+.introscreen h1{margin-bottom:var(--s3);display:block}
+.introscreen .tagline{margin:0;font-family:var(--fm);font-size:var(--t-body);
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--faint)}
+/* Six rules that can be SCANNED in five seconds and read in thirty (P3). */
+.rules{list-style:none;padding:0;margin:0 0 var(--s6);max-width:58ch}
+.rules li{display:grid;grid-template-columns:26px 1fr;gap:var(--s3);
+  padding:var(--s3) 0;border-top:1px solid var(--hairline)}
+.rules li:last-child{border-bottom:1px solid var(--hairline)}
+.rule-n{font-family:var(--fm);font-size:var(--t-small);color:var(--faint);
+  padding-top:2px}
+.rule-t b{display:block;font-family:var(--fd);font-weight:700;font-size:var(--t-read);
+  letter-spacing:-.01em;margin-bottom:2px}
+.rule-t>span{display:block;color:var(--soft);font-size:var(--t-body);line-height:1.5}
+.rule-t>span b{display:inline;font-family:inherit;font-weight:600;color:var(--ink);
+  font-size:inherit;margin:0}
+
+/* ============================================================ week node */
+.weeknode{margin-top:var(--s5);border-top:1px solid var(--hairline);
+  padding-top:var(--s2)}
+.weeks{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin-top:var(--s3)}
+.weekcard{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s2);
+  text-align:left;background:var(--panel);border:1px dashed var(--hairline);
+  border-radius:var(--r);padding:var(--s4)}
+@media(hover:hover){.weekcard:hover:not(:disabled){border-style:solid;border-color:var(--accent)}}
+.weekcard.off{opacity:.45}
+.week-top{display:flex;align-items:baseline;gap:var(--s2);width:100%}
+.week-icon{font-family:var(--fm);font-size:17px;color:var(--soft);line-height:1}
+.week-name{font-family:var(--fd);font-weight:700;font-size:var(--t-read);
+  letter-spacing:-.01em}
+.week-armed{margin-left:auto;font-family:var(--fm);font-size:9.5px;
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--accent)}
+.week-blurb{font-size:var(--t-body);color:var(--soft);line-height:1.4}
+.week-cost{font-size:var(--t-small);color:var(--faint);font-style:italic;line-height:1.35}
+/* Armed cards and confirms wear red ONLY when the withdrawal measures
+   dangerous (the sponsor, or any skip from mid-season on) — an early
+   practice week is a purchase, and it no longer dresses like a mistake. */
+.weekcard.picked{border-style:solid;border-color:var(--accent);
+  background:var(--tint-accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.weekcard.picked .week-icon{color:var(--accent)}
+.weekcard.picked.risk{border-color:var(--bad);background:var(--tint-bad);
+  box-shadow:inset 0 0 0 1px var(--bad)}
+.weekcard.picked.risk .week-icon,.weekcard.picked.risk .week-armed{color:var(--bad)}
+
+/* Confirming an off week — the only irreversible click on this screen. */
+.confirm{margin-top:var(--s4);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s4) var(--s4) var(--s4);background:var(--panel)}
+.confirm.is-risk{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.confirm-q{font-family:var(--fd);font-weight:700;font-size:var(--t-lede);
+  margin-bottom:var(--s2)}
+.confirm-why{font-size:var(--t-body);color:var(--soft);line-height:1.45;
+  margin-bottom:var(--s3)}
+.confirm-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);align-items:start}
+.confirm-row .ghost,.confirm-row .big{margin-top:0}
+.confirm-row .ghost{text-align:center;display:grid;place-items:center}
+
+/* ============================================================ encounters
+   Same room as the week cards, different company — but the offer and the
+   decline no longer dress identically. */
+.enc-icon{display:block;font-family:var(--fm);font-size:34px;color:var(--soft);
+  line-height:1;margin-bottom:var(--s3)}
+.enc-choices .weekcard{min-height:64px;justify-content:flex-start}
+.enc-choices .enc-take{border-style:solid;border-color:var(--accent);
+  box-shadow:inset 3px 0 0 var(--accent)}
+.enc-choices .enc-walk .week-name{color:var(--soft)}
+
+/* ============================================================ the shop */
+.wallet{display:flex;flex-direction:column;margin:0 0 var(--s4)}
+.wallet b{font-family:var(--fm);font-size:clamp(30px,5.6vw,44px);font-weight:600;
+  line-height:1;letter-spacing:-.02em}
+.wallet span{font-family:var(--fm);font-size:var(--t-micro);letter-spacing:var(--ls-caps);
+  text-transform:uppercase;color:var(--faint);margin-top:var(--s2)}
+
+/* THE SEASON ALLOWANCE — six boxes, not six glyphs in a sentence. */
+.allowance{display:flex;align-items:flex-start;gap:var(--s3);margin:0 0 var(--s5);
+  background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s3) var(--s4)}
+.allow-pips{display:flex;gap:3px;flex:none;padding-top:3px}
+.allow-pips .pip{width:11px;height:16px;border-radius:1px;background:var(--gold);
+  box-shadow:inset 0 0 0 1px var(--gold)}
+.allow-pips .pip.gone{background:transparent;box-shadow:inset 0 0 0 1px var(--hairline)}
+.allow-text{font-size:var(--t-body);color:var(--soft);line-height:1.4}
+.allow-text b{font-family:var(--fm);font-weight:600;color:var(--ink)}
+.allow-text em{font-style:normal;color:var(--faint)}
+.allowance.is-spent .allow-text b{color:var(--faint)}
+
+.offer{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
+  gap:var(--s3)}
+.offercard{display:flex;flex-direction:column;align-items:center;gap:var(--s2);
+  background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s3) var(--s3) var(--s2);text-align:center;position:relative;
+  border-top-width:3px}
+@media(hover:hover){.offercard:hover:not(:disabled){border-color:var(--accent);
+  box-shadow:inset 0 0 0 1px var(--accent)}}
+.offer-kind{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;
+  justify-content:center;min-height:20px}
+.offer-kind em{font-style:normal;font-family:var(--fm);font-size:9.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.offer-name{font-family:var(--fd);font-weight:700;font-size:var(--t-read);
+  text-transform:uppercase;letter-spacing:.01em;line-height:1.15;min-height:2.2em;
+  display:flex;align-items:center}
+.offer-num{font-family:var(--fm);font-size:var(--n-m);font-weight:600;line-height:1}
+.offer-num i{font-style:normal;font-size:var(--t-micro);color:var(--faint);
+  margin-left:3px;letter-spacing:.06em}
+.offer-focus{font-family:var(--fm);font-size:22px;color:var(--accent);
+  letter-spacing:2px;padding:12px 0}
+.offer-blurb{font-size:var(--t-small);color:var(--soft);line-height:1.35;flex:1}
+.offer-price{font-family:var(--fm);font-size:var(--t-body);font-weight:600;
+  color:var(--ink);border-top:1px solid var(--hairline);width:100%;
+  padding-top:var(--s2);margin-top:var(--s2)}
+/* money keeps its own casing — "$350k short", never "$350K SHORT" */
+.offer-why{display:block;font-style:normal;font-size:var(--t-micro);
+  letter-spacing:.04em;color:var(--bad);font-weight:400;margin-top:2px}
+/* Two different facts wearing one grey: broke, and out of allowance. Both now
+   dim the card AND say which it is (Shop.tsx prints the reason). */
+.offercard.off{opacity:.55;filter:saturate(.35)}
+.offercard.off .offer-price{color:var(--faint)}
+.boost-icon{font-size:32px;line-height:1;color:var(--gold);padding:var(--s2) 0 0}
+.offercard.is-card{border-top-color:var(--hairline)}
+/* RARITY TIERS (SHOP-SUPPLY.md): the tier colours the card's TOP edge and its
+   stamp — off the rack stays quiet, special order reads water-blue, tour issue
+   is the star gold: the truck came. */
+.offercard.tier-rack{border-top-color:var(--hairline)}
+.offercard.tier-special{border-top-color:var(--silver)}
+.offercard.tier-tour{border-top-color:var(--gold);background:var(--panel)}
+.offercard.tier-tour .boost-icon{color:var(--gold)}
+.offercard.tier-special .boost-icon{color:var(--silver)}
+.offercard.tier-rack .boost-icon{color:var(--soft)}
+
+.shoprow{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3);margin-top:var(--s4)}
+.shoprow .ghost{margin-top:0;display:flex;justify-content:space-between;
+  align-items:center;gap:var(--s3)}
+.shoprow .ghost span{display:flex;flex-direction:column}
+.shoprow .ghost em{font-style:normal;font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+.shoprow .ghost b{font-family:var(--fm);font-size:var(--t-body);color:var(--ink);
+  white-space:nowrap}
+.shoprow .ghost:disabled b{color:var(--faint)}
+
+/* ============================================================ fitting */
+.removelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:var(--s2);max-height:44vh;max-height:44dvh;overflow-y:auto;
+  padding:2px;margin-top:var(--s2)}
+.removeone{display:flex;justify-content:space-between;align-items:baseline;
+  gap:var(--s2);background:var(--panel);border:1px solid var(--hairline);
+  border-radius:var(--r);padding:11px 12px;text-align:left;min-height:44px}
+@media(hover:hover){.removeone:hover{border-color:var(--bad);color:var(--bad);
+  background:var(--tint-bad)}}
+.removeone b{font-family:var(--fd);font-weight:700;font-size:var(--t-body)}
+.removeone span{font-family:var(--fm);font-size:var(--t-fine);color:var(--faint)}
+/* touch: deletion reads as danger without a hover to reveal it */
+@media(hover:none){.removeone{box-shadow:inset 3px 0 0 var(--bad)}}
+
+/* ============================================================ the cheque */
+.cheque{display:flex;flex-direction:column;margin:0 0 var(--s4);
+  border-left:3px solid var(--good);padding-left:var(--s4)}
+.cheque b{font-family:var(--fm);font-size:clamp(28px,5.2vw,40px);font-weight:600;
+  line-height:1;letter-spacing:-.02em;color:var(--good)}
+.cheque span{font-family:var(--fm);font-size:var(--t-micro);letter-spacing:var(--ls-caps);
+  text-transform:uppercase;color:var(--faint);margin-top:var(--s2)}
+.cheque.is-nil{border-left-color:var(--hairline)}
+.cheque.is-nil b{color:var(--faint);font-size:clamp(22px,4vw,30px)}
+
+/* ============================================================ leaderboard
+   THE COLUMNS ARE LOCKED: position, name, total, thru. They are now labelled,
+   and the totals are a real right-aligned tabular column. */
+.leaderboard{background:var(--panel);border:1px solid var(--hairline);
+  border-radius:var(--r);padding:0 0 var(--s2);margin:var(--s4) 0}
+.lbtitle{display:flex;justify-content:space-between;gap:var(--s3);
+  padding:var(--s3) var(--s4) var(--s2);font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--faint)}
+.lbtitle span:first-child{color:var(--soft)}
+.lbrow,.lbhead{display:grid;grid-template-columns:36px 1fr 46px 30px;gap:var(--s2);
+  align-items:baseline;padding:4px var(--s4)}
+.lbhead{font-family:var(--fm);font-size:9.5px;letter-spacing:var(--ls-caps);
+  text-transform:uppercase;color:var(--faint);border-top:1px solid var(--hairline);
+  border-bottom:1px solid var(--hairline);padding-top:var(--s2);
+  padding-bottom:var(--s2);margin-bottom:var(--s1)}
+.lbhead .lbname{color:var(--faint)}
+.lbrow{font-size:var(--t-body)}
+.lbrow.you{background:var(--sunk);box-shadow:inset 2px 0 0 var(--ink);font-weight:600}
+.lbrow.you .lbname{color:var(--ink)}
+.lbpos{font-family:var(--fm);font-size:var(--t-fine);color:var(--faint);text-align:right}
+.lbrow.you .lbpos{color:var(--ink)}
+.lbname{color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lbstar{color:var(--gold);font-size:9px;margin-right:4px;vertical-align:1px}
+.lbtot{font-family:var(--fm);font-weight:600;text-align:right}
+.lbtot.under{color:var(--good)} .lbtot.over{color:var(--faint)}
+.lbthru{font-family:var(--fm);font-size:var(--t-fine);color:var(--faint);text-align:right}
+/* a break in the field, drawn as a break */
+.lbgap{padding:var(--s2) var(--s4)}
+.lbgap i{display:block;height:1px;background:repeating-linear-gradient(to right,
+  var(--hairline) 0 3px,transparent 3px 7px)}
+
+/* ============================================================ epilogue */
+.ceremony{font-size:var(--t-read);line-height:1.6;color:var(--ink);font-style:italic;
+  background:var(--panel);border-left:3px solid var(--gold);border-radius:var(--r);
+  padding:var(--s4) var(--s4);margin:0 0 var(--s5);max-width:58ch}
+/* THE THREE BARS, drawn as bars. */
+.checkbars{display:flex;flex-direction:column;gap:var(--s2);margin:0 0 var(--s5)}
+.checkbar{position:relative;display:flex;justify-content:space-between;
+  align-items:baseline;gap:var(--s3);font-family:var(--fm);font-size:var(--t-small);
+  background:var(--sunk);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s3) var(--s3);overflow:hidden}
+.cb-fill{position:absolute;inset:0 auto 0 0;background:var(--tint-good);
+  border-right:1px solid var(--good);pointer-events:none}
+.checkbar.is-no .cb-fill{background:var(--tint-bad);border-right-color:var(--bad)}
+.checkbar.is-na .cb-fill{background:transparent;border-right:0}
+.cb-label{position:relative;font-weight:600;color:var(--ink)}
+.cb-label i{font-style:normal;font-weight:400;color:var(--soft)}
+.cb-verdict{position:relative;text-align:right;color:var(--soft)}
+.checkbar.is-ok .cb-verdict{color:var(--good);font-weight:600}
+.checkbar.is-no .cb-verdict{color:var(--bad)}
+.checkbar.is-na .cb-verdict{color:var(--faint)}
+.checkbar.is-na .cb-label{color:var(--faint)}
+
+.starrows{display:flex;flex-direction:column;gap:var(--s2);margin:0 0 var(--s5)}
+.starrow{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);
+  background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s3) var(--s3)}
+.starrow b{font-family:var(--fd);font-weight:700;font-size:var(--t-body)}
+.starrow .lbstar{font-size:10px;margin-right:5px}
+.starrow .rec{font-family:var(--fm);font-size:var(--t-small);color:var(--faint);
+  white-space:nowrap;display:flex;align-items:baseline;gap:var(--s1)}
+.starrow .rec i{font-style:normal;font-weight:600;font-size:var(--n-s)}
+.starrow .rec em{font-style:normal;font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;margin-right:var(--s3)}
+.starrow .rec em:last-child{margin-right:0}
+.starrow .rec .w{color:var(--good)}
+.starrow .rec .l{color:var(--bad)}
+
+.boardblock{margin-top:var(--s6);border-top:1px solid var(--hairline);
+  padding-top:var(--s2)}
+.sharerow{display:grid;grid-template-columns:minmax(130px,.8fr) 1.2fr;gap:var(--s3);
+  margin-top:var(--s2)}
+@media(max-width:520px){.sharerow{grid-template-columns:1fr}}
+.namefield{font:inherit;font-size:var(--t-read);background:var(--panel);color:var(--ink);
+  border:1px solid var(--hairline);border-radius:var(--r);padding:11px 12px;min-height:44px}
+.namefield::placeholder{color:var(--faint)}
+.namefield:focus{outline:2px solid var(--accent);outline-offset:1px}
+.sharerow .ghost{margin-top:0;text-align:center;display:grid;place-items:center}
+.sharenote{margin-top:var(--s2)}
+
+/* the board affordance, one shape wherever it appears */
+.shareline{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3);
+  flex-wrap:wrap}
+.shareline .ghost{margin-top:0;flex:1;min-width:210px;text-align:center;
+  display:grid;place-items:center;font-family:var(--fm);font-size:var(--t-small);
+  letter-spacing:.03em}
+.boardlink{font-family:var(--fm);font-size:var(--t-small);color:var(--faint);
+  white-space:nowrap;display:inline-flex;align-items:center;min-height:44px;
+  padding:0 var(--s2)}
+
+/* a screen's quiet footer — reference material, never the point */
+.screenfoot{margin-top:var(--s6);border-top:1px solid var(--hairline);
+  padding-top:var(--s2)}
+
+/* ============================================================ chips */
+.deckpanel{display:flex;flex-wrap:wrap;gap:var(--s1);margin-top:var(--s2)}
+.chip{display:inline-flex;align-items:baseline;gap:5px;font-family:var(--fb);
+  font-size:var(--t-fine);background:var(--panel);border:1px solid var(--hairline);
+  border-radius:var(--r-stamp);padding:4px 7px;color:var(--soft)}
+.chip i{font-style:normal;font-family:var(--fm);font-size:var(--t-micro);
+  color:var(--faint);letter-spacing:.03em}
+.chip b{font-family:var(--fm);font-weight:600;color:var(--ink);font-size:var(--t-micro)}
+.chip.tech{border-color:var(--accent);color:var(--accent)}
+.chip.tech i{color:var(--accent)}
+.chip.boost{border-color:var(--gold);color:var(--gold)}
+.chip.empty{border-style:dashed;color:var(--faint)}
+
+/* ============================================================================
+   THE PLAYING SCREEN
+   ============================================================================ */
+.topbar{display:flex;justify-content:space-between;align-items:flex-end;
+  gap:var(--s4);flex-wrap:wrap;border-bottom:2px solid var(--ink);
+  padding-bottom:var(--s3);margin-bottom:var(--s4)}
+.hz{display:flex;align-items:center;gap:var(--s3);min-width:0}
+/* the hole number is an object, not a big grey digit floating next to a name */
+.hnum{font-family:var(--fd);font-weight:900;font-size:26px;line-height:1;
+  color:var(--on-ink);background:var(--ink);border-radius:var(--r-stamp);
+  min-width:40px;height:40px;display:grid;place-items:center;padding:0 6px;
+  font-variant-numeric:tabular-nums}
+.hid{min-width:0}
+.hname{font-family:var(--fd);font-weight:700;font-size:var(--t-lede);
+  letter-spacing:-.01em;line-height:1.1}
+.hmeta{display:flex;flex-wrap:wrap;gap:0;font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+.hmeta span{padding-right:var(--s2);margin-right:var(--s2);
+  border-right:1px solid var(--hairline)}
+.hmeta span:last-child{border-right:0;margin-right:0;padding-right:0}
+
+/* THE INSTRUMENT ROW. One of these is allowed to be loud. */
+.stats{display:flex;align-items:flex-end;gap:0}
+.stat{text-align:right;padding:0 var(--s4) 0 0;margin-right:var(--s4);
+  border-right:1px solid var(--hairline)}
+.stats>*:last-child{border-right:0;margin-right:0;padding-right:0}
+.stat b{display:block;font-family:var(--fm);font-size:var(--t-lede);font-weight:600;
+  line-height:1.1}
+.stat span{display:block;font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--faint);margin-top:2px}
+.stat.score b{font-family:var(--fd);font-weight:900;font-size:var(--n-l);
+  letter-spacing:-.02em;line-height:1}
+.stat.score.under b{color:var(--good)}
+.stat.score.over b{color:var(--soft)}
+.stat.bag b{letter-spacing:2px;color:var(--gold)}
+.deckbtn{background:none;border:0;border-right:1px solid var(--hairline);
+  padding:0 var(--s4) 0 0;text-align:right;min-height:44px;
+  display:flex;flex-direction:column;justify-content:flex-end}
+.deckbtn b i{font-style:normal;font-size:var(--t-small);color:var(--faint)}
+.deckbtn.open b{color:var(--accent)}
+@media(hover:hover){.deckbtn:hover b{color:var(--accent)}}
+
+/* THE FOCUS METER — held, staged, empty, and TAKEN by a sponsor. */
+.focusmeter b{display:block;font-family:var(--fm);font-size:var(--t-lede);
+  font-weight:600;color:var(--accent);letter-spacing:1px;white-space:nowrap;line-height:1.1}
+.focusmeter i{font-style:normal}
+.focusmeter .staged{opacity:.32}
+.focusmeter .empty{opacity:.3}
+.focusmeter .taken{color:var(--bad);opacity:.75;font-size:.85em}
+.focusmeter span{display:block;font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--faint);margin-top:2px}
+.focusmeter.is-docked span{color:var(--bad);opacity:.85;letter-spacing:.06em}
+
+/* the bag sheet */
+.deckdrawer{background:var(--panel);border:1px solid var(--hairline);
+  border-radius:var(--r);padding:var(--s3) var(--s4) var(--s4);margin-bottom:var(--s4)}
+.drawerhead{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s3)}
+.drawerhead .lbl{margin:var(--s2) 0 0}
+.drawerx{background:none;border:1px solid var(--hairline);border-radius:var(--r-stamp);
+  color:var(--faint);width:32px;height:32px;flex:none;font-size:var(--t-small);
+  display:grid;place-items:center}
+@media(hover:hover){.drawerx:hover{border-color:var(--ink);color:var(--ink)}}
+.bagcols{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);margin-top:var(--s2)}
+@media(max-width:640px){.bagcols{grid-template-columns:1fr;gap:var(--s2)}}
+.boostlist{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+@media(max-width:640px){.boostlist{grid-template-columns:1fr}}
+.boostrow{display:flex;gap:var(--s3);align-items:flex-start;background:var(--paper);
+  border:1px solid var(--hairline);border-radius:var(--r);padding:var(--s2) var(--s3)}
+.boost-ic{font-family:var(--fm);font-size:17px;color:var(--gold);line-height:1.2}
+.boostrow b{display:block;font-family:var(--fd);font-weight:700;font-size:var(--t-body);
+  line-height:1.2}
+.boostrow span:not(.boost-ic){display:block;font-size:var(--t-fine);color:var(--soft);
+  line-height:1.35;margin-top:2px}
+/* THE SPONSOR DECAL — a focus you never get back needs to say so somewhere. */
+.decalrow{display:flex;align-items:baseline;gap:var(--s3);margin-top:var(--s3);
+  border:1px solid var(--bad);border-radius:var(--r);padding:var(--s2) var(--s3);
+  background:var(--tint-bad)}
+.decalrow b{font-family:var(--fd);font-weight:700;font-size:var(--t-body);color:var(--bad)}
+.decalrow span{font-size:var(--t-small);color:var(--soft)}
+/* share the run from inside the drawer — mid-round, without backing out */
+.drawershare{margin-top:var(--s4);padding:10px;font-size:var(--t-small);
+  font-family:var(--fm);letter-spacing:.03em;color:var(--faint);text-align:center;
+  display:grid;place-items:center}
+
+/* one banner idiom for everything that happens between holes */
+.banner{font-family:var(--fm);font-size:var(--t-small);letter-spacing:.02em;
+  border:1px dashed var(--hairline);border-radius:var(--r);padding:var(--s2) var(--s3);
+  margin-bottom:var(--s3);color:var(--soft);line-height:1.4}
+.banner.shuffled{color:var(--accent);border-color:var(--accent)}
+.encounterline.good{color:var(--good);border-color:var(--good)}
+.encounterline.bad{color:var(--bad);border-color:var(--bad)}
+.encounterline.finale{color:var(--gold);border-color:var(--gold)}
+
+/* The board has four children — figure, cockpit (situation + aim), panel,
+   actionbar — so the mobile frame can pin the first two and the last while
+   only the panel scrolls. On desktop: figure left, cockpit over panel right,
+   actionbar hidden. */
 .board{display:grid;grid-template-columns:minmax(230px,0.78fr) minmax(360px,1fr);
-  column-gap:22px;row-gap:10px;align-items:start}
+  column-gap:22px;row-gap:var(--s3);align-items:start}
 .figure{position:sticky;top:12px;grid-column:1;grid-row:1/span 3}
-.cockpit{display:flex;flex-direction:column;gap:10px;grid-column:2;min-width:0}
+.cockpit{display:flex;flex-direction:column;gap:var(--s3);grid-column:2;min-width:0}
+.panel{display:flex;flex-direction:column;gap:var(--s3);grid-column:2;min-width:0}
+/* inside a gapped column a label owns no margin of its own — the gap is the
+   rhythm, and a label that adds to it drifts away from what it labels */
+.panel>.lbl,.cockpit>.lbl,.drawerhead .lbl{margin:var(--s2) 0 0}
+.deckdrawer>.lbl{margin:var(--s4) 0 0}
 .actionbar{display:none}
 .sit-strokes{display:none;font-style:normal}
 .m-note{display:none}
@@ -72,280 +623,153 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   .figure{grid-column:auto;grid-row:auto}
   .cockpit,.panel{grid-column:auto}
 }
-.holeview{width:100%;height:auto;max-height:74vh;max-height:74dvh;display:block;
-  border:1px solid var(--line);border-radius:3px;background:var(--rough)}
-.gridlabel{font-family:var(--fm);font-size:var(--gridfs,9px);fill:var(--grid);opacity:.55}
-.note{font-size:13px;color:var(--soft);font-style:italic;margin-top:8px;line-height:1.45}
 
-.panel{display:flex;flex-direction:column;gap:10px;grid-column:2;min-width:0}
-.situation{font-family:var(--fm);font-size:14px;color:var(--soft);
-  background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:10px 12px}
-.situation b{font-size:22px;color:var(--ink)}
-.shotline{font-size:14.5px;line-height:1.5;padding:10px 12px;border-radius:3px;
-  background:var(--panel);border-left:3px solid var(--cone)}
-.shotline.big-news{border-left-color:var(--good)}
-.holed{font-family:var(--fd);font-weight:700;font-size:20px;padding:4px 0}
-.momentum{font-size:13px;color:var(--good);padding:0 0 4px}
-.betline{font-family:var(--fd);font-weight:700;font-size:14px;padding:2px 0 6px}
-.betline.good{color:var(--good)} .betline.bad{color:var(--bad)} .betline.flat{color:var(--soft)}
-.encounterline{font-family:var(--fm);font-size:12.5px;letter-spacing:.02em;border:1px dashed var(--line);
-  border-radius:3px;padding:8px 12px;margin-bottom:12px;color:var(--soft)}
-.encounterline.good{color:var(--good);border-color:var(--good)}
-.encounterline.bad{color:var(--bad);border-color:var(--bad)}
-.boostlist{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-@media(max-width:640px){.boostlist{grid-template-columns:1fr}}
-.boostrow{display:flex;gap:9px;align-items:flex-start;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;padding:8px 10px}
-.boost-ic{font-family:var(--fm);font-size:17px;color:var(--cone);line-height:1.2}
-.boostrow b{display:block;font-family:var(--fd);font-weight:700;font-size:12.5px;line-height:1.2}
-.boostrow span:not(.boost-ic){font-size:11px;color:var(--soft);line-height:1.3}
-
-.lbl{font-family:var(--fm);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--faint);margin-top:6px}
-.lbl em{font-style:normal;text-transform:none;letter-spacing:0;opacity:.8}
-
-.aims{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
-.aim{background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:12px 4px;
-  font-size:13px;min-height:44px}
-.aim.sel{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-
-.techs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.tech{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;padding:8px 9px;position:relative}
-.tech.sel{border-color:var(--cone);box-shadow:inset 0 0 0 1px var(--cone);background:var(--panel)}
-.tech.off{opacity:.38}
-.tech-name{font-family:var(--fd);font-weight:700;font-size:12.5px;line-height:1.15}
-.tech-blurb{font-size:11px;color:var(--soft);line-height:1.3}
-.tech-cost{position:absolute;top:7px;right:8px;font-family:var(--fm);font-size:11px;color:var(--cone)}
-
-.clubs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.club{display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;padding:7px 5px 6px}
-.club.sel{border-color:var(--cone);box-shadow:inset 0 0 0 1px var(--cone)}
-.club.off{opacity:.32}
-.club-name{font-family:var(--fd);font-weight:700;font-size:10.5px;text-transform:uppercase;
-  letter-spacing:.02em;text-align:center;line-height:1.15}
-.cardcone{width:100%;height:60px;display:block}
-.club-num{font-family:var(--fm);font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
-.club-why{font-size:10px;color:var(--faint);text-align:center;line-height:1.1}
-
-.scorecard,.card-final{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:14px}
-.sq,.fh{background:var(--panel);border:1px solid var(--line);border-radius:2px;
-  padding:5px 2px;text-align:center}
-.sq span,.fh span{display:block;font-family:var(--fm);font-size:10px;color:var(--faint)}
-.sq b,.fh b{font-family:var(--fm);font-size:15px;font-variant-numeric:tabular-nums}
-.sq.now{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.sq.good b,.fh.good b{color:var(--good)} .sq.bad b,.fh.bad b{color:var(--bad)}
-.club-cut{font-size:10px;color:var(--faint);text-align:center;line-height:1.1;font-family:var(--fm)}
-.club.cut .club-num{color:var(--soft)}
-.putts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.putt{display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;padding:12px 8px}
-@media(hover:hover){.putt:hover{border-color:var(--cone)}}
-.putt-name{font-family:var(--fd);font-weight:700;font-size:14px;text-transform:uppercase;letter-spacing:.02em}
-.putt-make{font-family:var(--fm);font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
-.putt-sub{font-family:var(--fm);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.putt-risk{font-family:var(--fm);font-size:10.5px;color:var(--soft);margin-top:6px;
-  border-top:1px solid var(--line);padding-top:6px;width:100%;text-align:center}
-.putt-risk.hot{color:var(--bad)}
-.putt-note{font-size:12px;color:var(--faint);line-height:1.45;font-style:italic}
-.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.shot{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;
-  background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:8px 5px 7px}
-.shot.sel{border-color:var(--cone);box-shadow:inset 0 0 0 1px var(--cone)}
-.shot.off{opacity:.34}
-.shot.always{border-style:dashed}
-.shot-name{font-family:var(--fd);font-weight:700;font-size:11px;text-transform:uppercase;
-  letter-spacing:.02em;text-align:center;line-height:1.15;min-height:2.2em}
-.shot-num{font-family:var(--fm);font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
-.shot-num i{font-style:normal;font-size:10px;color:var(--faint);margin-left:1px}
-.shot-blurb{font-size:10px;color:var(--faint);text-align:center;line-height:1.2;min-height:2.4em}
-.shot-tag{position:absolute;top:5px;right:6px;font-family:var(--fm);font-size:9.5px;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.mini-eyebrow{font-family:var(--fm);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--faint);margin-bottom:10px}
-.intro h1.small{font-size:clamp(30px,5vw,46px)}
-.ghost{display:block;width:100%;background:none;border:1px dashed var(--line);
-  border-radius:3px;padding:12px;color:var(--soft);font-size:13.5px;margin-top:14px}
-@media(hover:hover){.ghost:hover{border-color:var(--soft);color:var(--ink)}}
-
-.offer{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.offercard{display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;padding:12px 10px 11px;text-align:center}
-@media(hover:hover){.offercard:hover{border-color:var(--cone);box-shadow:inset 0 0 0 1px var(--cone)}}
-.offercard.is-tech{border-left:3px solid var(--cone)}
-.offer-kind{font-family:var(--fm);font-size:10px;letter-spacing:.11em;text-transform:uppercase;
+/* THE SITUATION — one sentence, but the yardage is a yardage. */
+.situation{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 var(--s2);
+  font-family:var(--fm);font-size:var(--t-body);color:var(--soft);
+  background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s3) var(--s4)}
+.situation b{font-size:var(--n-l);font-weight:600;color:var(--ink);line-height:1;
+  letter-spacing:-.02em;margin-right:var(--s1)}
+.sit-unit{font-size:var(--t-micro);letter-spacing:var(--ls-caps);text-transform:uppercase;
   color:var(--faint)}
-.offer-name{font-family:var(--fd);font-weight:700;font-size:14px;text-transform:uppercase;
-  letter-spacing:.02em;line-height:1.15;min-height:2.2em;display:flex;align-items:center}
-.offer-num{font-family:var(--fm);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
-.offer-focus{font-family:var(--fm);font-size:22px;color:var(--cone);padding:16px 0}
-.offer-blurb{font-size:11.5px;color:var(--soft);line-height:1.35}
+.sit-lie{margin-left:auto;font-size:var(--t-small);color:var(--soft)}
+.shotline{font-size:var(--t-read);line-height:1.5;padding:var(--s3) var(--s4);
+  border-radius:var(--r);background:var(--panel);border-left:3px solid var(--accent)}
+.shotline.big-news{border-left-color:var(--good);font-weight:500}
+.betnote{margin-top:0}
+.aimlbl{margin:var(--s2) 0 0}
+.aims{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--s2)}
+.aim{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:12px 4px;font-family:var(--fm);font-size:var(--t-small);min-height:44px;
+  letter-spacing:.02em}
+.aim.sel{background:var(--ink);color:var(--on-ink);border-color:var(--ink);font-weight:600}
+@media(hover:hover){.aim:hover:not(.sel){border-color:var(--accent)}}
 
-.removelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;
-  max-height:44vh;max-height:44dvh;overflow-y:auto}
-.removeone{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
-  background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:9px 11px;text-align:left}
-@media(hover:hover){.removeone:hover{border-color:var(--bad);color:var(--bad)}}
-.removeone b{font-family:var(--fd);font-weight:700;font-size:12.5px}
-.removeone span{font-family:var(--fm);font-size:10px;color:var(--faint)}
+/* THE HAND. Armed is a FILLED state — six one-pixel rings were six needles in
+   a haystack. Card anatomy is untouched: name, cone, yardage, flavour. */
+.techs{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.tech{display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--panel);
+  border:1px solid var(--hairline);border-radius:var(--r);padding:var(--s2) var(--s3);
+  position:relative;min-height:44px}
+.tech.sel{border-color:var(--accent);background:var(--tint-accent);
+  box-shadow:inset 0 0 0 1px var(--accent)}
+.tech.off{opacity:.4}
+.tech-name{font-family:var(--fd);font-weight:700;font-size:var(--t-body);line-height:1.15;
+  padding-right:42px}
+.tech-blurb{font-size:var(--t-fine);color:var(--soft);line-height:1.35}
+.tech-cost{position:absolute;top:8px;right:9px;font-family:var(--fm);
+  font-size:var(--t-fine);color:var(--accent);letter-spacing:1px}
+.tech.sel .tech-cost{font-weight:600}
 
-.deckbtn{background:none;border:0;padding:0 2px;text-align:right;min-height:44px}
-.deckbtn b i{font-style:normal;font-size:12px;color:var(--faint)}
-.deckdrawer{background:var(--panel);border:1px solid var(--line);border-radius:3px;
-  padding:12px 14px;margin-bottom:14px}
-/* share the run from inside the drawer — mid-round, without backing out */
-.drawershare{margin-top:12px;padding:9px;font-size:12px;font-family:var(--fm);
-  letter-spacing:.03em;color:var(--faint)}
-.deckpanel{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
-.chip{font-family:var(--fm);font-size:11px;background:var(--paper);border:1px solid var(--line);
-  border-radius:2px;padding:3px 7px;color:var(--soft)}
-.chip.tech{border-color:var(--cone);color:var(--cone)}
-.chip b{font-weight:600;margin-left:3px;color:var(--ink)}
-.shuffled{font-family:var(--fm);font-size:11.5px;letter-spacing:.05em;color:var(--cone);
-  border:1px dashed var(--cone);border-radius:3px;padding:8px 12px;margin-bottom:12px}
-.shot-leave{font-family:var(--fm);font-size:11px;letter-spacing:.04em;color:var(--faint);
-  border-top:1px solid var(--line);width:100%;text-align:center;padding-top:4px;margin-top:2px}
-.shot-leave.hot{color:var(--good);font-weight:600}
-.offercard.is-boost{border-left:3px solid var(--sand)}
-@media(hover:hover){.offercard.is-boost:hover{border-color:var(--sand);box-shadow:inset 0 0 0 1px var(--sand)}}
-.boost-icon{font-size:32px;line-height:1;color:var(--sand);padding:6px 0 2px}
-/* RARITY TIERS (SHOP-SUPPLY.md): the label wears the tier's colour and the
-   card's left edge follows — off the rack stays quiet, special order reads
-   water-blue, tour issue is the star gold: the truck came. */
-.offercard.is-boost.tier-rack{border-left-color:var(--line)}
-.offercard.is-boost.tier-special{border-left-color:var(--water)}
-.offercard.is-boost.tier-tour{border-left-color:var(--star)}
-.offer-tier.tier-rack{color:var(--faint)}
-.offer-tier.tier-special{color:var(--water)}
-.offer-tier.tier-tour{color:var(--star);font-weight:600}
-/* THE SEASON ALLOWANCE — budget pips on the shop header */
-.pips{font-family:var(--fm);font-size:11.5px;letter-spacing:.05em;color:var(--soft);
-  margin:0 0 14px}
-.pips .pip-marks{letter-spacing:2px;color:var(--sand);font-weight:400}
-.stat.bag b{letter-spacing:2px;color:var(--sand)}
-.chip.boost{border-color:var(--sand);color:var(--sand)}
-.redraw{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
-  background:none;border:1px dashed var(--line);border-radius:3px;padding:12px 13px;
-  color:var(--soft);font-size:13px;margin-top:8px;min-height:44px}
-@media(hover:hover){.redraw:hover:not(:disabled){border-color:var(--cone);color:var(--ink)}}
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2)}
+.shot{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s2) 5px 7px}
+.shot.sel{border-color:var(--accent);background:var(--tint-accent);
+  box-shadow:inset 0 0 0 1px var(--accent)}
+.shot.off{opacity:.5;filter:saturate(.2)}
+.shot.always{border-style:dashed}
+@media(hover:hover){.shot:hover:not(:disabled):not(.sel){border-color:var(--accent)}}
+.shot-name{font-family:var(--fd);font-weight:700;font-size:var(--t-fine);
+  text-transform:uppercase;letter-spacing:.02em;text-align:center;line-height:1.15;
+  min-height:2.2em;display:flex;align-items:center}
+.cardcone{width:100%;height:60px;display:block}
+.shot-num{font-family:var(--fm);font-size:var(--n-s);font-weight:600;line-height:1.1}
+.shot-num i{font-style:normal;font-size:var(--t-fine);color:var(--faint);margin-left:1px}
+.shot-num em{font-style:normal;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--faint);margin-left:3px}
+/* the line to par — load-bearing (MOBILE-PROPOSAL §1.5), so it is never
+   smaller than 11px and it goes green the moment the shot reaches the green */
+.shot-leave{font-family:var(--fm);font-size:var(--t-fine);letter-spacing:.03em;
+  color:var(--soft);border-top:1px solid var(--hairline);width:100%;text-align:center;
+  padding-top:4px;margin-top:3px}
+.shot-leave.hot{color:var(--good);font-weight:600;border-top-color:var(--good)}
+.shot-blurb{font-size:var(--t-micro);color:var(--faint);text-align:center;
+  line-height:1.25;min-height:2.4em}
+/* a card you cannot play should not look like a card with a sad blurb */
+.shot-block{font-family:var(--fm);font-size:var(--t-micro);letter-spacing:.04em;
+  text-transform:uppercase;color:var(--bad);text-align:center;line-height:1.3;
+  border-top:1px solid var(--hairline);width:100%;padding-top:4px;margin-top:3px;
+  min-height:3.2em;display:flex;align-items:center;justify-content:center}
+.shot-tag{position:absolute;top:5px;right:6px;font-family:var(--fm);font-size:9px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+
+.redraw{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);
+  width:100%;background:none;border:1px dashed var(--hairline);border-radius:var(--r);
+  padding:11px 13px;color:var(--soft);font-size:var(--t-body);margin-top:var(--s2);
+  min-height:44px;text-align:left}
+.redraw span{display:flex;flex-direction:column}
+.redraw em{font-style:normal;font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+@media(hover:hover){.redraw:hover:not(:disabled){border-color:var(--accent);color:var(--ink)}}
 .redraw:disabled{opacity:.4}
-.redraw b{font-family:var(--fm);color:var(--cone);letter-spacing:1px}
-.intro h1.major{color:var(--sand)}
-.evfacts{display:flex;gap:26px;margin:0 0 20px}
-.evfacts b{display:block;font-family:var(--fm);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
-.evfacts span{font-family:var(--fm);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
-.ladder{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 14px}
-.rung{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);
-  border-radius:2px;font-family:var(--fm);font-size:11px;color:var(--faint)}
-.rung.done{background:var(--panel);color:var(--soft)}
-.rung.now{border-color:var(--ink);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1px var(--ink)}
-.rung.maj{border-color:var(--sand);color:var(--sand)}
-.rung.maj.now{box-shadow:inset 0 0 0 1px var(--sand)}
-.big-ladder .rung{width:32px;height:32px;font-size:12px}
-.moneynote{font-family:var(--fm);font-size:12px;color:var(--soft);margin:0 0 6px}
-.leaderboard{background:var(--panel);border:1px solid var(--line);border-radius:3px;
-  padding:8px 0 6px;margin:10px 0}
-.lbhead{display:flex;justify-content:space-between;padding:0 12px 7px;
-  font-family:var(--fm);font-size:10px;letter-spacing:.13em;text-transform:uppercase;
-  color:var(--faint);border-bottom:1px solid var(--line);margin-bottom:4px}
-.lbrow{display:grid;grid-template-columns:34px 1fr 42px 26px;gap:6px;align-items:baseline;
-  padding:3px 12px;font-size:13px}
-.lbrow.you{background:var(--paper);font-weight:600}
-.lbrow.you .lbname{color:var(--ink)}
-.lbpos{font-family:var(--fm);font-size:11px;color:var(--faint);text-align:right}
-.lbrow.you .lbpos{color:var(--ink)}
-.lbname{color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lbstar{color:var(--star);font-size:9px;margin-right:4px;vertical-align:1px}
-.lbtot{font-family:var(--fm);font-variant-numeric:tabular-nums;text-align:right}
-.lbtot.under{color:var(--good)} .lbtot.over{color:var(--faint)}
-.lbthru{font-family:var(--fm);font-size:10.5px;color:var(--faint);text-align:right}
-.lbgap{text-align:center;color:var(--faint);font-size:11px;letter-spacing:2px;padding:1px 0}
-.offer-price{font-family:var(--fm);font-size:13px;font-weight:600;color:var(--ink);
-  border-top:1px solid var(--line);width:100%;padding-top:7px;margin-top:8px}
-.offercard.off{opacity:.4}
-.offercard.off .offer-price{color:var(--bad)}
-.shoprow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-.shoprow .ghost{margin-top:0;display:flex;justify-content:space-between;gap:8px}
-.shoprow .ghost b{font-family:var(--fm)}
-.weeks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.weekcard{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;
-  background:var(--panel);border:1px dashed var(--line);border-radius:3px;padding:12px 13px}
-@media(hover:hover){.weekcard:hover:not(:disabled){border-style:solid;border-color:var(--cone)}}
-.weekcard.off{opacity:.4}
-/* Armed cards and confirms wear red ONLY when the withdrawal measures
-   dangerous (the sponsor, or any skip from mid-season on) — an early
-   practice week is a purchase, and it no longer dresses like a mistake. */
-.weekcard.picked{border-style:solid;border-color:var(--cone);background:var(--panel)}
-.weekcard.picked .week-icon{color:var(--cone)}
-.weekcard.picked.risk{border-color:var(--bad)}
-.weekcard.picked.risk .week-icon{color:var(--bad)}
-/* the season-yield line above the week cards — the trade, said out loud */
-.weeknote{font-size:12.5px;color:var(--soft);line-height:1.45;margin:6px 0 0}
+.redraw b{font-family:var(--fm);color:var(--accent);letter-spacing:1px;white-space:nowrap}
 
-/* Confirming an off week — the only irreversible click on this screen. */
-.confirm{margin-top:12px;border:1px solid var(--bad);border-radius:3px;padding:14px 15px;
-  background:var(--panel)}
-.confirm.calm{border-color:var(--line)}
-.confirm-q{font-family:var(--fd);font-weight:700;font-size:15px;margin-bottom:5px}
-.confirm-why{font-size:12.5px;color:var(--soft);line-height:1.45;margin-bottom:11px}
-.confirm-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
-.confirm-row .ghost{margin-top:0}
-.big.danger{background:var(--bad);color:#fff}
-.week-icon{font-family:var(--fm);font-size:18px;color:var(--cone);line-height:1}
-.week-name{font-family:var(--fd);font-weight:700;font-size:14px;margin-top:2px}
-.week-blurb{font-size:12.5px;color:var(--soft);line-height:1.4}
-.week-cost{font-size:11.5px;color:var(--faint);font-style:italic;line-height:1.35;margin-top:3px}
+/* THE GREEN. Two prices, side by side, and what each buys. */
+.putts{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.putt{display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r);
+  padding:var(--s4) var(--s2)}
+@media(hover:hover){.putt:hover:not(:disabled){border-color:var(--accent)}}
+.putt.off{opacity:.45}
+.putt-name{font-family:var(--fd);font-weight:700;font-size:var(--t-read);
+  text-transform:uppercase;letter-spacing:.02em}
+.putt-make{font-family:var(--fm);font-size:var(--n-l);font-weight:600;line-height:1.15;
+  letter-spacing:-.01em}
+.putt-make.under{color:var(--good)}
+.putt-sub{font-family:var(--fm);font-size:var(--t-fine);letter-spacing:.08em;
+  text-transform:uppercase;color:var(--faint);text-align:center}
+.putt.charge .putt-sub{color:var(--accent)}
+.putt.charge.off .putt-sub{color:var(--bad)}
+.putt-note{font-size:var(--t-small);color:var(--faint);line-height:1.45;font-style:italic}
 
-/* The encounters — same room as the week cards, different company. */
-.enc-icon{display:block;font-family:var(--fm);font-size:34px;color:var(--cone);
-  line-height:1;margin-bottom:10px}
-.enc-choices .weekcard{min-height:44px;justify-content:center}
-.enc-choices .enc-walk .week-name{color:var(--soft)}
-.betnote{margin-top:2px}
+/* the hole is over */
+.holed{display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap;
+  border-top:2px solid var(--ink);padding-top:var(--s3)}
+.holed b{font-family:var(--fd);font-weight:900;font-size:var(--n-l);
+  text-transform:uppercase;letter-spacing:-.02em;line-height:1}
+.holed span{font-family:var(--fm);font-size:var(--t-small);color:var(--faint);
+  letter-spacing:.04em}
+.betline{font-family:var(--fd);font-weight:700;font-size:var(--t-read)}
+.betline.good{color:var(--good)} .betline.bad{color:var(--bad)} .betline.flat{color:var(--soft)}
+.momentum{font-family:var(--fm);font-size:var(--t-small);color:var(--good)}
 
-/* ============================================================
-   THE FINALE + THE EPILOGUE — the season knows when it is ending.
-   One gold banner line on the finale's first tee, and the season-in-
-   review screen: ceremony, the three bars, the record vs the stars,
-   and the clubhouse-board post (platform/share.ts).
-   ============================================================ */
-.encounterline.finale{color:var(--sand);border-color:var(--sand)}
-.ceremony{font-size:15px;line-height:1.6;color:var(--ink);font-style:italic;
-  background:var(--panel);border-left:3px solid var(--sand);border-radius:3px;
-  padding:13px 15px;margin:0 0 20px;max-width:58ch}
-.checkbars{display:flex;flex-direction:column;gap:6px;margin:8px 0 16px}
-.checkbar{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
-  font-family:var(--fm);font-size:12.5px;background:var(--panel);
-  border:1px solid var(--line);border-radius:3px;padding:8px 11px}
-.checkbar .ok{color:var(--good);font-weight:600}
-.checkbar .no{color:var(--bad);text-align:right}
-.checkbar .na{color:var(--faint)}
-.starrows{display:flex;flex-direction:column;gap:6px;margin:8px 0 16px}
-.starrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
-  background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:8px 11px}
-.starrow b{font-family:var(--fd);font-weight:700;font-size:13px}
-.starrow .lbstar{font-size:10px;margin-right:5px}
-.starrow .rec{font-family:var(--fm);font-size:12px;color:var(--soft);white-space:nowrap}
-.starrow .rec i{font-style:normal;font-weight:600}
-.starrow .rec .w{color:var(--good)}
-.starrow .rec .l{color:var(--bad)}
-.sharerow{display:grid;grid-template-columns:minmax(130px,0.8fr) 1.2fr;gap:8px;margin-top:8px}
-@media(max-width:520px){.sharerow{grid-template-columns:1fr}}
-.namefield{font:inherit;font-size:14px;background:var(--panel);color:var(--ink);
-  border:1px solid var(--line);border-radius:3px;padding:11px 12px;min-height:44px}
-.namefield::placeholder{color:var(--faint)}
-.namefield:focus{outline:2px solid var(--cone);outline-offset:1px}
-.sharerow .ghost{margin-top:0}
-.sharenote{margin-top:6px}
+/* THE SCORECARD. Par is on it now, and so is the running total — a stroke
+   count with no par beside it is not a score. */
+.scorecard{display:grid;gap:3px;margin-top:var(--s4)}
+.sq{background:var(--panel);border:1px solid var(--hairline);border-radius:var(--r-stamp);
+  padding:4px 2px 3px;text-align:center;min-width:0}
+.sq-n{display:block;font-family:var(--fm);font-size:9px;letter-spacing:.06em;
+  color:var(--faint);line-height:1.3}
+.sq b{display:block;font-family:var(--fm);font-size:var(--n-s);font-weight:600;
+  line-height:1.2}
+.sq-par{display:block;font-family:var(--fm);font-size:9px;color:var(--faint);
+  line-height:1.3}
+.sq.now{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.sq.good b{color:var(--good)} .sq.bad b{color:var(--bad)}
+/* where the cut falls — the strip is also the schedule of this week */
+.sq.cutmark{border-right:2px solid var(--soft)}
+.sq.total{background:var(--sunk);border-color:var(--soft)}
+.sq.total .sq-par.good{color:var(--good)} .sq.total .sq-par.bad{color:var(--bad)}
 
-/* ============================================================
-   Course art toggle + SUNDAY TAPE hole rendering
-   GRAPHICS-PROPOSAL.md approach (a) · tokens from /sunday-tape.css
-   Scoped to .holewrap.tape so ONLY the hole figure changes — the
-   rest of the app keeps the current look until the theme lands
-   app-wide. Default is classic; the toggle lives on the figure.
-   ============================================================ */
+/* ============================================================ sound */
+.sndbtn{position:fixed;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));
+  z-index:40;font-family:var(--fm);font-size:9.5px;letter-spacing:var(--ls-caps);
+  background:var(--panel);color:var(--faint);border:1px solid var(--hairline);
+  border-radius:var(--r-stamp);padding:8px 10px;opacity:.7;min-height:32px}
+.sndbtn.is-muted{color:var(--bad);border-color:var(--bad);opacity:.85}
+@media(hover:hover){.sndbtn:hover{opacity:1;border-color:var(--ink);color:var(--ink)}}
+
+/* ============================================================================
+   THE HOLE PICTURE — owned by the hole-art pass (HoleView.tsx, holeArt.ts).
+   Everything from here to the mobile section is that agent's contract with
+   this file: the .holewrap tokens, the Sunday Tape remapping, and the
+   broadcast furniture. Restyle nothing here from the interface side.
+   ============================================================================ */
+.holeview{width:100%;height:auto;max-height:74vh;max-height:74dvh;display:block;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--rough)}
+.gridlabel{font-family:var(--fm);font-size:var(--gridfs,9px);fill:var(--grid);opacity:.55}
 .holewrap{position:relative}
 .artbtn{position:absolute;top:8px;right:8px;z-index:3;font-family:var(--fm);font-size:10px;
   letter-spacing:.14em;background:var(--panel);color:var(--faint);border:1px solid var(--line);
@@ -391,83 +815,83 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   background:rgba(6,10,7,.72);border:1px solid rgba(130,227,155,.35);padding:3px 7px}
 .holewrap.tape .artbtn{background:#0A0F0B;color:#82E39B;border-color:rgba(130,227,155,.35)}
 
-/* ============================================================
-   MOBILE (MOBILE-PROPOSAL.md) — the touch pass.
-   Portrait phone gets the fixed/scroll/fixed frame (§2.1): topbar
-   and figure pinned, the panel scrolls, the action bar at the thumb.
-   Desktop ≥861px keeps the exact layout above — everything here is
-   additive and media-scoped, except the always-on minimap/ab styles
-   which only apply to elements desktop hides or never windows.
-   ============================================================ */
-
 /* full-hole locator strip — shown whenever the camera is windowed (§2.3) */
 .minimap{position:absolute;right:6px;bottom:6px;z-index:2;width:36px;height:46%;
   pointer-events:none;border:1px solid var(--line);border-radius:2px;
   background:var(--rough);opacity:.92}
 .holewrap.tape .minimap{border-color:#2A4230}
 
-/* the action bar's focus meter — focus lives next to what spends it */
-.ab-focus{flex:none;min-width:86px}
-.ab-focus b{display:block;font-family:var(--fm);font-size:17px;font-weight:600;
-  color:var(--cone);letter-spacing:1px;white-space:nowrap}
-.ab-focus i{opacity:.3;font-style:normal}
-.ab-focus span{font-family:var(--fm);font-size:10px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--faint)}
-.ab-note{flex:1;font-family:var(--fm);font-size:13px;color:var(--soft);text-align:right}
+/* ============================================================================
+   MOBILE (MOBILE-PROPOSAL.md) — the touch pass.
+   Portrait phone gets the fixed/scroll/fixed frame (§2.1): topbar and figure
+   pinned, the panel scrolls, the action bar at the thumb. Desktop ≥861px keeps
+   the layout above — everything here is additive and media-scoped.
+   ============================================================================ */
 
-/* touch: deletion reads as danger without a hover to reveal it */
-@media(hover:none){
-  .removeone{border-left:3px solid var(--bad)}
-}
+/* the action bar's focus meter — focus lives next to what spends it */
+.ab-focus{flex:none;min-width:92px}
+.ab-note{flex:1;font-family:var(--fm);font-size:var(--t-body);color:var(--soft);
+  text-align:right}
 
 @media(max-width:640px) and (orientation:portrait){
   /* ---- between-event screens ---- */
-  .intro{padding-top:24px}
+  .intro{padding-top:20px}
   .shoprow{grid-template-columns:1fr}
+  .facts{overflow-x:auto}
+  .checkbar{flex-wrap:wrap}
 
   /* ---- the playing frame ---- */
   .shell.play{display:flex;flex-direction:column;height:100vh;height:100dvh;
     overflow:hidden;max-width:none;
     padding:calc(8px + env(safe-area-inset-top)) max(10px,env(safe-area-inset-right))
       0 max(10px,env(safe-area-inset-left))}
-  .shell.play .topbar{flex-wrap:nowrap;gap:10px;align-items:center;
-    padding-bottom:8px;margin-bottom:8px}
-  .shell.play .hz{min-width:0;flex:1;gap:8px}
-  .shell.play .hz>div{min-width:0}
-  .shell.play .hnum{font-size:22px}
-  .shell.play .hname{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .shell.play .hmeta{font-size:9.5px;letter-spacing:.05em;white-space:nowrap;
-    overflow:hidden;text-overflow:ellipsis}
-  .shell.play .stats{gap:12px;flex:none}
-  .shell.play .stat b{font-size:16px}
+  .shell.play .topbar{flex-wrap:nowrap;gap:var(--s3);align-items:center;
+    padding-bottom:var(--s2);margin-bottom:var(--s2)}
+  .shell.play .hz{min-width:0;flex:1;gap:var(--s2)}
+  .shell.play .hid{min-width:0}
+  .shell.play .hnum{font-size:17px;min-width:28px;height:28px}
+  .shell.play .hname{font-size:var(--t-body);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .shell.play .hmeta{font-size:9.5px;letter-spacing:.04em;flex-wrap:nowrap;
+    overflow:hidden}
+  .shell.play .hmeta span{white-space:nowrap}
+  .shell.play .stats{flex:none}
+  .shell.play .stat{padding-right:var(--s3);margin-right:var(--s3)}
+  .shell.play .stat b{font-size:var(--t-read)}
+  .shell.play .stat.score b{font-size:23px}
   /* strokes moves into the situation line; bag folds into the deck drawer;
      focus moves to the action bar it gets spent from */
   .shell.play .stat.bag,.shell.play .stat.strokes,.shell.play .stat.focus{display:none}
-  .sit-strokes{display:inline;color:var(--faint)}
+  .sit-strokes{display:inline;color:var(--faint);font-size:var(--t-small);
+    margin-left:var(--s2)}
 
   .shell.play .deckdrawer{position:fixed;top:calc(56px + env(safe-area-inset-top));
     left:10px;right:10px;z-index:30;margin:0;max-height:70dvh;overflow-y:auto;
     box-shadow:0 12px 32px rgba(0,0,0,.3)}
-  .shuffled{margin-bottom:8px;padding:6px 10px}
+  .drawerx{width:44px;height:44px}
+  .banner{margin-bottom:var(--s2);padding:var(--s2) var(--s3)}
 
-  .board{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex:1;
-    min-height:0;overflow:hidden}
+  .board{display:flex;flex-direction:column;align-items:stretch;gap:var(--s2);
+    flex:1;min-height:0;overflow:hidden}
   .figure{position:static;flex:none}
   .figure .note{display:none}       /* reads once at the tee, in the panel */
   .m-note{display:block;margin:0}
   .holeview{height:38vh;height:38dvh;max-height:none}
-  .cockpit{flex:none;gap:6px}
+  .cockpit{flex:none;gap:var(--s2)}
   .cockpit .lbl{display:none}       /* "Aim" — the three buttons explain themselves */
-  .situation{padding:7px 10px;font-size:13px}
-  .situation b{font-size:18px}
-  .shotline{padding:8px 10px;font-size:13.5px}
+  .situation{padding:var(--s2) var(--s3)}
+  .situation b{font-size:22px}
+  .sit-lie{margin-left:0}
+  .shotline{padding:var(--s2) var(--s3);font-size:var(--t-body)}
   .panel{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;padding-bottom:10px}
+    overscroll-behavior:contain;padding-bottom:var(--s3)}
   .flowact{display:none}
-  .actionbar{display:flex;align-items:center;gap:14px;flex:none;
+  .actionbar{display:flex;align-items:center;gap:var(--s4);flex:none;
     border-top:2px solid var(--ink);background:var(--paper);
-    padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+    padding:var(--s2) 0 calc(var(--s2) + env(safe-area-inset-bottom))}
   .actionbar .big{margin-top:0;flex:1;padding:12px;min-height:44px}
+  /* the sound switch must not sit on top of the thumb bar */
+  .sndbtn{display:none}
 }
 
 /* landscape phone (§2.4): figure left at full height, panel scrolls right,
@@ -476,29 +900,37 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   .shell.play{display:flex;flex-direction:column;height:100vh;height:100dvh;
     overflow:hidden;max-width:none;
     padding:6px max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left))}
-  .shell.play .topbar{flex-wrap:nowrap;gap:10px;padding-bottom:6px;margin-bottom:6px}
+  .shell.play .topbar{flex-wrap:nowrap;gap:var(--s3);padding-bottom:6px;margin-bottom:6px}
   .shell.play .hz{min-width:0;flex:1}
-  .shell.play .hnum{font-size:20px}
-  .shell.play .hname{font-size:13px;white-space:nowrap}
-  .shell.play .hmeta{font-size:9.5px;white-space:nowrap}
-  .shell.play .stats{gap:12px;flex:none}
-  .shell.play .stat b{font-size:15px}
+  .shell.play .hnum{font-size:16px;min-width:26px;height:26px}
+  .shell.play .hname{font-size:var(--t-body);white-space:nowrap}
+  .shell.play .hmeta{font-size:9.5px;flex-wrap:nowrap;overflow:hidden}
+  .shell.play .stats{flex:none}
+  .shell.play .stat{padding-right:var(--s3);margin-right:var(--s3)}
+  .shell.play .stat b{font-size:var(--t-body)}
+  .shell.play .stat.score b{font-size:20px}
   .shell.play .stat.bag,.shell.play .stat.focus{display:none}
   .board{flex:1;min-height:0;overflow:hidden;display:grid;
     grid-template-columns:minmax(190px,42%) 1fr;grid-template-rows:auto 1fr auto;
-    column-gap:14px;row-gap:8px;align-items:stretch}
+    column-gap:14px;row-gap:var(--s2);align-items:stretch}
   .figure{position:static;grid-column:1;grid-row:1/span 3;min-height:0;display:flex}
   .figure .note{display:none}
   .m-note{display:none}
   .holewrap{flex:1;min-height:0}
   .holeview{height:100%;max-height:none;width:100%}
-  .cockpit{grid-column:2;grid-row:1;gap:6px}
+  .cockpit{grid-column:2;grid-row:1;gap:var(--s2)}
   .cockpit .lbl{display:none}
   .panel{grid-column:2;grid-row:2;min-height:0;overflow-y:auto;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .flowact{display:none}
-  .actionbar{display:flex;grid-column:2;grid-row:3;align-items:center;gap:14px;
+  .actionbar{display:flex;grid-column:2;grid-row:3;align-items:center;gap:var(--s4);
     border-top:2px solid var(--ink);background:var(--paper);
     padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
   .actionbar .big{margin-top:0;flex:1;padding:10px}
+  .sndbtn{display:none}
+}
+
+/* Reduced motion: the only animation in the interface is a bar filling. */
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
 }
