@@ -119,16 +119,31 @@ export const WEEKS_END_AT = 10
  * the early-mid season eased (event 5 $710k -> $610k, the budget slowing
  * the midsummer kit). Events 1-3 held within noise — the spring rule,
  * still visible here.
+ *
+ * RE-MEASURED at CALIBRATION-3.md (26 Aug 2026, same harness and seeds,
+ * now under THE FULL SCORECARD — 36-hole weeks, full tie split at every
+ * rank, R=1.55). The registration predicted the spring holds and the late
+ * season eases a touch; half right. The SPRING ROSE 15-20% (event 1
+ * $300k -> $360k, THE MASTERS $1.14M -> $1.32M): the extension pays a
+ * pace-holding week everywhere, and the spring is exactly where the
+ * 8-hole world's twenty-deep tie stacks used to flatten a good week into
+ * the group's cheque — spread out, a good April is finally worth more
+ * than a mediocre one. (A yields rise is not a spring-rule breach: the
+ * rule is about difficulty, and the check-1 re-anchor absorbed the new
+ * money — see season.ts.) The late season eased ~5% as registered
+ * (event 14 $2.41M -> $2.23M; the full split now taxes every tied late
+ * finish where top-only handed the group the best cheque), and the mid
+ * held. The schedule screen tells the 36-hole truth.
  */
 export const EVENT_YIELDS: readonly number[] = [
-  300_000, 320_000, 360_000, 1_140_000, 610_000,        // events 1–5
-  630_000, 1_950_000, 990_000, 1_010_000,               // events 6–9
-  1_030_000, 2_420_000, 1_160_000, 1_090_000, 2_410_000, // events 10–14
+  360_000, 390_000, 420_000, 1_320_000, 700_000,        // events 1–5
+  730_000, 1_990_000, 1_030_000, 1_000_000,             // events 6–9
+  1_010_000, 2_370_000, 1_090_000, 1_010_000, 2_230_000, // events 10–14
 ]
 
 /** The same measurement by stage — the late mean is the UI's "by the fall". */
 export const STAGE_YIELD: Readonly<Record<'early' | 'mid' | 'late', number>> = {
-  early: 550_000, mid: 1_150_000, late: 1_620_000,
+  early: 640_000, mid: 1_190_000, late: 1_540_000,
 }
 
 export function eventStage(num: number): 'early' | 'mid' | 'late' {

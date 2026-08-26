@@ -43,6 +43,20 @@ import type { Boost } from '../sim/types'
  * (Soft Spikes 1.37x, Short Memory 1.22x — least cushion above the floor),
  * both repriced to value over two, inside the pass's <= 2 budget. No tier
  * line moved; nothing drifted over.
+ *
+ * CALIBRATION-3 (26 Aug 2026 — the pass after THE FULL SCORECARD, N=250,
+ * EXT 28, same instrument and seeds): the 36-hole world pays the equipped
+ * back half, so the whole shelf ROSE (bare season $5.48M -> $5.79M) and
+ * the three SKUs SHOP-SUPPLY left standing a whisker under the floor came
+ * back into the band on their own — Fresh Grips 1.53x, A Three Wood You
+ * Trust 1.70x, The Circle of Friendship 1.58x. ZERO repricings: the
+ * standing verdict resolved itself, which is what a verdict is for. The
+ * drift moved to the other end instead: Soft Spikes 2.82x, Clean Slate
+ * 2.77x, New Glove 2.63x sit OVER the 2.5 ceiling (the cheap rack end
+ * swings hardest in every world; all three are one measurement over, and
+ * two of the three are the shelf's most spread-prone measurements). Left
+ * standing under this pass's budget, REPORTED as the next calibration's
+ * patients — see CALIBRATION-3.md standing verdicts.
  */
 export const BOOSTS: readonly Boost[] = [
   {

@@ -46,6 +46,36 @@ function fieldMean(pars: readonly number[], offset: number): number {
   return sum / count
 }
 
+/**
+ * THE 36-HOLE COUPLING RECEIPT (RECEIPT=1 — CALIBRATION-3.md, item 6).
+ * The full scorecard extends every week to FULL_HOLES from the salt-10
+ * stream with fieldShift applied per hole, same slope, so each course's
+ * 36-hole field delta should be exactly (36/8 = 4.5)× its 8-hole one —
+ * linear inheritance, never a re-derivation. This measures both means in
+ * one pass (same trial stream as fieldMean, extension on its own derived
+ * stream, exactly the game's construction) so the ×4.5 is a printed
+ * receipt instead of an assumption.
+ */
+function fieldMean36(pars: readonly number[], offset: number): { m8: number; m36: number } {
+  let rng: RngState = makeRng(987654321)
+  let sum8 = 0
+  let sum36 = 0
+  let count = 0
+  for (let k = 0; k < N; k++) {
+    let [field, r] = makeField(rng, F)
+    rng = r
+    for (const par of pars) {
+      const [f2, r2] = advanceField(field, par, rng, offset)
+      field = f2
+      rng = r2
+    }
+    for (const p of field) sum8 += p.total
+    const [ext] = extendFieldWith(field, pars, makeRng(hash(k + 1, FIELD_EXT_SALT)), offset, FULL_HOLES)
+    for (const p of ext) { sum36 += p.total; count++ }
+  }
+  return { m8: sum8 / count, m36: sum36 / count }
+}
+
 const parsOf = (id: keyof typeof COURSES) => COURSES[id].holes.map(h => h.par)
 /**
  * CANON LADDER RULING (slice 4, 25 Aug 2026): the live post-depth coursecheck
@@ -73,20 +103,30 @@ const TARGET: Record<string, number> = {
 // the ties probe (sweep C's loop).
 if (process.env.WINNERGAP !== 'only' && process.env.TIES !== 'only') {
 
-const base = fieldMean(parsOf('pinehollow'), 0)
+const RECEIPT = process.env.RECEIPT === '1'
+const base36 = RECEIPT ? fieldMean36(parsOf('pinehollow'), 0) : null
+const base = base36 ? base36.m8 : fieldMean(parsOf('pinehollow'), 0)
 console.log(`\nFIELD COUPLING · ${N} fields per cell · floorLift ${F}`)
-console.log(`  Pine Hollow baseline: field mean ${base.toFixed(2)} over 8 holes\n`)
-console.log('  course        offset    field mean   Δ vs PH   target    miss')
-console.log('  ' + '-'.repeat(64))
+console.log(`  Pine Hollow baseline: field mean ${base.toFixed(2)} over 8 holes` +
+  (base36 ? ` · ${base36.m36.toFixed(2)} over ${FULL_HOLES}` : '') + '\n')
+console.log('  course        offset    field mean   Δ vs PH   target    miss' +
+  (RECEIPT ? '      Δ36     Δ36/Δ8' : ''))
+console.log('  ' + '-'.repeat(RECEIPT ? 82 : 64))
 for (const id of COURSE_POOL) {
   const c = COURSES[id]
-  const m = fieldMean(parsOf(id), c.fieldShift)
+  const m36 = RECEIPT ? fieldMean36(parsOf(id), c.fieldShift) : null
+  const m = m36 ? m36.m8 : fieldMean(parsOf(id), c.fieldShift)
   const d = m - base
   const t = TARGET[id]!
+  const d36 = m36 && base36 ? m36.m36 - base36.m36 : null
   console.log(
     `  ${c.label.padEnd(13)} ${c.fieldShift.toFixed(3).padStart(6)}   ` +
     `${m.toFixed(2).padStart(9)} ${d.toFixed(2).padStart(9)} ${t.toFixed(1).padStart(8)}` +
-    `   ${Math.abs(d - t) <= 0.1 ? 'ok' : (d - t).toFixed(2)}`,
+    `   ${Math.abs(d - t) <= 0.1 ? 'ok' : (d - t).toFixed(2)}` +
+    (d36 !== null
+      ? `   ${d36.toFixed(2).padStart(6)}   ${Math.abs(d) > 0.05
+        ? (d36 / d).toFixed(2).padStart(6) : '    --'}`
+      : ''),
   )
 }
 

@@ -155,13 +155,27 @@ This is the Balatro blind requirement, wearing a visor.
 > the supply dial (`shop.ts` SHOP_BUDGET and the tier weights), never a
 > sixth re-anchoring. Provenance in `content/season.ts`.
 
+> **RE-ANCHORED A SIXTH TIME (CALIBRATION-3.md, 26 Aug 2026):
+> $2.6M / $10.1M / $13.8M — the first anchoring in the project's history
+> to move bars UP.** THE FULL SCORECARD (FIELD-SPREAD.md) spread the
+> field over 36-hole weeks and shipped the full tie split at every rank;
+> the extension pays a pace-holding player up the spread board more than
+> the split taxes them, so at the old triple survival read 50%. The new
+> bars send home **44% / 37% / 2%** of arrivals; survival mixed 35%,
+> aggressive 27%, safe 1% (hoarder 6%). Check 2 is the season's whole
+> wall now; check 3 sits at the invariant's ceiling — which ROSE with
+> the spread: 91% of wins are solo, so the win-pays-the-final-leg
+> invariant prices the leg on the SOLO cheque again (payout(purse,1) =
+> $3.4M at a major, leg cap ~$3.78M, was ~$3.0M under the tie-world's
+> expected 2-way cheque). Provenance in `content/season.ts`.
+
 **The intent table (re-set at SHOP-SUPPLY, was 41/29/14):**
 
 | Check | After event | Threshold | Kill intent, of arrivals | Measured |
 |---|---|---|---|---|
-| First | 5 | **$2,100,000** | 44% — the spring rule's number | 44% |
-| Second | 9 | **$8,100,000** | 33% — the season's real wall | 31% |
-| Last | 12 | **$11,100,000** | ≤ 8% ceiling — a pace check; its teeth are the win the leg demands | 1% |
+| First | 5 | **$2,600,000** | 44% — the spring rule's number | 44% |
+| Second | 9 | **$10,100,000** | 33% — the season's real wall | 37% |
+| Last | 12 | **$13,800,000** | ≤ 8% ceiling — a pace check; its teeth are the win the leg demands | 2% |
 
 **The last check is not after the last event, and that matters.** It used to be,
 and a check after the final tournament is not a checkpoint — it is a verdict on
@@ -189,12 +203,12 @@ minute 25 instead of minute 80.
 
 **The list itself.** The Money List is the **72 players you tee it up against
 every week** — the same population as the leaderboard, counted twice. A mixed
-shopper's median season banks $15.8M under the finished world
-(CALIBRATION-2: drops modeled, stars in the field) and sits **20th**; the
-checks demand a pace worth roughly 26th, 17th, then 20th — the last one
-tighter in pace terms than it kills, because check 3's kill is the standing
-residual. The squeeze is visible in your own position without the game ever
-having to state a demand in places.
+shopper's median season banks $16.97M under the finished world
+(CALIBRATION-3: drops modeled, stars in the field, 36-hole weeks, full tie
+split) and sits **20th**; the checks demand a pace worth roughly 28th, 17th,
+then 19th — the last one tighter in pace terms than it kills, because check
+3's kill is the standing residual. The squeeze is visible in your own
+position without the game ever having to state a demand in places.
 
 ### 3.4 The squeeze — where difficulty actually comes from
 

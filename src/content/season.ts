@@ -286,11 +286,44 @@ export const EVENT_COUNT = SEASON.length
  * bar move again — the ceiling is the invariant, and the difficulty
  * owner for "too easy" is the supply dial (shop.ts SHOP_BUDGET and the
  * tier weights), never a sixth re-anchoring.
+ *
+ * RE-ANCHORED A SIXTH TIME — CALIBRATION-3.md, 26 Aug 2026, the pass
+ * FIELD-SPREAD.md §9.5 ordered after THE FULL SCORECARD shipped — and the
+ * first anchoring in the project's history to move bars UP. (The "never a
+ * sixth re-anchoring" above forbade chasing check-3 kill with a bar move;
+ * this is not that. The WORLD moved: the field plays 36-hole weeks, the
+ * full tie split pays every rank, and the extension pays a pace-holding
+ * player up the spread board more than the split taxes them, so at the
+ * old triple the mixed shopper read kills 36/21/0 and survival 50%.)
+ * Derived by shopcheck sweep under the finished world (offer stream,
+ * budget 6, final shelf — the band check repriced NOTHING this pass;
+ * 250-season brackets then the authoritative 400/policy, seeds 700000+):
+ * the triple below sends home 44% / 37% / 2% of arrivals; survival mixed
+ * 35%, aggressive 27%, safe 1%, mixed hoarder 6%. Against the intent
+ * table (44 / 33 / <= 8): check 1 prints the intent digit itself, at the
+ * FLOOR of FIELD-SPREAD's registered $2.6-3.2M range — the spring got
+ * richer (the extension pays a good April that the 8-hole tie stacks
+ * used to flatten into the group cheque), so the bar rose only $500k;
+ * check 2 became the season's whole wall at $10.1M, four points over
+ * intent at 400 seasons (the 250-bracket printed the intent 33 and the
+ * 400-run reads 37 — the same bracket-to-authoritative drift
+ * CALIBRATION-2 recorded; and with check 3 structurally small, survival
+ * ~36 REQUIRES kill-2 near 34 by arithmetic, so survival keeps the
+ * argument); check 3 sits at the re-priced invariant's ceiling on the
+ * $100k grid (leg $3.7M against the SOLO $3.4M major cheque — 91% of
+ * wins are solo now, so the leg is priced on payout(purse,1) again, see
+ * the tiePayout note and deck.test.ts) and buys 2%, under its 8-point
+ * ceiling, structurally small ON PURPOSE. Mixed beats aggressive by
+ * eight points (check 2's wall presses win-heavy play exactly where the
+ * stars eat) and the hoarder ~6x: the ordering law holds whole.
+ * Sensitivity, third time recorded: these bars are honest to ±2 ONLY at
+ * the exact live shelf and 400 fresh seasons (CALIBRATION-2 verdict 4);
+ * this pass moved no price, so the shelf IS the calibrated one.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
-  { after: 5, need: 2_100_000 },
-  { after: 9, need: 8_100_000 },
-  { after: 12, need: 11_100_000 },
+  { after: 5, need: 2_600_000 },
+  { after: 9, need: 10_100_000 },
+  { after: 12, need: 13_800_000 },
 ]
 
 export function checkAfter(event: number) {
@@ -332,13 +365,22 @@ export function payout(purse: number, place: number): number {
  * top-only rather than re-anchor; the deeper fix — spread the field — is
  * §3.4b's, and stays on the ledger.
  *
- * WHAT A WIN IS WORTH, once this rule exists: the modal winning group is
- * 2-3 players, so the cheque a player can EXPECT a win to pay is the
- * 2-way value — tiePayout(purse, 1, 2), ~$2.71M at a major — not the
- * solo payout(purse, 1). The win-pays-the-final-leg invariant
- * (deck.test.ts) and the MONEY_CHECKS derivation above both price the
- * final leg on that expected cheque (SHOP-SUPPLY SHIPPED): a leg priced
- * on the solo cheque would demand a win AND the luck of winning alone.
+ * WHAT A WIN IS WORTH, under that rule: in the 8-hole score space the
+ * modal winning group was 2-3 players, so a win's expected cheque was the
+ * 2-way value — tiePayout(purse, 1, 2), ~$2.71M at a major — and the
+ * win-pays-the-final-leg invariant priced the leg there (SHOP-SUPPLY
+ * SHIPPED): a leg priced on the solo cheque would have demanded a win AND
+ * the luck of winning alone.
+ *
+ * SUPERSEDED BY THE FULL SCORECARD (FIELD-SPREAD.md SHIPPED, 26 Aug
+ * 2026): settle now pays tiePayout at EVERY rank — the full real-tour
+ * split, shippable because the 36-hole board thinned the winning groups
+ * until 91% of measured wins are SOLO (shopcheck WINS, 400 seasons). The
+ * top-only compromise above is kept as history; the "what a win is worth"
+ * arithmetic flipped with the spread: the expected win cheque is the solo
+ * payout(purse, 1) = $3.4M at a major again, and the invariant
+ * (deck.test.ts) and the MONEY_CHECKS derivation are re-priced on it
+ * (CALIBRATION-3.md).
  */
 export function tiePayout(purse: number, place: number, tied: number): number {
   if (tied <= 1) return payout(purse, place)
@@ -399,11 +441,20 @@ export function money(n: number): string {
  * rung re-scales to the new anchor at its old ratio, rounded to $100k.
  * The moved medians were checked against the quoted tolerance before
  * anything moved: -$750k on a $100k-grid ladder is not a rounding.
+ *
+ * RE-ANCHORED at CALIBRATION-3.md (26 Aug 2026): the first anchor to move
+ * UP. THE FULL SCORECARD (FIELD-SPREAD.md SHIPPED — 36-hole weeks, full
+ * tie split) pays a pace-holding player up the spread board more than the
+ * split taxes them, and the same 400-season shopper median rises $15.05M
+ * -> $16.97M (shopcheck SHARE=1, seeds 700000+, final shelf — this pass
+ * repriced nothing). Every rung re-scales at its old ratio, $100k grid.
+ * The rest of the tour got richer the same way you did: the board spreads
+ * for everyone.
  */
 const LADDER: readonly (readonly [number, number])[] = [
-  [1, 43_700_000], [3, 28_800_000], [5, 24_200_000], [10, 21_500_000],
-  [20, 15_100_000], [30, 11_300_000], [40, 8_200_000], [50, 5_700_000],
-  [60, 3_300_000], [72, 800_000],
+  [1, 49_200_000], [3, 32_400_000], [5, 27_200_000], [10, 24_200_000],
+  [20, 17_000_000], [30, 12_700_000], [40, 9_200_000], [50, 6_400_000],
+  [60, 3_700_000], [72, 900_000],
 ]
 
 /**
@@ -427,8 +478,17 @@ const LADDER: readonly (readonly [number, number])[] = [
  * $146k / $746k / $2.98M / $6.99M / $12.65M / $15.05M at 1, 3, 6, 9,
  * 12, 14. The middle eases a few points (the budget slows the midsummer
  * kit, so midsummer earns less of the season) while both ends hold.
+ *
+ * Re-measured at CALIBRATION-3.md from the $16.97M anchor's own 400
+ * seasons (THE FULL SCORECARD: 36-hole weeks, full split, R=1.55):
+ * medians $121k / $420k / $1.16M / $2.34M / $3.22M / $3.96M / $6.52M /
+ * $7.56M / $8.77M / $9.78M / $12.40M / $13.32M / $14.41M / $16.97M.
+ * The curve tilts LATE (0.54 -> 0.58 at 10, 0.84 -> 0.85 at 13, and the
+ * whole spring shrinks as a share): the extension pays the equipped back
+ * half of the season hardest, exactly as FIELD-SPREAD §9 predicted, so
+ * the fall carries a larger share of a bigger season.
  */
-const SHARE = [0.01, 0.03, 0.05, 0.12, 0.15, 0.20, 0.33, 0.38, 0.46, 0.54, 0.69, 0.77, 0.84, 1.00]
+const SHARE = [0.01, 0.02, 0.07, 0.14, 0.19, 0.23, 0.38, 0.45, 0.52, 0.58, 0.73, 0.78, 0.85, 1.00]
 
 /**
  * THE LIST IS THE FIELD YOU ALREADY SEE.
@@ -440,9 +500,10 @@ const SHARE = [0.01, 0.03, 0.05, 0.12, 0.15, 0.20, 0.33, 0.38, 0.46, 0.54, 0.69,
  * one tour, counted twice.
  *
  * The ladder is placed against measured earnings: a mixed shopper's median
- * season banks $15.05M under the finished world (drops modeled, stars in
- * the field, split purse, season shop budget — SHOP-SUPPLY SHIPPED),
- * which sits 20th. Below that is a long tail of players who miss cuts.
+ * season banks $16.97M under the finished world (drops modeled, stars in
+ * the field, 36-hole weeks with the full tie split, season shop budget —
+ * CALIBRATION-3.md), which sits 20th. Below that is a long tail of
+ * players who miss cuts.
  */
 export const TOUR_SIZE = 72
 

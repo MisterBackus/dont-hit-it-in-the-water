@@ -376,13 +376,21 @@ describe('the season', () => {
     // doomed-but-alive run keeps its target; it just has to be alive at 9.
     //
     // RE-PRICED at the SHOP-SUPPLY pass (26 Aug 2026), for the split purse:
-    // under top-only ties (season.ts tiePayout) the MODAL winning group in
-    // this compressed score space is 2-3 players, so the cheque a win can be
-    // EXPECTED to pay is tiePayout's 2-way value (~$2.71M at a $20M purse),
-    // not the solo $3.4M — a leg priced against the solo cheque would demand
-    // a win AND the luck of winning alone, which is a lottery, not a leg.
-    // The invariant now prices the leg on the expected win.
-    const expectedWin = Math.max(...SEASON.map(e => tiePayout(e.purse, 1, 2)))
+    // under top-only ties in the 8-hole score space the MODAL winning group
+    // was 2-3 players, so the leg was priced on tiePayout's 2-way value
+    // (~$2.71M at a $20M purse) — a leg priced on the solo cheque would have
+    // demanded a win AND the luck of winning alone, a lottery, not a leg.
+    //
+    // RE-PRICED BACK UP at CALIBRATION-3.md (26 Aug 2026): THE FULL
+    // SCORECARD (FIELD-SPREAD.md SHIPPED) spread the field — 91% of 2,065
+    // measured wins are SOLO on the 36-hole board (shopcheck WINS, 400
+    // seasons) — so winning alone stopped being luck and became the normal
+    // shape of winning. The cheque a win can be EXPECTED to pay is the solo
+    // payout(purse, 1) = $3.4M at a $20M major again, and the leg's ceiling
+    // rises ~$3.01M -> ~$3.78M at the standing tolerance: check 3 gets
+    // ~$770k of headroom back, paid for by the spread, not by a bar move —
+    // and the shipped triple spends it (leg $3.7M, CALIBRATION-3.md).
+    const expectedWin = Math.max(...SEASON.map(e => payout(e.purse, 1)))
     const c = MONEY_CHECKS
     const lastLeg = c[c.length - 1]!.need - c[c.length - 2]!.need
     // The 0.9 tolerance stays: the leg is the residual of two measured bars
