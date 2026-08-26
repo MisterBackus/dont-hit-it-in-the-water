@@ -88,7 +88,7 @@ function mine(name: string, raw: string): string | null {
 const RUNS = join(import.meta.dirname ?? __dirname, '..', '..', 'runs')
 const skipped: string[] = []
 if (existsSync(RUNS)) {
-  for (const f of readdirSync(RUNS).filter(f => f.endsWith('.json'))) {
+  for (const f of readdirSync(RUNS).filter(f => f.endsWith('.json') && f !== 'verified.json')) {
     const name = basename(f, '.json')
     const raw = readFileSync(join(RUNS, f), 'utf8')
     // single run or an archive bundle {runs:[...]} — mine every season in it
