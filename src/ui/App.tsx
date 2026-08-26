@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useRef, useState } from 'react'
+﻿import { useMemo, useReducer, useRef, useState } from 'react'
 import {
   reduce, previewCone, redrawPrice, scoreName, handShots, handTechs, boostsOf, sinkPrice,
   type Action,
@@ -367,7 +367,7 @@ export function App() {
         {s.boosts.length > 0 && (
           <div className="deckpanel" style={{ marginTop: 8 }}>
             {s.boosts.map(id => (
-              <span key={id} className="chip boost">{BOOST[id]!.icon} {BOOST[id]!.name}</span>
+              <span key={id} className="chip boost" title={BOOST[id]!.blurb}>{BOOST[id]!.icon} {BOOST[id]!.name}</span>
             ))}
           </div>
         )}
@@ -515,7 +515,7 @@ export function App() {
             <div className="lbl">What you were carrying</div>
             <div className="deckpanel">
               {s.boosts.map(id => (
-                <span key={id} className="chip boost">{BOOST[id]!.icon} {BOOST[id]!.name}</span>
+                <span key={id} className="chip boost" title={BOOST[id]!.blurb}>{BOOST[id]!.icon} {BOOST[id]!.name}</span>
               ))}
             </div>
           </>
@@ -580,12 +580,21 @@ export function App() {
           {s.boosts.length > 0 && (
             <>
               <div className="lbl" style={{ marginTop: 12 }}>Carrying</div>
-              <div className="deckpanel">
-                {s.boosts.map(id => (
-                  <span key={id} className="chip boost">
-                    {BOOST[id]!.icon} {BOOST[id]!.name}
-                  </span>
-                ))}
+              {/* owner playtest note: equipment must SAY what it is doing —
+                  a boost you can't read is a boost you forget you own */}
+              <div className="boostlist">
+                {s.boosts.map(id => {
+                  const b = BOOST[id]!
+                  return (
+                    <div key={id} className="boostrow">
+                      <span className="boost-ic">{b.icon}</span>
+                      <div>
+                        <b>{b.name}</b>
+                        <span>{b.blurb}</span>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </>
           )}
