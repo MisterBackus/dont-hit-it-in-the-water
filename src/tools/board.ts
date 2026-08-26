@@ -66,8 +66,28 @@ const OUT = join(ROOT, 'public')
 
 const rows: Row[] = []
 const notes: string[] = []
+
+// THE FROZEN LEDGER (runs/verified.json): rows verified by replay at the
+// version they were PLAYED, then frozen. A save-version bump must never
+// erase history the engine already vouched for — files listed here are
+// trusted from the ledger and not re-replayed.
+const frozen = new Set<string>()
+const ledgerPath = join(RUNS, 'verified.json')
+if (existsSync(ledgerPath)) {
+  try {
+    const ledger = JSON.parse(readFileSync(ledgerPath, 'utf8')) as {
+      rows?: (Row & { file: string; verifiedAtVersion: number })[]
+    }
+    for (const r of ledger.rows ?? []) {
+      frozen.add(r.file)
+      rows.push({ name: r.name, gross: r.gross, wins: r.wins, played: r.played,
+        firedAt: r.firedAt, rank: r.rank, finished: r.finished })
+    }
+  } catch { notes.push('verified.json unreadable — frozen rows skipped') }
+}
+
 if (existsSync(RUNS)) {
-  for (const f of readdirSync(RUNS).filter(f => f.endsWith('.json'))) {
+  for (const f of readdirSync(RUNS).filter(f => f.endsWith('.json') && f !== 'verified.json' && !frozen.has(f))) {
     const name = basename(f, '.json')
     const raw = readFileSync(join(RUNS, f), 'utf8')
     // a file is either one run or a bundle {runs:[...]} — the archive export

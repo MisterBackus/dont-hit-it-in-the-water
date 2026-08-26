@@ -2,7 +2,7 @@
 
 export interface RngState { readonly s: number }
 
-export type Stream = 'shot' | 'putt' | 'draw' | 'field'
+export type Stream = 'shot' | 'putt' | 'draw' | 'field' | 'events'
 
 // NB: a mapped type must be a `type`, not an `interface` (TS7061).
 export type RngBank = { readonly [K in Stream]: RngState }
@@ -56,5 +56,9 @@ export function seedBank(seed: number): RngBank {
     putt: makeRng(hash(seed, 2)),
     draw: makeRng(hash(seed, 3)),
     field: makeRng(hash(seed, 4)),
+    // salt 5 belongs to the schedule (schedule.ts EVENTS_SALT, a one-shot
+    // derived stream). The encounters own this one — an independent stream,
+    // so an encounter roll can never perturb a shot, a draw, or the field.
+    events: makeRng(hash(seed, 6)),
   }
 }

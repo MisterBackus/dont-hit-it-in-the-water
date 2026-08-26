@@ -1,0 +1,16 @@
+{
+  "note": "Rows verified by replay at the save version they were played, then frozen. A version bump must never erase history the engine already vouched for. board.ts reads this first and only replays files not listed here.",
+  "rows": [
+    {
+      "file": "andrew.json",
+      "verifiedAtVersion": 5,
+      "name": "andrew",
+      "gross": 20120000,
+      "wins": 9,
+      "played": 12,
+      "firedAt": null,
+      "rank": 1,
+      "finished": false
+    }
+  ]
+}

@@ -264,6 +264,13 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .week-blurb{font-size:12.5px;color:var(--soft);line-height:1.4}
 .week-cost{font-size:11.5px;color:var(--faint);font-style:italic;line-height:1.35;margin-top:3px}
 
+/* The encounters — same room as the week cards, different company. */
+.enc-icon{display:block;font-family:var(--fm);font-size:34px;color:var(--cone);
+  line-height:1;margin-bottom:10px}
+.enc-choices .weekcard{min-height:44px;justify-content:center}
+.enc-choices .enc-walk .week-name{color:var(--soft)}
+.betnote{margin-top:2px}
+
 /* ============================================================
    Course art toggle + SUNDAY TAPE hole rendering
    GRAPHICS-PROPOSAL.md approach (a) · tokens from /sunday-tape.css

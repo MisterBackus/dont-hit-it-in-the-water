@@ -3,6 +3,7 @@ import type { RngBank } from './rng'
 import type { FieldPlayer } from './resolve/field'
 import type { ShopItem } from '../content/shop'
 import type { Course } from '../content/courses'
+import type { PendingBet } from '../content/encounters'
 import { seedBank } from './rng'
 import { shuffle } from './deck'
 import { courseForEvent } from './schedule'
@@ -32,6 +33,7 @@ export type Phase =
   | 'playing' | 'shot' | 'holed'
   | 'cut'         // did you survive four holes
   | 'boost'       // equipment, at a major
+  | 'encounter'   // somebody on the walk to the fifth tee (content/encounters.ts)
   | 'shop'        // the pro shop — spend your winnings, or bank them
   | 'remove'      // choose which card to cut
   | 'payout'      // where you finished and what it paid
@@ -95,6 +97,10 @@ export interface GameState {
   readonly boosts: readonly string[]
   /** three boosts on offer after making the cut */
   readonly boostOffer: readonly string[]
+  /** who is waiting on the walk to the fifth tee, when somebody is */
+  readonly encounterOffer: string | null
+  /** a side bet riding on the next holed-out — one at a time, then cleared */
+  readonly pendingBet: PendingBet | null
   /** free putt-holes remaining this round (Lucky Ball Marker) */
   readonly freeSinks: number
   /** the week's field, advancing hole by hole alongside you */
@@ -152,6 +158,8 @@ export function initialState(seed: number): GameState {
     skipped: 0,
     boosts: [],
     boostOffer: [],
+    encounterOffer: null,
+    pendingBet: null,
     freeSinks: 0,
     field: [],
     justShuffled: false,

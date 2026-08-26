@@ -14,6 +14,10 @@ import {
   type ShopItem,
 } from '../content/shop'
 import { WEEK, WEEKS, LESSON_FEE } from '../content/weeks'
+import {
+  ENCOUNTER, ENCOUNTERS, ENCOUNTER_BOOSTS, ENCOUNTER_CHANCE, type Outcome,
+} from '../content/encounters'
+import { next as rollEvents } from './rng'
 import { BOOST } from '../content/boosts'
 import { buildCone, focusCost, focusRegen, gimmeRange, maxFocus, whyNotPlayable } from './effects'
 import { dropPoint, resolveShot } from './resolve/shot'
@@ -35,6 +39,8 @@ export type Action =
   | { type: 'LEAVE_SHOP' }
   | { type: 'REMOVE_CARD'; id: string | null }
   | { type: 'TAKE_BOOST'; id: string }
+  | { type: 'ENGAGE' }
+  | { type: 'WALK_ON' }
   | { type: 'REDRAW' }
   | { type: 'TEE_OFF' }
   | { type: 'PICK_WEEK'; id: string | null }
@@ -117,6 +123,8 @@ export function reduce(state: GameState, action: Action): GameState {
     case 'LEAVE_SHOP': return moneyListOrNext(state)
     case 'REMOVE_CARD': return removeCard(state, action.id)
     case 'TAKE_BOOST': return takeBoost(state, action.id)
+    case 'ENGAGE':   return engage(state)
+    case 'WALK_ON':  return walkOn(state)
     case 'REDRAW':   return redraw(state)
     case 'TEE_OFF':  return startEvent(state)
     case 'PICK_WEEK':
@@ -138,7 +146,10 @@ function stock(state: GameState): GameState {
   return produce(state, d => {
     const owned = new Set(d.boosts)
     const budget = state.event <= EARLY_SHOP_UNTIL
-    const pool = BOOSTS.filter(b => !owned.has(b.id) && (!budget || b.price < PREMIUM_BOOST))
+    // encounter-only superstitions are never for sale — you cannot buy
+    // somebody else's tiger (content/encounters.ts ENCOUNTER_BOOSTS)
+    const pool = BOOSTS.filter(b => !owned.has(b.id) && !ENCOUNTER_BOOSTS.has(b.id)
+      && (!budget || b.price < PREMIUM_BOOST))
     const [bs, r1] = shuffle(pool.map(b => b.id), d.rng.draw)
     const [cs, r2] = shuffle(REWARD_POOL, r1)
     d.rng = { ...d.rng, draw: r2 }
@@ -392,8 +403,11 @@ export function sinkPrice(s: GameState, feet: number): number | null {
  */
 function offerBoosts(state: GameState): GameState {
   const owned = new Set(state.boosts)
-  const premium = BOOSTS.filter(b => !owned.has(b.id) && b.price >= PREMIUM_BOOST)
-  const any = BOOSTS.filter(b => !owned.has(b.id))
+  // ENCOUNTER_BOOSTS are excluded from a major's drop as from the shop: an
+  // encounter-only superstition (price 0) must never ride the `any` fallback.
+  const premium = BOOSTS.filter(b =>
+    !owned.has(b.id) && !ENCOUNTER_BOOSTS.has(b.id) && b.price >= PREMIUM_BOOST)
+  const any = BOOSTS.filter(b => !owned.has(b.id) && !ENCOUNTER_BOOSTS.has(b.id))
   const pool = (premium.length > 0 ? premium : any).map(b => b.id)
   if (pool.length === 0) return dealHole(state, state.scores.length)
   return produce(state, d => {
@@ -414,6 +428,118 @@ function takeBoost(state: GameState, id: string): GameState {
     d.log.push({ hole: 0, text: `Picked up ${b.name}.`, tone: 'good' })
   })
   return dealHole(next, next.scores.length)
+}
+
+/**
+ * THE ENCOUNTERS (content/encounters.ts) — decided here, on the walk off the
+ * cut, from the bank's own 'events' stream: roughly one made cut in three at
+ * a non-major, at most one per event. Majors keep their prize moment. All
+ * rolls — whether anyone shows, who, and how a gamble lands — come through
+ * the bank, so a replayed run meets the same people with the same luck.
+ */
+function maybeEncounter(state: GameState): GameState {
+  const [show, r1] = rollEvents(state.rng.events)
+  const [pick, r2] = rollEvents(r1)
+  const spent = produce(state, d => { d.rng = { ...d.rng, events: r2 } })
+  const eligible = ENCOUNTERS.filter(e =>
+    (e.minWallet ?? 0) <= state.earnings &&
+    // no second tiger: an already-granted encounter boost retires its encounter
+    !(e.engage.kind === 'sure' && e.engage.outcome.grantBoost !== undefined
+      && state.boosts.includes(e.engage.outcome.grantBoost)))
+  const chosen = eligible[Math.floor(pick * eligible.length)]
+  if (show >= ENCOUNTER_CHANCE || !chosen) {
+    return dealHole(spent, spent.scores.length)
+  }
+  return produce(spent, d => {
+    d.encounterOffer = chosen.id
+    d.phase = 'encounter'
+  })
+}
+
+/**
+ * THE ONE INTERPRETER. Every encounter consequence — and both ends of a
+ * settled bet — comes through here. The vocabulary is deliberately exactly
+ * four words: focus (clamped to [1, maxFocus] like everywhere else), money
+ * (gains land in earnings, gross-consistent like the sponsor week; losses
+ * clamp at an empty wallet), grantBoost (encounter-only superstitions), and
+ * the log line that says what happened.
+ */
+function applyOutcome(d: Draft<GameState>, o: Outcome, hole: number): void {
+  if (o.money !== undefined) {
+    d.earnings = Math.max(0, d.earnings + o.money)
+  }
+  if (o.grantBoost !== undefined && !d.boosts.includes(o.grantBoost)) {
+    d.boosts.push(o.grantBoost)
+  }
+  if (o.focus !== undefined) {
+    const bs = d.boosts.map(id => BOOST[id]!)
+    const cap = Math.max(1, maxFocus(MAX_FOCUS, bs) - d.focusPenalty)
+    d.focus = Math.min(cap, Math.max(1, d.focus + o.focus))
+  }
+  d.log.push({ hole, text: o.line, tone: o.tone })
+}
+
+/** Say yes. A gamble rolls now, from the events stream; a bet arms one. */
+function engage(state: GameState): GameState {
+  const enc = state.encounterOffer !== null ? ENCOUNTER[state.encounterOffer] : undefined
+  if (state.phase !== 'encounter' || !enc) return state
+  const done = produce(state, d => {
+    d.encounterOffer = null
+    const e = enc.engage
+    switch (e.kind) {
+      case 'sure':
+        applyOutcome(d, e.outcome, 0)
+        break
+      case 'gamble': {
+        const [r, r1] = rollEvents(d.rng.events)
+        const [which, r2] = rollEvents(r1)
+        d.rng = { ...d.rng, events: r2 }
+        const pool = r < e.odds ? e.win : e.lose
+        applyOutcome(d, pool[Math.floor(which * pool.length)]!, 0)
+        break
+      }
+      case 'bet':
+        // the stake leaves now; the verdict waits for the next holed-out
+        d.earnings = Math.max(0, d.earnings - e.stake)
+        d.pendingBet = {
+          condition: e.condition, win: e.win, lose: e.lose,
+          push: e.push, reminder: e.reminder,
+        }
+        d.log.push({ hole: 0, text: `${enc.name} — ${e.reminder}.`, tone: 'flat' })
+        break
+    }
+  })
+  return dealHole(done, done.scores.length)
+}
+
+/** Walk on. Always available, always free, changes nothing but the view. */
+function walkOn(state: GameState): GameState {
+  if (state.phase !== 'encounter') return state
+  const done = produce(state, d => { d.encounterOffer = null })
+  return dealHole(done, done.scores.length)
+}
+
+/**
+ * Settle a pending bet against the hole just finished. Judged on rel
+ * (strokes − par): 'birdie-or-better' wins at −1 or better, else loses;
+ * 'par-or-better' wins at par or better and loses ONLY at double or worse —
+ * a bogey is a push (the junior has seen golf before); 'no-double' wins
+ * anywhere short of a double. One bet at a time, cleared no matter what.
+ */
+function settleBet(draft: Draft<GameState>, rel: number, hole: number): void {
+  const bet = draft.pendingBet
+  if (!bet) return
+  const verdict =
+    bet.condition === 'birdie-or-better' ? (rel <= -1 ? 'win' : 'lose')
+      : bet.condition === 'par-or-better' ? (rel <= 0 ? 'win' : rel >= 2 ? 'lose' : 'push')
+        : (rel < 2 ? 'win' : 'lose')   // no-double
+  const outcome = verdict === 'win' ? bet.win : verdict === 'lose' ? bet.lose : bet.push
+  if (outcome) {
+    applyOutcome(draft, outcome, hole)
+    // the payoff belongs on the holed-out screen, next to the score it rode on
+    draft.lastShot = draft.lastShot ? `${draft.lastShot} ${outcome.line}` : outcome.line
+  }
+  draft.pendingBet = null
 }
 
 function finishHole(draft: Draft<GameState>): void {
@@ -443,6 +569,9 @@ function finishHole(draft: Draft<GameState>): void {
   if (rel <= 0 && draft.focus - before > 1) {
     draft.log.push({ hole: hole.num, text: 'Momentum — focus comes back faster after a good hole.', tone: 'good' })
   }
+  // a bet placed on the walk to this tee settles the moment the ball drops —
+  // after momentum, so its focus swing clamps against the refilled meter
+  settleBet(draft, rel, hole.num)
 }
 
 export function scoreName(rel: number): string {
@@ -591,7 +720,8 @@ function advance(state: GameState): GameState {
     if (state.madeCut === false) return settle(state, false)
     // a major hands you equipment for surviving it
     if (currentEvent(state).major) return offerBoosts(state)
-    return dealHole(state, state.scores.length)
+    // an ordinary made cut sometimes hands you a person instead
+    return maybeEncounter(state)
   }
 
   if (state.phase === 'payout') {

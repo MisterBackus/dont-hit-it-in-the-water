@@ -161,6 +161,18 @@ export const BOOSTS: readonly Boost[] = [
     redrawDiscount: 1, price: 550_000,
   },
 
+  // ---- encounter-only, 25 Aug 2026 ----
+  {
+    id: 'foundtiger', name: 'Somebody’s Tiger', icon: '◐',
+    // ENCOUNTER-ONLY (content/encounters.ts, The Lost Headcover). Price 0 and
+    // never for sale: reducer.ts excludes ENCOUNTER_BOOSTS from the shop's
+    // stock() and from a major's offerBoosts(). A superstition, not equipment
+    // — a headcover found face down in the rough, kept. A whisker of calm,
+    // forever, and the small permanent knowledge that it is not yours.
+    blurb: 'A headcover from the rough. Not yours. 3% less scatter, and you know why.',
+    spreadScale: 0.97, price: 0,
+  },
+
   // NOT here, and measured out rather than talked out: NEW GROOVES
   // (sandRelief — bunkers play as fairway) measured $3k a season, dead zero.
   // Bunker visits are rare, mostly short splash-outs where the spread

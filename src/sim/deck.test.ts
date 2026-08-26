@@ -15,6 +15,8 @@ import { standings, rankCut } from './resolve/field'
 import { currentHole } from './state'
 import { toPin, greenCentre } from './geometry'
 import { buildCone, focusRegen, whyNotPlayable } from './effects'
+import { ENCOUNTERS, ENCOUNTER_BOOSTS } from '../content/encounters'
+import { SAVE_VERSION } from '../platform/storage'
 
 /** The opening hand across many seeds. */
 function openingHands(n: number) {
@@ -291,6 +293,8 @@ describe('the season flows end to end', () => {
         s = reduce(s, { type: 'TAKE_WEEK', id: s.weekOptions[0]! }); continue
       }
       if (s.phase === 'boost') { s = reduce(s, { type: 'TAKE_BOOST', id: s.boostOffer[0]! }); continue }
+      // say yes to everyone, so the interpreter gets exercised end to end
+      if (s.phase === 'encounter') { s = reduce(s, { type: 'ENGAGE' }); continue }
       if (s.phase === 'playing' && s.hole.puttFeet !== null) {
         s = reduce(s, { type: 'PUTT', sink: false }); continue
       }
@@ -355,6 +359,7 @@ describe('you can always keep playing — no softlocks', () => {
       if (s.phase === 'shop') { s = reduce(s, { type: 'LEAVE_SHOP' }); continue }
       if (s.phase === 'remove') { s = reduce(s, { type: 'REMOVE_CARD', id: null }); continue }
       if (s.phase === 'boost') { s = reduce(s, { type: 'TAKE_BOOST', id: s.boostOffer[0]! }); continue }
+      if (s.phase === 'encounter') { s = reduce(s, { type: 'WALK_ON' }); continue }
       if (s.phase === 'over') break
       if (s.phase !== 'playing') { s = reduce(s, { type: 'NEXT' }); continue }
 
@@ -532,6 +537,7 @@ describe('a season can be played to its end', () => {
         case 'shop': s = reduce(s, { type: 'LEAVE_SHOP' }); break
         case 'remove': s = reduce(s, { type: 'REMOVE_CARD', id: s.deck[0] ?? null }); break
         case 'boost': s = reduce(s, { type: 'TAKE_BOOST', id: s.boostOffer[0]! }); break
+        case 'encounter': s = reduce(s, { type: 'ENGAGE' }); break
         default: s = reduce(s, { type: 'NEXT' })
       }
     }
@@ -625,6 +631,7 @@ describe('taking a week off', () => {
       } else if (s.phase === 'shop') s = reduce(s, { type: 'LEAVE_SHOP' })
       else if (s.phase === 'remove') s = reduce(s, { type: 'REMOVE_CARD', id: s.deck[0] ?? null })
       else if (s.phase === 'boost') s = reduce(s, { type: 'TAKE_BOOST', id: s.boostOffer[0]! })
+      else if (s.phase === 'encounter') s = reduce(s, { type: 'WALK_ON' })
       else if (s.phase === 'over') break
       else s = reduce(s, { type: 'NEXT' })
     }
@@ -905,5 +912,266 @@ describe('tiered drops — majors premium, early shop budget', () => {
       scores: [4, 4, 4, 4], boosts: all }
     const s = reduce(atMajorCut, { type: 'NEXT' })
     expect(s.phase).toBe('playing')   // straight to the fifth tee, no empty offer
+  })
+})
+
+/**
+ * THE ENCOUNTERS — somebody on the walk to the fifth tee.
+ *
+ * Everything below leans on the same guarantees as the rest of the sim: the
+ * 'events' stream is the bank's own, so a season with encounters in it is
+ * exactly as replayable as one without; walking on is free, forever; and a
+ * bet is data riding in state, settled by finishHole and nothing else.
+ */
+describe('the encounters', () => {
+  const teed = (seed: number) =>
+    reduce(reduce(initialState(seed), { type: 'START' }), { type: 'NEXT' })
+
+  /** a made cut at an ordinary event, about to walk off the cut screen */
+  const atCut = (seed: number, cash = 2_000_000) => ({
+    ...teed(seed), phase: 'cut' as const, madeCut: true,
+    scores: [4, 4, 4, 4], earnings: cash,
+  })
+
+  /** put a specific somebody in the walkway */
+  const meeting = (seed: number, id: string, cash = 2_000_000) => ({
+    ...teed(seed), phase: 'encounter' as const, encounterOffer: id, earnings: cash,
+  })
+
+  test('the save version gate turned for them', () => {
+    // the cut no longer deals the fifth hole directly on one weekend in
+    // three, so a v5 action log replays as a different season
+    expect(SAVE_VERSION).toBe(6)
+  })
+
+  test('who shows up is decided by the seed, at roughly one cut in three', () => {
+    const offers = (seed: number) => {
+      const s = reduce(atCut(seed), { type: 'NEXT' })
+      return s.phase === 'encounter' ? s.encounterOffer : null
+    }
+    const once = Array.from({ length: 120 }, (_, i) => offers(500 + i))
+    const twice = Array.from({ length: 120 }, (_, i) => offers(500 + i))
+    expect(once).toEqual(twice)                       // same seeds, same people
+    const met = once.filter(x => x !== null).length
+    expect(met).toBeGreaterThan(120 * 0.15)           // they do show up
+    expect(met).toBeLessThan(120 * 0.55)              // but not every week
+  })
+
+  test('majors keep their prize moment, and a missed cut meets nobody', () => {
+    const major = reduce({ ...atCut(17), event: 4 }, { type: 'NEXT' })
+    expect(major.phase).toBe('boost')
+    const missed = reduce({ ...atCut(17), madeCut: false }, { type: 'NEXT' })
+    expect(missed.phase).toBe('payout')
+  })
+
+  test('walking on is a pure pass, for every one of them', () => {
+    for (const enc of ENCOUNTERS) {
+      const s = meeting(7, enc.id)
+      const after = reduce(s, { type: 'WALK_ON' })
+      expect(after.phase).toBe('playing')             // straight to the tee
+      expect(after.focus).toBe(s.focus)
+      expect(after.earnings).toBe(s.earnings)
+      expect(after.spent).toBe(s.spent)
+      expect(after.boosts).toEqual(s.boosts)
+      expect(after.pendingBet).toBe(null)
+      expect(after.encounterOffer).toBe(null)
+    }
+  })
+
+  test('engaging outside the phase does nothing', () => {
+    const s = teed(7)
+    expect(reduce(s, { type: 'ENGAGE' })).toBe(s)
+    expect(reduce(s, { type: 'WALK_ON' })).toBe(s)
+  })
+
+  test('the cart girl is the mercy encounter, and the meter still has a top', () => {
+    const thirsty = reduce({ ...meeting(7, 'cartgirl'), focus: 3 }, { type: 'ENGAGE' })
+    expect(thirsty.focus).toBe(4)
+    const full = reduce({ ...meeting(7, 'cartgirl'), focus: 5 }, { type: 'ENGAGE' })
+    expect(full.focus).toBe(5)                        // clamped at maxFocus
+  })
+
+  test('the autograph is always the same honest trade', () => {
+    const s = { ...meeting(7, 'autograph'), focus: 3 }
+    const after = reduce(s, { type: 'ENGAGE' })
+    expect(after.earnings).toBe(s.earnings + 150_000)
+    expect(after.focus).toBe(2)
+    expect(after.spent).toBe(s.spent)                 // winnings, not un-spending
+  })
+
+  test('the porta-potty gamble: seeded, bounded, and floored at one focus', () => {
+    const runs = Array.from({ length: 60 }, (_, i) =>
+      reduce({ ...meeting(100 + i, 'portapotty'), focus: 1 }, { type: 'ENGAGE' }))
+    const lost = runs.filter(s => s.log.some(l => l.text.startsWith('You looked')))
+    const won = runs.filter(s => !s.log.some(l => l.text.startsWith('You looked')))
+    expect(lost.length).toBeGreaterThan(5)            // it has gone both ways
+    expect(won.length).toBeGreaterThan(5)
+    for (const s of lost) expect(s.focus).toBe(1)     // the floor holds
+    for (const s of won) {
+      // the good outcome is one of exactly two: focus, or money into gross
+      const paid = s.earnings === 2_200_000
+      const steadied = s.focus === 3
+      expect(paid || steadied).toBe(true)
+    }
+    // and the same seed always finds the same thing behind the unit
+    expect(reduce({ ...meeting(104, 'portapotty'), focus: 1 }, { type: 'ENGAGE' }))
+      .toEqual(reduce({ ...meeting(104, 'portapotty'), focus: 1 }, { type: 'ENGAGE' }))
+  })
+
+  test('the official can fine you, but never into debt', () => {
+    const runs = Array.from({ length: 60 }, (_, i) =>
+      reduce(meeting(200 + i, 'official', 0), { type: 'ENGAGE' }))
+    const fined = runs.filter(s => s.log.some(l => l.text.includes('junior programme')))
+    expect(fined.length).toBeGreaterThan(5)
+    for (const s of fined) expect(s.earnings).toBe(0) // the wallet floor holds
+  })
+
+  test('the sandbagger: stake now, verdict at the next holed-out', () => {
+    const armed = reduce(meeting(31, 'sandbagger'), { type: 'ENGAGE' })
+    expect(armed.earnings).toBe(1_800_000)            // the stake left already
+    expect(armed.pendingBet?.condition).toBe('birdie-or-better')
+    expect(armed.phase).toBe('playing')
+
+    const par = currentHole(armed).par
+    // a tap-in leaves a birdie: strokes so far + one free putt = par − 1
+    const birdie = reduce({ ...armed,
+      hole: { ...armed.hole, lie: 'green' as const, puttFeet: 4, strokes: par - 2 } },
+      { type: 'PUTT', sink: false })
+    expect(birdie.earnings).toBe(2_300_000)           // $500k, into gross
+    expect(birdie.pendingBet).toBe(null)
+    expect(birdie.log.some(l => l.text.includes('He pays like he putts'))).toBe(true)
+
+    // two putts from eight feet is a par — and a par is not a birdie
+    const parred = reduce({ ...armed,
+      hole: { ...armed.hole, lie: 'green' as const, puttFeet: 8, strokes: par - 2 } },
+      { type: 'PUTT', sink: false })
+    expect(parred.earnings).toBe(1_800_000)           // the stake is his
+    expect(parred.pendingBet).toBe(null)
+    expect(parred.log.some(l => l.text.includes('does not gloat'))).toBe(true)
+  })
+
+  test('the sandbagger is not offered to a player who cannot cover the stake', () => {
+    const met = (cash: number) => {
+      const ids: string[] = []
+      for (let i = 0; i < 150; i++) {
+        const s = reduce(atCut(3000 + i, cash), { type: 'NEXT' })
+        if (s.phase === 'encounter') ids.push(s.encounterOffer!)
+      }
+      return ids
+    }
+    const broke = met(0)
+    expect(broke.length).toBeGreaterThan(10)
+    expect(broke).not.toContain('sandbagger')
+    expect(met(2_000_000)).toContain('sandbagger')    // solvency restores him
+  })
+
+  test('the junior: par pays two, a double costs one, a bogey is a push', () => {
+    const armed = reduce({ ...meeting(31, 'junior'), focus: 1 }, { type: 'ENGAGE' })
+    expect(armed.earnings).toBe(2_000_000)            // no stake — he is nine
+    const par = currentHole(armed).par
+    const holeOut = (s: typeof armed, strokes: number, feet: number) =>
+      reduce({ ...s, hole: { ...s.hole, lie: 'green' as const, puttFeet: feet, strokes } },
+        { type: 'PUTT', sink: false })
+    // each case against the identical hole with no bet riding
+    const bare = { ...armed, pendingBet: null }
+
+    const win = holeOut(armed, par - 2, 8)            // two putts, par
+    expect(win.focus - holeOut(bare, par - 2, 8).focus).toBe(2)
+    expect(win.pendingBet).toBe(null)
+
+    const push = holeOut(armed, par - 1, 8)           // two putts, bogey
+    expect(push.focus).toBe(holeOut(bare, par - 1, 8).focus)
+    expect(push.pendingBet).toBe(null)
+    expect(push.log.some(l => l.text.includes('He understands'))).toBe(true)
+
+    const lose = holeOut(armed, par, 8)               // two putts, double
+    expect(lose.focus - holeOut(bare, par, 8).focus).toBe(-1)
+    expect(lose.pendingBet).toBe(null)
+  })
+
+  test('the found tiger is granted once, calms the cone, and retires its encounter', () => {
+    const kept = reduce(meeting(7, 'tiger'), { type: 'ENGAGE' })
+    expect(kept.boosts).toContain('foundtiger')
+    const plan = { shot: CARD['midiron'] as never, techniques: [], aim: 'pin' as const }
+    const bare = buildCone(plan, 'fairway', 999, boostsOf(teed(7))).cone
+    const calm = buildCone(plan, 'fairway', 999, boostsOf(kept)).cone
+    expect(calm.spread).toBeLessThan(bare.spread)
+    // a player already carrying it never meets the headcover again
+    for (let i = 0; i < 150; i++) {
+      const s = reduce({ ...atCut(4000 + i), boosts: ['foundtiger'] }, { type: 'NEXT' })
+      if (s.phase === 'encounter') expect(s.encounterOffer).not.toBe('tiger')
+    }
+  })
+
+  test('encounter-only boosts are never stocked, never dropped', () => {
+    // the shop, across seeds and weeks
+    for (const seed of [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
+      const t = teed(seed)
+      const s = reduce({ ...t, event: 5, phase: 'payout' as const,
+        earnings: 5_000_000, madeCut: true }, { type: 'NEXT' })
+      for (const item of s.offer) expect(ENCOUNTER_BOOSTS.has(item.id)).toBe(false)
+    }
+    // a major's drop — including the fallback shelf, which is the leak that
+    // a price-0 boost would otherwise ride: own everything BUT the tiger
+    const everything = BOOSTS.filter(b => !ENCOUNTER_BOOSTS.has(b.id)).map(b => b.id)
+    for (const boosts of [[], everything]) {
+      const t = teed(17)
+      const s = reduce({ ...t, event: 4, phase: 'cut' as const, madeCut: true,
+        scores: [4, 4, 4, 4], boosts }, { type: 'NEXT' })
+      for (const id of s.boostOffer) expect(ENCOUNTER_BOOSTS.has(id)).toBe(false)
+      if (boosts.length > 0) expect(s.phase).toBe('playing')   // skipped, not leaked
+    }
+  })
+
+  test('a season with encounters in it replays byte-identical', () => {
+    const run = (seed: number) => {
+      let s = reduce(initialState(seed), { type: 'START' })
+      const trace: string[] = []
+      let steps = 0
+      while (s.phase !== 'over') {
+        if (++steps > 20_000) throw new Error(`stuck in ${s.phase}`)
+        switch (s.phase) {
+          case 'playing': {
+            if (s.hole.puttFeet !== null) { s = reduce(s, { type: 'PUTT', sink: false }); break }
+            // the distance-ranked policy from the end-to-end suite — this bot
+            // has to actually make cuts, or no encounter ever gets a chance
+            const dist = toPin(currentHole(s), s.hole.ball)
+            const ranked = [...handShots(s)].sort((a, b) => {
+              const ca = a.carry > dist ? (a.carry - dist) * 1.3 : dist - a.carry
+              const cb = b.carry > dist ? (b.carry - dist) * 1.3 : dist - b.carry
+              return ca - cb
+            })
+            let moved = false
+            for (const shot of ranked) {
+              const picked = reduce(s, { type: 'SELECT_SHOT', id: shot.id })
+              const hit = reduce(picked, { type: 'COMMIT' })
+              if (hit !== picked) { s = hit; moved = true; break }
+            }
+            if (!moved) s = reduce(s, { type: 'NEXT' })
+            break
+          }
+          case 'shop': s = reduce(s, { type: 'LEAVE_SHOP' }); break
+          case 'remove': s = reduce(s, { type: 'REMOVE_CARD', id: s.deck[0] ?? null }); break
+          case 'boost': s = reduce(s, { type: 'TAKE_BOOST', id: s.boostOffer[0]! }); break
+          case 'encounter':
+            trace.push(`met ${s.encounterOffer}`)
+            s = reduce(s, { type: 'ENGAGE' })
+            break
+          default: s = reduce(s, { type: 'NEXT' })
+        }
+      }
+      trace.push(JSON.stringify(s))
+      return trace.join('\n')
+    }
+    // find a seed whose season actually meets somebody — a season the bot
+    // busts out of before making an ordinary cut proves nothing
+    let met: number | null = null
+    for (let seed = 2026; seed < 2056 && met === null; seed++) {
+      if (run(seed).includes('met ')) met = seed
+    }
+    expect(met).not.toBe(null)
+    const first = run(met!)
+    expect(run(met!)).toBe(first)     // byte-identical, gambles and bets included
+    expect(first).toContain('met ')
   })
 })

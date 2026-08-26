@@ -16,6 +16,7 @@ import { PUNCH_OUT, CHIP_OUT, HAND_SIZE, CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
 import { CUT_PRICE, REROLL_PRICE } from '../content/shop'
 import { WEEK, LESSON_FEE } from '../content/weeks'
+import { ENCOUNTER } from '../content/encounters'
 import { buildCone, focusCost, gimmeRange, maxFocus, whyNotPlayable } from '../sim/effects'
 import { SURFACE_LABEL, toPin } from '../sim/geometry'
 import { baseputts } from '../sim/resolve/putt'
@@ -467,6 +468,47 @@ export function App() {
     )
   }
 
+  if (s.phase === 'encounter') {
+    /* Somebody on the walk to the fifth tee (content/encounters.ts). Two
+       buttons, and only two: theirs, and WALK ON — which is always safe,
+       always available, and never explained further. Where the offer is a
+       gamble the odds are in the small text, said plainly (P8 extends to
+       people). Same room shape as the week cards, on purpose: this is the
+       same kind of decision, just wearing a bib or a windbreaker. */
+    const enc = ENCOUNTER[s.encounterOffer ?? '']
+    if (!enc) {
+      // an offer the content no longer knows must still have a door out —
+      // "when the reducer gains a phase, the UI must gain a room", and a
+      // room must never lose its exit
+      return (
+        <div className="shell intro">
+          <div className="mini-eyebrow">{currentEvent(s).name} · the cut is made</div>
+          <h1 className="small">Nobody there</h1>
+          <p className="tagline">Whoever it was, they have gone.</p>
+          <button className="big" onClick={() => dispatch({ type: 'WALK_ON' })}>Walk on</button>
+        </div>
+      )
+    }
+    return (
+      <div className="shell intro">
+        <div className="mini-eyebrow">{currentEvent(s).name} · the cut is made</div>
+        <span className="enc-icon">{enc.icon}</span>
+        <h1 className="small">{enc.name}</h1>
+        <p className="tagline">{enc.blurb}</p>
+        <div className="weeks enc-choices">
+          <button className="weekcard" onClick={() => dispatch({ type: 'ENGAGE' })}>
+            <span className="week-name">{enc.accept}</span>
+            <span className="week-blurb">{enc.stakes}</span>
+          </button>
+          <button className="weekcard enc-walk" onClick={() => dispatch({ type: 'WALK_ON' })}>
+            <span className="week-name">Walk on</span>
+            <span className="week-cost">{enc.walk}</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (s.phase === 'over') {
     const finished = s.event >= EVENT_COUNT && s.keptJob !== false
     const played = finished ? EVENT_COUNT : s.event
@@ -620,6 +662,10 @@ export function App() {
             <b>{dist}</b> yards to the pin — from {SURFACE_LABEL[s.hole.lie]}
             <i className="sit-strokes"> · stroke {s.hole.strokes}</i>
           </div>
+
+          {/* a bet rides this hole and only this hole — it settles (and this
+              line leaves) the moment the ball drops (settleBet, reducer.ts) */}
+          {s.pendingBet && <div className="note betnote">{s.pendingBet.reminder}</div>}
 
           {s.lastShot && <div className={`shotline ${holed ? 'big-news' : ''}`}>{s.lastShot}</div>}
 
