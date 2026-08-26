@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { CARD, HAND_SIZE, REWARD_POOL, STARTING_DECK } from '../content/cards'
 import { initialState } from './state'
 import { draw } from './deck'
-import { reduce, boostsOf, handShots } from './reducer'
+import { reduce, boostsOf, handShots, sinkPrice } from './reducer'
 import { PUNCH_OUT, freeShot } from '../content/cards'
 import { SEASON, MONEY_CHECKS, EVENT_COUNT, payout } from '../content/season'
 import { CARD_PRICES, CUT_PRICE, PREMIUM_BOOST, cardPrice } from '../content/shop'
@@ -127,6 +127,31 @@ describe('the pro shop — money finally does something', () => {
       expect(after.phase).toBe('shop')   // no forced swap — the slot was bought
       expect(after.mustSwap).toBe(false)
       expect(size(after)).toBe(20)
+    })
+  })
+
+  describe('the lucky ball marker actually works', () => {
+    // The owner bought it for $1.6M, went par-par-par-par, and missed the
+    // cut: sinkPrice zeroed the price while a charge was held, the UI hides
+    // price-zero buttons (that rule exists for tap-ins), and putt() then
+    // skipped consuming a charge the price said was already free — three
+    // correct-looking pieces composing into equipment no human could use.
+    const onGreen = (focus: number, freeSinks: number) => {
+      const teed = reduce(reduce(initialState(31), { type: 'START' }), { type: 'NEXT' })
+      return { ...teed, focus, freeSinks, hole: { ...teed.hole, lie: 'green' as const, puttFeet: 16, strokes: 2 } }
+    }
+
+    test('a charged marker holes a putt a broke player could not buy', () => {
+      const s = onGreen(1, 1)
+      expect(sinkPrice(s, 16)).toBeGreaterThan(0)   // the price is the price
+      const done = reduce(s, { type: 'PUTT', sink: true })
+      expect(done.scores[0]).toBe(3)                // holed it — the birdie is real
+      expect(done.freeSinks).toBe(0)                // and the charge was spent
+    })
+
+    test('without a charge, an unaffordable sink stays refused', () => {
+      const s = onGreen(1, 0)
+      expect(reduce(s, { type: 'PUTT', sink: true })).toBe(s)
     })
   })
 

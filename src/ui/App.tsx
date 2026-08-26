@@ -719,7 +719,11 @@ export function App() {
             const par = hole.par
             const afterFree = s.hole.strokes + free - par
             const afterSink = s.hole.strokes + 1 - par
-            const canSink = cost !== null && cost > 0 && cost <= s.focus
+            // a charged Lucky Ball Marker PAYS the price — it must not hide
+            // the button. Price-zero means tap-in (nothing to buy); marker
+            // means "buyable, and the marker's got this one."
+            const markered = s.freeSinks > 0 && cost !== null && cost > 0
+            const canSink = cost !== null && cost > 0 && (markered || cost <= s.focus)
             const gimmed = feet > 4 && feet <= gimme
             return (
               <>
@@ -736,7 +740,7 @@ export function App() {
                       onClick={() => dispatch({ type: 'PUTT', sink: true })}>
                       <span className="putt-name">Hole it</span>
                       <span className="putt-make">{scoreName(afterSink)}</span>
-                      <span className="putt-sub">{'\u25c6'.repeat(cost)} focus</span>
+                      <span className="putt-sub">{markered ? 'free \u00b7 lucky marker' : `${'\u25c6'.repeat(cost)} focus`}</span>
                     </button>
                   )}
                   {cost === null && (

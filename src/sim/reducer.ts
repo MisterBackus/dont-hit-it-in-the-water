@@ -370,7 +370,9 @@ function putt(state: GameState, sink: boolean): GameState {
   if (state.hole.puttFeet === null) return state
   const feet = state.hole.puttFeet
   const cost = sinkPrice(state, feet)
-  if (sink && (cost === null || cost > state.focus)) return state
+  // a charged Lucky Ball Marker covers the price, so it must also open the
+  // gate — a broke player with a free sink in pocket can still hole it
+  if (sink && (cost === null || (state.freeSinks <= 0 && cost > state.focus))) return state
 
   return produce(state, d => {
     if (sink && cost !== null) {
@@ -384,12 +386,21 @@ function putt(state: GameState, sink: boolean): GameState {
   })
 }
 
-/** What holing this putt actually costs, after equipment. */
+/**
+ * What holing this putt costs in FOCUS, after equipment discounts. The Lucky
+ * Ball Marker's free sink is deliberately NOT applied here: this function
+ * used to zero the price while a free sink was charged, the UI hides the
+ * hole-it button at price zero (that rule exists for tap-ins), and putt()
+ * then skipped consuming the charge because the price it saw was already
+ * zero — three correct-looking pieces composing into a boost no human could
+ * ever use. Found by the owner going par-par-par-par into a missed cut the
+ * event after buying it. The price is the price; whether the marker PAYS it
+ * is putt()'s business, and the UI says "free" when a charge will cover it.
+ */
 export function sinkPrice(s: GameState, feet: number): number | null {
   const base = sinkCost(feet, gimmeRange(boostsOf(s)))
   if (base === null) return null
   if (base === 0) return 0
-  if (s.freeSinks > 0) return 0
   const discount = boostsOf(s).reduce((n, b) => n + (b.sinkDiscount ?? 0), 0)
   return Math.max(1, base - discount)
 }
