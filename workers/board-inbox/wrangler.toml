@@ -1,0 +1,15 @@
+# The board inbox — deploy with `npx wrangler deploy` from this directory.
+# Full walkthrough: SETUP-SHARING.md at the repo root.
+name = "board-inbox"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+# Create the namespace first — `npx wrangler kv namespace create RUNS` —
+# then paste the id it prints over the placeholder below.
+[[kv_namespaces]]
+binding = "RUNS"
+id = "PASTE_KV_NAMESPACE_ID_HERE"
+
+# READ_TOKEN is a secret, not a var: `npx wrangler secret put READ_TOKEN`
+# (invent any long random string; the same string becomes the
+# INBOX_READ_TOKEN GitHub Actions secret).

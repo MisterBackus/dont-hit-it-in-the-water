@@ -26,6 +26,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # collect the mail: pull player-posted runs from the board inbox into runs/.
+      # No-ops with a friendly line when the secrets aren't set (SETUP-SHARING.md).
+      - run: npx tsx src/tools/fetchruns.ts
+        env:
+          INBOX_URL: ${{ secrets.INBOX_URL }}
+          INBOX_READ_TOKEN: ${{ secrets.INBOX_READ_TOKEN }}
       # the clubhouse board: verify shared runs by replay, emit public/board.html
       - run: npx tsx src/tools/board.ts
       - run: npm run build
