@@ -1,6 +1,6 @@
 import { useMemo, useReducer, useRef, useState } from 'react'
 import {
-  reduce, previewCone, scoreName, handShots, handTechs, boostsOf, sinkPrice,
+  reduce, previewCone, redrawPrice, scoreName, handShots, handTechs, boostsOf, sinkPrice,
   type Action,
 } from '../sim/reducer'
 import {
@@ -12,11 +12,11 @@ import {
 import {
   SEASON, EVENT_COUNT, checkAfter, money, MONEY_CHECKS, moneyListRank, TOUR_SIZE,
 } from '../content/season'
-import { PUNCH_OUT, CHIP_OUT, HAND_SIZE, CARD, REDRAW_COST } from '../content/cards'
+import { PUNCH_OUT, CHIP_OUT, HAND_SIZE, CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
 import { CUT_PRICE, REROLL_PRICE } from '../content/shop'
 import { WEEK, LESSON_FEE } from '../content/weeks'
-import { buildCone, focusCost, maxFocus, whyNotPlayable } from '../sim/effects'
+import { buildCone, focusCost, gimmeRange, maxFocus, whyNotPlayable } from '../sim/effects'
 import { SURFACE_LABEL, toPin } from '../sim/geometry'
 import { baseputts } from '../sim/resolve/putt'
 import { HoleView } from './HoleView'
@@ -644,20 +644,26 @@ export function App() {
 
           {s.phase === 'playing' && s.hole.puttFeet !== null && (() => {
             const feet = s.hole.puttFeet
-            const free = baseputts(feet)
+            // The gimme range MUST be in this arithmetic. It wasn't, and a
+            // player carrying Inside the Leather watched every close birdie
+            // display as a forced two-putt par while the engine quietly holed
+            // them for free. The picture must never lie — even kindly.
+            const gimme = gimmeRange(boostsOf(s))
+            const free = baseputts(feet, gimme)
             const cost = sinkPrice(s, feet)
             const par = hole.par
             const afterFree = s.hole.strokes + free - par
             const afterSink = s.hole.strokes + 1 - par
             const canSink = cost !== null && cost > 0 && cost <= s.focus
+            const gimmed = feet > 4 && feet <= gimme
             return (
               <>
                 <div className="lbl">On the green — <em>{feet} feet</em></div>
                 <div className="putts">
                   <button className="putt lag" onClick={() => dispatch({ type: 'PUTT', sink: false })}>
-                    <span className="putt-name">{free === 1 ? 'Tap in' : `${free} putts`}</span>
+                    <span className="putt-name">{gimmed ? 'Pick it up' : free === 1 ? 'Tap in' : `${free} putts`}</span>
                     <span className="putt-make">{scoreName(afterFree)}</span>
-                    <span className="putt-sub">free</span>
+                    <span className="putt-sub">{gimmed ? 'inside the leather' : 'free'}</span>
                   </button>
                   {cost !== null && cost > 0 && (
                     <button className={`putt charge ${canSink ? '' : 'off'}`}
@@ -713,10 +719,12 @@ export function App() {
                 ))}
               </div>
 
-              <button className="redraw" disabled={s.focus < REDRAW_COST}
+              {/* the real price, not the sticker — An Organized Bag halves
+                  it, and the button has to say so or the discount is a lie */}
+              <button className="redraw" disabled={s.focus < redrawPrice(s)}
                 onClick={() => dispatch({ type: 'REDRAW' })}>
                 <span>Check the bag — six new cards</span>
-                <b>{'\u25c6'.repeat(REDRAW_COST)}</b>
+                <b>{redrawPrice(s) === 0 ? 'free' : '\u25c6'.repeat(redrawPrice(s))}</b>
               </button>
 
               <button className="big commit flowact" disabled={!pv || !!pv.blocked}
