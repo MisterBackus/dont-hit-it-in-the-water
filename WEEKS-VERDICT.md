@@ -148,3 +148,75 @@ per season measured (range's stacking untested); the lesson's early mean is
 diluted by unaffordable seasons; the fitting cuts rewardcheck's best victim
 (Smooth It). None of these move any verdict's sign except possibly Corporate
 day's, which is within noise of zero exactly as a "niche" option should be.*
+
+---
+
+## Addendum — the redesign shipped (26 Aug 2026)
+
+The owner took **A + C-2 + B-1**, and they are now in the game (SAVE_VERSION 7
+— a v6 log replays as a different run; the frozen ledger keeps the board's old
+rows). Re-measured the same night: `npx tsx src/tools/weekcheck.ts`, N=1000,
+mixed shopper, seeds 800000+ — baseline $18.00M gross / 35% survival (the
+world moved a little since §1: the gimme/redraw fixes landed between the two
+runs, so numbers below are against the fresh baseline, not the old one).
+
+**What shipped**
+
+1. **The trade is printed (A).** The schedule screen's week node now says
+   what an event at this point of the season typically adds — the measured
+   per-event yields live in `weeks.ts` (`EVENT_YIELDS`, from §1 of this run:
+   $280k at event 1, $770k at event 5, ~$1.9M late) — and that a practice
+   week compounds through everything left. The danger-red confirm is
+   reserved for withdrawals that measure dangerous: the sponsor always, and
+   any skip from event 6 on. Events 1–5, non-sponsor, get a neutral confirm.
+2. **The draw follows the measurement (C-2).** Events 1–4 guarantee a
+   practice option (range / fitting / lesson) the first slot. Majors offer
+   no node at all — skipping THE major re-measured **−$3.30M, −28pp** — and
+   from event 10 the node goes quiet entirely, because every current option
+   costs the week and every late skip measured ≤ −$1.05M. The screen says
+   why in both cases rather than silently vanishing. Judgment call, as
+   invited: "no node at all" was chosen over "non-skip options only" because
+   no non-skip option exists yet; the gate in `offerWeek` (and the
+   `WEEKS_END_AT` comment) is written so one can be slotted in later. Same
+   named draw stream; deterministic; weekcheck prints unofferable rows as
+   `[OFF MENU]` counterfactuals instead of faking a purchase.
+3. **The sponsor expires (B-1).** −1 focus for the **next three events**,
+   then the contract runs out (state: `sponsorContracts`, decremented as
+   each event completes, played or skipped; regression-tested in
+   deck.test.ts — sign, three events, gone at the fourth tee).
+
+**The sponsor, re-measured (before → after)**
+
+| Row | Permanent (25 Aug) | 3-event contract (26 Aug) |
+|---|---|---|
+| Taken at ev 2 (skip + tax + $300k) | −$2.42M · −12pp | **−$1.03M ±$212k · −9pp** |
+| Taken at ev 8 | −$1.60M · −9pp | **−$1.20M ±$84k · −9pp** |
+| The tax alone, from ev 2 | −$2.88M · −13pp | **−$797k ±$158k · −8pp** |
+| The tax alone, from ev 8 | −$848k | **−$366k ±$46k · −2pp** |
+
+The verdict predicted the capped price lands ~$300–500k. Measured: **$366k
+from mid-season — inside the window; $797k from event 2 — above it, but
+under the >$900k bar this decision set for re-tuning**, so duration (3) and
+cash ($300k) stand untouched. The early tax is dearer because taxing events
+2–4 bleeds check-1 survival (−8pp), and dead seasons stop earning; that is
+the loan's real interest rate, not a mispricing. The card is still the menu's
+worst deal at every timing (best row −$1.03M), which is why it keeps the
+danger confirm everywhere — but it is now a loan with an end date instead of
+the only arithmetic trap in the game, and its cost line says exactly what it
+costs.
+
+**The rest of the menu, against the fresh baseline** — range early +$706k
+±$210k (+4pp), fitting early +$1.25M ±$209k (+9pp), lesson early +$865k
+±$181k (+6pp, unaffordable-and-played-instead in 38% of seasons — the
+wallet gate §3.3 flagged is untouched by this redesign and still bites),
+Corporate day a wash (−$13k). Signs all held.
+
+**Registered prediction.** Practice weeks start getting taken in events 1–3:
+the draw now guarantees one is offered there, the screen prints that an event
+there forfeits only ~$280–360k, and the confirm no longer dresses the
+purchase as a mistake. If future runstats bundles still show `WEEKS taken:
+none` in events 1–3, option A failed and the remaining lever is C-1 (ship
+fatigue) or pricing the effects into the shop. Secondary: sponsor signings
+should now cluster mid-season (the loan's cheap window) when they happen at
+all — and nobody should ever again lose a season to a misclicked withdrawal
+at a major, because the button is no longer there.

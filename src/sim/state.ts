@@ -82,15 +82,23 @@ export interface GameState {
    * An off-week option that has been clicked but not confirmed.
    *
    * These are the most irreversible buttons in the game — a sponsor costs a
-   * focus every hole for the whole rest of the season — and they sat one click
+   * focus every hole for your next three events — and they sat one click
    * away from a mis-aimed cursor, next to the button you press every week.
    * Found in playtest, the hard way.
    */
   readonly pendingWeek: string | null
   /** compounded cone tightening from range weeks and lessons */
   readonly practice: number
-  /** focus given up to sponsors, permanently */
-  readonly focusPenalty: number
+  /**
+   * Sponsor contracts still running — one entry per focus point owed, the
+   * value being how many events that contract has left. Signing pushes
+   * `effect.events` (currently 3) per focus point; every completed event —
+   * played or sat out, the calendar does not care — decrements each entry,
+   * and a spent contract disappears. The old field here was a permanent
+   * `focusPenalty`, which measured as the game's only arithmetic trap
+   * (WEEKS-VERDICT.md option B-1: −$848k..−$2.88M against $300k of cash).
+   */
+  readonly sponsorContracts: readonly number[]
   /** weeks sat out — shown on the schedule so the cost is visible */
   readonly skipped: number
   /** equipment and superstitions — always on, never in the deck */
@@ -160,7 +168,7 @@ export function initialState(seed: number): GameState {
     weekOptions: [],
     pendingWeek: null,
     practice: 1,
-    focusPenalty: 0,
+    sponsorContracts: [],
     skipped: 0,
     boosts: [],
     boostOffer: [],
@@ -176,6 +184,11 @@ export function initialState(seed: number): GameState {
     cutsMissed: 0,
     spent: 0,
   }
+}
+
+/** The sponsor tax active right now: −1 focus per running contract. */
+export function focusPenaltyOf(s: Pick<GameState, 'sponsorContracts'>): number {
+  return s.sponsorContracts.length
 }
 
 /** Deck composition, for the deck viewer. */

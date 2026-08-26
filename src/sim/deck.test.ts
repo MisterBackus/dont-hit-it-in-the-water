@@ -12,7 +12,7 @@ import { LESSON_FEE } from '../content/weeks'
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { dropPoint } from './resolve/shot'
 import { standings, rankCut } from './resolve/field'
-import { currentHole } from './state'
+import { MAX_FOCUS, courseOf, currentHole } from './state'
 import { toPin, greenCentre } from './geometry'
 import { buildCone, focusRegen, whyNotPlayable } from './effects'
 import { ENCOUNTERS, ENCOUNTER_BOOSTS } from '../content/encounters'
@@ -494,11 +494,37 @@ describe('sitting a week out', () => {
     expect(two.practice).toBeLessThan(one.practice)
   })
 
-  test('a sponsor pays now and costs focus for the rest of the season', () => {
+  test('a sponsor pays now and taxes focus for the next three events', () => {
     const s = { ...atSchedule(21), weekOptions: ['sponsor', 'range'] }
     const after = reduce(s, { type: 'TAKE_WEEK', id: 'sponsor' })
     expect(after.earnings).toBe(s.earnings + 300_000)
-    expect(after.focusPenalty).toBe(1)
+    expect(after.sponsorContracts).toEqual([3])
+  })
+
+  test('the contract runs out — three events later the focus is back', () => {
+    // sign at event 1; the tax must hold at the tee of events 2, 3 and 4 and
+    // be gone at the tee of event 5. WEEKS-VERDICT option B-1: the permanent
+    // −1 was the game's only arithmetic trap; the cap is what makes it a loan.
+    const s = { ...atSchedule(21), weekOptions: ['sponsor', 'range'] }
+    let at = reduce(s, { type: 'TAKE_WEEK', id: 'sponsor' })
+    for (let played = 0; played < 3; played++) {
+      expect(at.phase).toBe('schedule')
+      const teed = reduce(at, { type: 'NEXT' })
+      expect(teed.focus).toBe(MAX_FOCUS - 1)   // the tax, at the tee
+      // fabricate a finished event and let it settle
+      const scores = courseOf(teed).holes.map(h => h.par)
+      const done = reduce(
+        { ...teed, scores, madeCut: true, phase: 'holed' as const, earnings: 50_000_000 },
+        { type: 'NEXT' })                       // -> settle -> payout
+      expect(done.phase).toBe('payout')
+      expect(done.sponsorContracts).toEqual(played < 2 ? [2 - played] : [])
+      at = reduce(reduce(done, { type: 'NEXT' }), { type: 'LEAVE_SHOP' })
+      if (at.phase === 'moneylist') at = reduce(at, { type: 'NEXT' })
+    }
+    // the fourth event after signing: the contract has expired
+    expect(at.sponsorContracts).toEqual([])
+    const fourth = reduce(at, { type: 'NEXT' })
+    expect(fourth.focus).toBe(MAX_FOCUS)
   })
 
   test('a lesson is the one week you also pay for, and you cannot go into debt', () => {
@@ -529,6 +555,28 @@ describe('sitting a week out', () => {
   test('you cannot take a week that was not offered', () => {
     const s = { ...atSchedule(21), weekOptions: ['range', 'exhibition'] }
     expect(reduce(s, { type: 'TAKE_WEEK', id: 'sponsor' })).toBe(s)
+  })
+
+  test('the draw follows the measurement — biased early, silent at majors and late', () => {
+    // WEEKS-VERDICT.md option C-2. Events 1–4: a practice option is
+    // guaranteed the first slot, because that window is where they pay.
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      const s = reduce(initialState(seed), { type: 'START' })
+      expect(['range', 'fitting', 'lesson']).toContain(s.weekOptions[0]!)
+      expect(s.weekOptions.length).toBe(2)
+      expect(new Set(s.weekOptions).size).toBe(2)
+    }
+    // a major offers nothing — skipping THE major measured −$3.59M
+    const shop3 = { ...atSchedule(21), event: 3, phase: 'shop' as const, offer: [] }
+    const at4 = reduce(shop3, { type: 'LEAVE_SHOP' })
+    expect(at4.event).toBe(4)
+    expect(at4.weekOptions).toEqual([])
+    // and from event 10 the node goes quiet: every option skips the event,
+    // and every late skip is a known loss
+    const shop11 = { ...atSchedule(21), event: 11, phase: 'shop' as const, offer: [] }
+    const at12 = reduce(shop11, { type: 'LEAVE_SHOP' })
+    expect(at12.event).toBe(12)
+    expect(at12.weekOptions).toEqual([])
   })
 })
 
@@ -963,10 +1011,10 @@ describe('the encounters', () => {
     ...teed(seed), phase: 'encounter' as const, encounterOffer: id, earnings: cash,
   })
 
-  test('the save version gate turned for them', () => {
-    // the cut no longer deals the fifth hole directly on one weekend in
-    // three, so a v5 action log replays as a different season
-    expect(SAVE_VERSION).toBe(6)
+  test('the save version gate turned for the weeks redesign', () => {
+    // the week draw is biased early and silent at majors and from event 10,
+    // and a sponsor now expires — a v6 log replays as a different season
+    expect(SAVE_VERSION).toBe(7)
   })
 
   test('who shows up is decided by the seed, at roughly one cut in three', () => {

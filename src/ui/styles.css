@@ -254,12 +254,20 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
   background:var(--panel);border:1px dashed var(--line);border-radius:3px;padding:12px 13px}
 @media(hover:hover){.weekcard:hover:not(:disabled){border-style:solid;border-color:var(--cone)}}
 .weekcard.off{opacity:.4}
-.weekcard.picked{border-style:solid;border-color:var(--bad);background:var(--panel)}
-.weekcard.picked .week-icon{color:var(--bad)}
+/* Armed cards and confirms wear red ONLY when the withdrawal measures
+   dangerous (the sponsor, or any skip from mid-season on) — an early
+   practice week is a purchase, and it no longer dresses like a mistake. */
+.weekcard.picked{border-style:solid;border-color:var(--cone);background:var(--panel)}
+.weekcard.picked .week-icon{color:var(--cone)}
+.weekcard.picked.risk{border-color:var(--bad)}
+.weekcard.picked.risk .week-icon{color:var(--bad)}
+/* the season-yield line above the week cards — the trade, said out loud */
+.weeknote{font-size:12.5px;color:var(--soft);line-height:1.45;margin:6px 0 0}
 
 /* Confirming an off week — the only irreversible click on this screen. */
 .confirm{margin-top:12px;border:1px solid var(--bad);border-radius:3px;padding:14px 15px;
   background:var(--panel)}
+.confirm.calm{border-color:var(--line)}
 .confirm-q{font-family:var(--fd);font-weight:700;font-size:15px;margin-bottom:5px}
 .confirm-why{font-size:12.5px;color:var(--soft);line-height:1.45;margin-bottom:11px}
 .confirm-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}

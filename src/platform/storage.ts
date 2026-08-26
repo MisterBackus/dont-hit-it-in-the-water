@@ -14,7 +14,7 @@
  */
 import type { Action } from '../sim/reducer'
 
-export const SAVE_VERSION = 6 // v6: encounters after the cut — a v5 log has no ENGAGE/WALK_ON and one made cut in three now stops at the fifth tee // v5: ten-course pool + new pins reshuffle every seed's schedule // v4: the schedule rotation — events draw courses from the pool, so a v3 log replays as a different run
+export const SAVE_VERSION = 7 // v7: the weeks redesign — the draw is biased early, silent at majors and from event 10, and a sponsor expires after three events, so a v6 log replays as a different run // v6: encounters after the cut — a v5 log has no ENGAGE/WALK_ON and one made cut in three now stops at the fifth tee // v5: ten-course pool + new pins reshuffle every seed's schedule // v4: the schedule rotation — events draw courses from the pool, so a v3 log replays as a different run
 const KEY = 'dont-hit-it-in-the-water/save'
 
 export interface SaveFile {

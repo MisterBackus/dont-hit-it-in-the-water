@@ -705,7 +705,11 @@ Shuffled in, not chosen. Cured at a cost.
 ### 8.1 The week node — the off week
 
 You may tee it up, or **take the week off**. Two of five options are offered each
-week, shuffled:
+week, shuffled — and since the weeks redesign (WEEKS-VERDICT.md, 26 Aug 2026)
+the draw follows the measurement: events 1–4 guarantee a practice option a
+slot, majors offer nothing at all, and from event 10 the node goes quiet
+(every current option costs the week, and every late skip measured −$1.2M or
+worse).
 
 | Off week | Effect | Cost |
 |---|---|---|
@@ -713,18 +717,21 @@ week, shuffled:
 | A lesson with someone good | Cones tighten 10% for the rest of the season | $120k as well as the week |
 | Get properly fitted | Cut a card from the bag, free | No prize money this week |
 | Corporate day | $180k, guaranteed | No ranking, no equipment |
-| Sign with a sponsor | $300k up front, today | **One less focus, every hole, for the rest of the season** |
+| Sign with a sponsor | $300k up front, today | **One less focus, every hole, for the next three events — then the contract runs out** |
 
 Sitting out is money you don't earn while the Money List clock keeps running,
 which is the entire trade: everything here has to be worth roughly what an event
-pays, or nobody would ever take one.
+pays, or nobody would ever take one. The schedule screen now prints that trade —
+what an event typically adds at this point in the season — instead of hiding it.
 
-**Off weeks are confirmed, not clicked.** Signing with a sponsor is the only
-permanent debuff in the game, and its button used to fire on a single click,
-sitting directly underneath the one you press every single week. A playtester hit
-it by accident. Picking an off week now only *arms* it — the card highlights and
-a confirmation panel names the event you are withdrawing from and the price —
-and **pressing Tee off clears a half-made choice rather than honouring it.**
+**Off weeks are confirmed, not clicked.** The sponsor's button used to fire on a
+single click, sitting directly underneath the one you press every single week. A
+playtester hit it by accident. Picking an off week now only *arms* it — the card
+highlights and a confirmation panel names the event you are withdrawing from and
+the price — and **pressing Tee off clears a half-made choice rather than
+honouring it.** The danger-red confirm is reserved for withdrawals that measure
+dangerous (the sponsor, and any skip from mid-season on); an early practice week
+gets a neutral one, because it is a purchase, not a mistake.
 
 ### 8.2 Fatigue
 A season-long resource that only goes up during play. Each event adds fatigue; majors add more; pro-ams add the most. High fatigue reduces max focus. Only Rest clears it.

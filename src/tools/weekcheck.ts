@@ -20,8 +20,12 @@
  *   2. WHAT DOES EACH WEEK OPTION RETURN taken early / mid / late vs never —
  *      final gross earnings delta (the number the Money List reads) and
  *      survival delta. The lesson compounds through the practice multiplier,
- *      so early should beat late; the sponsor's -1 focus is a tax on every
- *      remaining hole, so late should beat early. Measured, not assumed.
+ *      so early should beat late; the sponsor's -1 focus taxes the NEXT
+ *      THREE EVENTS (the weeks redesign — it used to be permanent), so its
+ *      price should now be flat-ish across timings. Measured, not assumed.
+ *      Since the redesign not every option is offerable at every timing —
+ *      nothing at majors, nothing from event 10 — and those rows are printed
+ *      as [OFF MENU] counterfactuals rather than faked as purchases.
  *   3. WHAT WOULD THE EFFECTS BE WORTH FREE — the same tighten / focus-tax
  *      applied without skipping the event, to decompose each option into
  *      (effect value) − (event forfeited) and price the design space.
@@ -44,7 +48,7 @@ import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../conte
 import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import { PREMIUM_BOOST } from '../content/shop'
-import { WEEK, WEEKS, LESSON_FEE } from '../content/weeks'
+import { WEEK, WEEKS, LESSON_FEE, WEEKS_END_AT } from '../content/weeks'
 import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
@@ -129,6 +133,8 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: readonly Boost[], policy: Po
  */
 interface Plan {
   readonly weeks?: Readonly<Record<number, string>>
+  /** the sponsor's tax alone, SHIPPED SEMANTICS: −1 focus for the contract's
+   * three events starting AT this event, no event skipped */
   readonly penaltyFrom?: number
   readonly practiceFrom?: { readonly event: number; readonly tighten: number }
 }
@@ -144,6 +150,10 @@ interface SeasonOut {
 
 /** best-affordable-first, one a week — shopcheck's shopper */
 const ORDER = [...BOOSTS].sort((a, b) => b.price - a.price)
+
+/** the sponsor's contract terms, read from content so this cannot drift */
+const SPONSOR = WEEK['sponsor']!.effect as
+  { kind: 'sponsor'; amount: number; focusCost: number; events: number }
 
 /**
  * One season: shopcheck's shopping season (major-cut drops modeled, gross
@@ -166,8 +176,19 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
   const running: number[] = []
   const rota = scheduleFor(seed)
 
+  // sponsor contracts, mirroring reducer.ts: one entry per focus point owed,
+  // the value being events remaining; every completed event — played or sat
+  // out — burns one, and the tax is the count of live entries
+  const contracts: number[] = []
+  const tick = () => {
+    for (let i = contracts.length - 1; i >= 0; i--) {
+      contracts[i]! -= 1
+      if (contracts[i]! <= 0) contracts.splice(i, 1)
+    }
+  }
+
   for (const ev of SEASON) {
-    if (plan.penaltyFrom === ev.num) ctx.penalty += 1
+    if (plan.penaltyFrom === ev.num) contracts.push(SPONSOR.events)
     if (plan.practiceFrom?.event === ev.num) practice *= plan.practiceFrom.tighten
 
     let weekId = plan.weeks?.[ev.num]
@@ -193,6 +214,9 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
 
     if (weekId) {
       const w = WEEK[weekId]!
+      // this week's event concludes without you — running contracts burn an
+      // event BEFORE a newly signed one lands at its full length (reducer.ts)
+      tick()
       switch (w.effect.kind) {
         case 'practice':
           // the fee is wallet-only: earnings→spent, gross unchanged
@@ -204,7 +228,7 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
           break
         case 'sponsor':
           banked += w.effect.amount; earned += w.effect.amount
-          ctx.penalty += w.effect.focusCost
+          for (let i = 0; i < w.effect.focusCost; i++) contracts.push(w.effect.events)
           break
         case 'cut':
           for (const pile of [ctx.deck, ctx.discard]) {
@@ -224,6 +248,8 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
       { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness * practice },
       ...kit,
     ]
+    // the sponsor tax active this event — contracts live for the whole event
+    ctx.penalty = contracts.length
     // reducer startEvent: MAX_FOCUS + bonuses − focusPenalty, floored at 1
     ctx.focus = Math.max(1, maxFocus(5, boosts) - ctx.penalty)
     ctx.freeSinks = kit.reduce((n, b) => n + (b.freeSinks ?? 0), 0)
@@ -277,6 +303,8 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
       banked += cheque
       earned += cheque
     }
+    // the event is over — reducer.ts settle: every contract burns one event
+    tick()
     running.push(earned)
     prevPlayed = true
   }
@@ -364,7 +392,18 @@ console.log('    that is what a week COSTS; every option below has to beat it.\n
  * plus the drop), because the schedule screen happily offers it.
  * ------------------------------------------------------------------ */
 const TIMINGS: readonly (readonly [string, number])[] = [['early', 2], ['mid', 8], ['late', 13]]
+
+/**
+ * Mirrors reducer.ts offerWeek since the weeks redesign: nothing is offered
+ * at a major or from WEEKS_END_AT on. Rows past those gates are still
+ * measured — they price the door the redesign closed — but the instrument
+ * says the card is off the menu rather than pretending it is for sale.
+ */
+const offerable = (evNum: number) =>
+  !SEASON[evNum - 1]!.major && evNum < WEEKS_END_AT
+
 console.log('  EACH WEEK OPTION, TAKEN ONCE, vs NEVER  (Δ paired by seed, ±1 s.e.)')
+console.log('  [OFF MENU] = not offerable in-game since the redesign; measured as a counterfactual')
 console.log('  option                      timing        gross Δ    ±s.e.   survival Δ')
 console.log('  ' + '-'.repeat(72))
 const results = new Map<string, { t: string; ev: number; d: number; se: number; ds: number }[]>()
@@ -375,8 +414,9 @@ for (const w of WEEKS) {
     const { d, se } = delta(r, base)
     const ds = r.surv - base.surv
     rows.push({ t, ev, d, se, ds })
-    const note = w.id === 'lesson' && r.refused > 0
-      ? `  (unaffordable, played instead, in ${Math.round(r.refused * 100)}%)` : ''
+    const note = (w.id === 'lesson' && r.refused > 0
+      ? `  (unaffordable, played instead, in ${Math.round(r.refused * 100)}%)` : '')
+      + (offerable(ev) ? '' : '  [OFF MENU]')
     console.log(`  ${w.name.padEnd(26)} ${`${t} (ev ${ev})`.padEnd(12)}` +
       ` ${dm(d).padStart(9)} ${money(Math.round(se)).padStart(8)} ${pp(ds).padStart(11)}${note}`)
   }
@@ -387,7 +427,7 @@ for (const w of WEEKS) {
   const { d, se } = delta(r, base)
   console.log(`  ${'(any option) at THE major'.padEnd(26)} ${'major (ev 7)'.padEnd(12)}` +
     ` ${dm(d).padStart(9)} ${money(Math.round(se)).padStart(8)} ${pp(r.surv - base.surv).padStart(11)}` +
-    '  (range shown; the forfeit dominates)')
+    '  [OFF MENU] (range shown; the forfeit dominates)')
 }
 console.log()
 
@@ -398,12 +438,13 @@ console.log()
  * without the week" and "how heavy is the sponsor's tax, really".
  * ------------------------------------------------------------------ */
 console.log('  THE EFFECT ALONE (no event skipped — the designer\'s counterfactual)')
+console.log(`  (the sponsor tax is now the SHIPPED contract: -1 focus for ${SPONSOR.events} events)`)
 for (const [label, plan] of [
   ['lesson tighten ×0.90 from ev 2 ', { practiceFrom: { event: 2, tighten: 0.90 } }],
   ['lesson tighten ×0.90 from ev 8 ', { practiceFrom: { event: 8, tighten: 0.90 } }],
   ['range tighten ×0.94 from ev 2  ', { practiceFrom: { event: 2, tighten: 0.94 } }],
-  ['sponsor -1 focus from ev 2     ', { penaltyFrom: 2 }],
-  ['sponsor -1 focus from ev 8     ', { penaltyFrom: 8 }],
+  ['sponsor -1, 3 events, from ev 2', { penaltyFrom: 2 }],
+  ['sponsor -1, 3 events, from ev 8', { penaltyFrom: 8 }],
 ] as const satisfies readonly (readonly [string, Plan])[]) {
   const r = measure(plan)
   const { d, se } = delta(r, base)

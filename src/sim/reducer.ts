@@ -2,8 +2,8 @@ import { produce, type Draft } from 'immer'
 import type { AimChoice, Boost, Cone, HoleSpec, Point, ShotCard, Surface, TechniqueCard } from './types'
 import type { GameState } from './state'
 import {
-  CUT_AFTER_HOLE, MAX_FOCUS, courseOf, currentEvent, currentHole, freshHole,
-  holeCount, initialState, parThrough,
+  CUT_AFTER_HOLE, MAX_FOCUS, courseOf, currentEvent, currentHole, focusPenaltyOf,
+  freshHole, holeCount, initialState, parThrough,
 } from './state'
 import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
@@ -13,7 +13,9 @@ import {
   cardPrice, CUT_PRICE, EARLY_SHOP_UNTIL, PREMIUM_BOOST, REROLL_PRICE,
   type ShopItem,
 } from '../content/shop'
-import { WEEK, WEEKS, LESSON_FEE } from '../content/weeks'
+import {
+  LESSON_FEE, PRACTICE_BIAS_UNTIL, PRACTICE_WEEK_IDS, WEEK, WEEKS, WEEKS_END_AT,
+} from '../content/weeks'
 import {
   ENCOUNTER, ENCOUNTERS, ENCOUNTER_BOOSTS, ENCOUNTER_CHANCE, type Outcome,
 } from '../content/encounters'
@@ -242,7 +244,7 @@ function startEvent(state: GameState): GameState {
     d.madeCut = null
     d.focus = Math.max(1,
       MAX_FOCUS + boostsOf(state).reduce((n, b) => n + (b.maxFocusBonus ?? 0), 0)
-      - state.focusPenalty)
+      - focusPenaltyOf(state))
     d.freeSinks = state.boosts.reduce((n, id) => n + (BOOST[id]!.freeSinks ?? 0), 0)
     d.log = []
     const [field, r] = makeField(d.rng.field, SEASON[d.event - 1]!.fieldStrength)
@@ -484,7 +486,7 @@ function applyOutcome(d: Draft<GameState>, o: Outcome, hole: number): void {
   }
   if (o.focus !== undefined) {
     const bs = d.boosts.map(id => BOOST[id]!)
-    const cap = Math.max(1, maxFocus(MAX_FOCUS, bs) - d.focusPenalty)
+    const cap = Math.max(1, maxFocus(MAX_FOCUS, bs) - focusPenaltyOf(d))
     d.focus = Math.min(cap, Math.max(1, d.focus + o.focus))
   }
   d.log.push({ hole, text: o.line, tone: o.tone })
@@ -582,7 +584,7 @@ function finishHole(draft: Draft<GameState>): void {
   const bs = draft.boosts.map(id => BOOST[id]!)
   const before = draft.focus
   draft.focus = Math.min(
-    Math.max(1, maxFocus(MAX_FOCUS, bs) - draft.focusPenalty),
+    Math.max(1, maxFocus(MAX_FOCUS, bs) - focusPenaltyOf(draft)),
     draft.focus + focusRegen(bs, rel),
   )
   // momentum is a rule the player is meant to play around, so it has to be
@@ -605,10 +607,23 @@ export function scoreName(rel: number): string {
   return `${rel} over`
 }
 
+/**
+ * An event has concluded — played or sat out, the calendar does not care —
+ * so every running sponsor contract burns one of its events. Called from
+ * settle (a played event ending, cut made or missed) and from takeWeek (a
+ * week sat out, BEFORE the new option's effect lands, so a contract signed
+ * this week starts at its full length). Signed at event N, a three-event
+ * contract taxes events N+1, N+2 and N+3, and is gone at N+4.
+ */
+function tickSponsors(d: Draft<GameState>): void {
+  d.sponsorContracts = d.sponsorContracts.map(n => n - 1).filter(n => n > 0)
+}
+
 /** Settle the event: where you finished, and what it paid. */
 function settle(state: GameState, madeCut: boolean): GameState {
   const ev = currentEvent(state)
   return produce(state, d => {
+    tickSponsors(d)
     if (!madeCut) {
       d.lastPlace = 0
       d.lastPaid = 0
@@ -657,14 +672,42 @@ function moneyListOrNext(state: GameState): GameState {
   return offerWeek(produce(state, d => { d.event += 1 }))
 }
 
-/** Two things you could do instead of teeing it up. */
+/**
+ * Two things you could do instead of teeing it up — where the measurement
+ * allows it (WEEKS-VERDICT.md, owner decision C-2):
+ *
+ *   - A MAJOR offers nothing: every option costs the week, and skipping THE
+ *     major measured −$3.59M and −25pp survival. That is a misclick waiting
+ *     to happen, not a choice worth selling.
+ *   - From WEEKS_END_AT (event 10) the node goes quiet: no current option
+ *     avoids skipping the event, and every late skip measured −$1.2M or
+ *     worse. A menu of known losses teaches distrust of the whole system.
+ *   - Through PRACTICE_BIAS_UNTIL (events 1–4) the first slot is guaranteed
+ *     to be a practice option (range / fitting / lesson) — the early window
+ *     is where they measured +$720k..+$1.12M WITH survival gains.
+ *
+ * Same named draw stream as ever: deterministic, replayable.
+ */
 function offerWeek(state: GameState): GameState {
+  const ev = currentEvent(state)
   return produce(state, d => {
+    d.pendingWeek = null
+    d.phase = 'schedule'
+    if (ev.major || ev.num >= WEEKS_END_AT) {
+      d.weekOptions = []
+      return
+    }
+    if (ev.num <= PRACTICE_BIAS_UNTIL) {
+      const [ps, r1] = shuffle([...PRACTICE_WEEK_IDS], d.rng.draw)
+      const first = ps[0]!
+      const [rest, r2] = shuffle(WEEKS.map(w => w.id).filter(id => id !== first), r1)
+      d.rng = { ...d.rng, draw: r2 }
+      d.weekOptions = [first, rest[0]!]
+      return
+    }
     const [ws, r] = shuffle(WEEKS.map(w => w.id), d.rng.draw)
     d.rng = { ...d.rng, draw: r }
     d.weekOptions = ws.slice(0, 2)
-    d.pendingWeek = null
-    d.phase = 'schedule'
   })
 }
 
@@ -681,6 +724,9 @@ function takeWeek(state: GameState, id: string): GameState {
     d.skipped += 1
     d.weekOptions = []
     d.pendingWeek = null
+    // this week's event concludes without you — running contracts burn an
+    // event BEFORE a newly signed one lands at its full three
+    tickSponsors(d)
     switch (w.effect.kind) {
       case 'practice':
         if (id === 'lesson') { d.earnings -= LESSON_FEE; d.spent += LESSON_FEE }
@@ -690,8 +736,11 @@ function takeWeek(state: GameState, id: string): GameState {
         d.earnings += w.effect.amount
         break
       case 'sponsor':
+        // one contract entry per focus point owed, each `events` events long
+        for (let i = 0; i < w.effect.focusCost; i++) {
+          d.sponsorContracts.push(w.effect.events)
+        }
         d.earnings += w.effect.amount
-        d.focusPenalty += w.effect.focusCost
         break
       case 'cut':
         break

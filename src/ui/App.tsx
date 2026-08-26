@@ -15,7 +15,7 @@ import {
 import { PUNCH_OUT, CHIP_OUT, HAND_SIZE, CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
 import { CUT_PRICE, REROLL_PRICE } from '../content/shop'
-import { WEEK, LESSON_FEE } from '../content/weeks'
+import { WEEK, LESSON_FEE, EVENT_YIELDS, STAGE_YIELD, eventStage } from '../content/weeks'
 import { ENCOUNTER } from '../content/encounters'
 import { buildCone, focusCost, gimmeRange, maxFocus, whyNotPlayable } from '../sim/effects'
 import { SURFACE_LABEL, toPin } from '../sim/geometry'
@@ -197,18 +197,45 @@ export function App() {
           {' '}<a href="board.html">the clubhouse board →</a>
         </p>
 
+        {/* THE WEEK NODE — silent at majors and from event 10 (offerWeek), and
+            it says why: a system that measured as good-deals-nobody-can-see
+            (WEEKS-VERDICT.md) now prints the trade instead of hiding it. */}
+        {s.weekOptions.length === 0 && s.event > 1 && (
+          <p className="note" style={{ textAlign: 'center' }}>
+            {ev.major
+              ? 'No withdrawing this week. Nobody sits out a major.'
+              : `No off-week offers this late — an event out here typically adds
+                 about ${money(STAGE_YIELD.late)}, and nothing a week off buys is worth that.`}
+          </p>
+        )}
         {s.weekOptions.length > 0 && (
           <>
             <div className="lbl" style={{ marginTop: 18 }}>
               Take the week off <em>— no prize money, and the Money List does not wait</em>
             </div>
+            <p className="weeknote">
+              {eventStage(s.event) === 'early'
+                ? <>An event out here typically adds about {money(EVENT_YIELDS[s.event - 1]!)}
+                  {' '}to a season; by the fall, nearer {money(STAGE_YIELD.late)}. A week
+                  spent on your game is cheapest right now — and what it buys compounds
+                  through every event left.</>
+                : <>An event out here typically adds about {money(EVENT_YIELDS[s.event - 1]!)},
+                  and the number keeps climbing. The cheap weeks to sit out are gone.</>}
+            </p>
             <div className="weeks">
               {s.weekOptions.map(id => {
                 const w = WEEK[id]!
                 const broke = id === 'lesson' && s.earnings < LESSON_FEE
                 const picked = s.pendingWeek === id
+                // Danger-red is reserved for withdrawals that MEASURE dangerous
+                // (WEEKS-VERDICT.md option A): the sponsor always, and any skip
+                // from the mid season on. An early practice week is a purchase,
+                // not a mistake, and its confirm no longer dresses like one.
+                const risky = w.effect.kind === 'sponsor' || ev.major
+                  || eventStage(s.event) !== 'early'
                 return (
-                  <button key={id} className={`weekcard ${broke ? 'off' : ''} ${picked ? 'picked' : ''}`}
+                  <button key={id}
+                    className={`weekcard ${broke ? 'off' : ''} ${picked ? 'picked' : ''} ${risky ? 'risk' : ''}`}
                     disabled={broke}
                     onClick={() => dispatch({ type: 'PICK_WEEK', id: picked ? null : id })}>
                     <span className="week-icon">{w.icon}</span>
@@ -224,8 +251,10 @@ export function App() {
                 they used to fire on a single click, sitting next to Tee off. */}
             {s.pendingWeek && (() => {
               const w = WEEK[s.pendingWeek]!
+              const risky = w.effect.kind === 'sponsor' || ev.major
+                || eventStage(s.event) !== 'early'
               return (
-                <div className="confirm">
+                <div className={`confirm ${risky ? '' : 'calm'}`}>
                   <div className="confirm-q">
                     Withdraw from {ev.name} to {w.name.toLowerCase()}?
                   </div>
@@ -234,7 +263,7 @@ export function App() {
                     counts against the Money List.
                   </div>
                   <div className="confirm-row">
-                    <button className="big danger"
+                    <button className={risky ? 'big danger' : 'big'}
                       onClick={() => dispatch({ type: 'TAKE_WEEK', id: s.pendingWeek! })}>
                       Yes — withdraw
                     </button>
