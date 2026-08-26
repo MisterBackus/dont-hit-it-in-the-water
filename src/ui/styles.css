@@ -934,3 +934,21 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 @media(prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
 }
+
+/* ================================================== the week, shown
+   The 36-hole total used to appear from nowhere — 28 of its holes are
+   rolled at settle. A number the player cannot trace is exactly what P8
+   forbids, so the payout screen now shows the arithmetic and names the
+   luck. See WeekBreakdown in Results.tsx. */
+.weekscore{background:var(--panel);border:1px solid var(--hairline);
+  border-radius:var(--r);padding:var(--s3) var(--s4);margin:0 0 var(--s5)}
+.ws-line{display:flex;justify-content:space-between;align-items:baseline;
+  gap:var(--s3);padding:var(--s2) 0}
+.ws-line span{font-family:var(--fm);font-size:var(--t-micro);
+  letter-spacing:var(--ls-caps);text-transform:uppercase;color:var(--faint)}
+.ws-line b{font-family:var(--fm);font-size:var(--n-s);font-weight:600}
+.ws-line.is-total{border-top:1px solid var(--hairline);margin-top:var(--s2);
+  padding-top:var(--s3)}
+.ws-line.is-total span{color:var(--soft)}
+.ws-line.is-total b{font-size:var(--n-m)}
+.ws-note{font-size:var(--t-small);color:var(--soft);margin:var(--s3) 0 var(--s1)}

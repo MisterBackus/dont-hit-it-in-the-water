@@ -57,6 +57,47 @@ export function CutScreen({ s, dispatch, board }: {
 
 /* ---------------------------------------------------------------- payout */
 
+/**
+ * THE WEEK, SHOWN. Your 36-hole number used to arrive from nowhere: eight of
+ * its holes are yours and twenty-eight are rolled at settle (FIELD-SPREAD §8),
+ * fitted to the pace your eight set. A total the player cannot trace is the one
+ * thing P8 exists to forbid — the cone's whole promise is that every disaster
+ * is traceable to something you saw — so the arithmetic goes on the screen, and
+ * the last line NAMES THE LUCK: whether the week you did not play ran hot or
+ * cold against the pace you did. Variance you can read is a golf story ("I had
+ * a bad Saturday"); variance you cannot read is a slot machine.
+ */
+function WeekBreakdown({ rel, rel36, played }: {
+  rel: number; rel36: number; played: number
+}) {
+  const rest = FULL_HOLES - played
+  if (rest <= 0) return null
+  const remainder = rel36 - rel
+  // the same fit the sim used: the expected remainder IS your pace over the rest
+  const expected = (rel / Math.max(1, played)) * rest
+  const delta = remainder - expected
+  const n = Math.abs(Math.round(delta))
+  const story = delta <= -1.5
+    ? `The rest of the week ran ${n} better than the pace you set.`
+    : delta >= 1.5
+      ? `The rest of the week gave ${n} back on the pace you set.`
+      : 'The rest of the week held the pace you set.'
+  return (
+    <div className="weekscore">
+      <div className="ws-line">
+        <span>the {played} you played</span><b>{relStr(rel)}</b>
+      </div>
+      <div className="ws-line">
+        <span>the other {rest}</span><b>{relStr(remainder)}</b>
+      </div>
+      <div className="ws-line is-total">
+        <span>36 holes</span><b>{relStr(rel36)}</b>
+      </div>
+      <p className="ws-note">{story}</p>
+    </div>
+  )
+}
+
 export function PayoutScreen({ s, dispatch }: { s: GameState; dispatch: (a: Action) => void }) {
   const rel = toPar(s)
   const made = s.madeCut !== false
@@ -92,15 +133,20 @@ export function PayoutScreen({ s, dispatch }: { s: GameState; dispatch: (a: Acti
         <span>this week</span>
       </div>
 
-      <p className="tagline">
-        {!made
-          ? `${relStr(rel)} through ${s.scores.length}. Missed cuts do not pay.`
-          : splitWin
-            ? `${relStr(rel36)} for the 36-hole week — a ${way}-way tie at the top. It still counts as a win; the cheque splits ${way} ways, and ${money(s.lastPaid)} of it is yours.`
-            : splitPlace
-              ? `${relStr(rel36)} for the 36-hole week — a ${way}-way tie. The cheque pools the ${way} places it covers and splits; ${money(s.lastPaid)} of it is yours.`
-              : `${relStr(rel36)} for the 36-hole week, ${relStr(rel)} across your ${s.scores.length} played.`}
-      </p>
+      {/* An ordinary finish says nothing here: the breakdown below now shows
+          the same arithmetic properly. The tie prose stays — it is explaining
+          a rule, not restating a number. */}
+      {(!made || splitWin || splitPlace) && (
+        <p className="tagline">
+          {!made
+            ? `${relStr(rel)} through ${s.scores.length}. Missed cuts do not pay.`
+            : splitWin
+              ? `A ${way}-way tie at the top. It still counts as a win; the cheque splits ${way} ways, and ${money(s.lastPaid)} of it is yours.`
+              : `A ${way}-way tie. The cheque pools the ${way} places it covers and splits; ${money(s.lastPaid)} of it is yours.`}
+        </p>
+      )}
+
+      {made && <WeekBreakdown rel={rel} rel36={rel36} played={s.scores.length} />}
 
       <Facts items={[
         { v: money(grossEarnings(s)), k: 'season earnings' },

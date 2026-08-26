@@ -36,8 +36,9 @@ const RULES: readonly Rule[] = [
   },
   {
     head: 'Four holes, then the cut',
-    body: <>Only the top of the board plays on, and the number who do shrinks
-      all season.</>,
+    body: <>Only the top of the board plays on, and fewer do every week. An event
+      is <b>36 holes</b> — you play the eight that decide it, and the rest of your
+      week plays out at the pace you set on them.</>,
   },
   {
     head: 'The Money List can end you',
