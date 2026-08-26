@@ -32,8 +32,12 @@
  * THE SPREAD-FLOOR COUNTERFACTUAL — the same table if junk imposed a
  * MINIMUM ABSOLUTE SCATTER: spread = max(club × lieScale, FLOOR yards),
  * swept over three candidate floors so a future fix can be read straight
- * off the table. The floor lives INSIDE this instrument only — the game is
- * not touched. It is applied by handing the chooser and the cone pre-floored
+ * off the table. SHIPPED since JUNK-VERDICT's SHIPPED section: buildCone now
+ * carries JUNK_SPREAD_FLOOR = 12 (sim/geometry.ts), so the floor-0 arm below
+ * IS the live game with that floor in it, and the swept arms only add
+ * whatever their floor exceeds 12 by (the floor-12 column now measures the
+ * same world as floor 0). The sweep is applied by handing the chooser and
+ * the cone pre-floored
  * copies of the shot cards, so cut-down, techniques and the P8 cone cap all
  * flow exactly as the game would flow them. The chooser itself is policy.ts
  * mirrored line for line (floor 0 reduces to the live chooser) rather than

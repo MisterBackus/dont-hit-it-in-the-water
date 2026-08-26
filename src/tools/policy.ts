@@ -76,6 +76,13 @@ export function chooseShot(
   // chosen. Measured, that made Super Ball — "everything goes 10% further" —
   // cost $1.32M a season, and Long Tees $541k. Those were not bad boosts.
   // They were a blind planner. A human sees the cone move and clubs down.
+  //
+  // The same lesson covers the JUNK SPREAD FLOOR (JUNK-VERDICT.md SHIPPED):
+  // every candidate below is priced through buildCone, the one place the
+  // floor lives, so this planner sees a wedge from the rough fan to 12 yards
+  // exactly as the player's cone does. If spread arithmetic ever grows a
+  // second home here, the floor must move into it too — a blind planner
+  // mismeasures a rule.
   const free = freeShot(toPin(hole, ball))
   const shots: ShotCard[] = [
     ...hand.map(id => CARD[id]).filter((c): c is ShotCard => !!c && c.kind === 'shot'),

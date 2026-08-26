@@ -1,5 +1,5 @@
 import type { Boost, Cone, ShotCard, ShotPlan, Surface, TechniqueCard } from './types'
-import { LIE } from './geometry'
+import { JUNK_SPREAD_FLOOR, LIE, isJunk } from './geometry'
 import { CARRY_JITTER } from './resolve/shot'
 import { TAP_IN_FEET } from './resolve/putt'
 
@@ -75,6 +75,14 @@ export function buildCone(
   const pen = relieved ? LIE.fairway : LIE[lie]
   let carry = plan.shot.carry * pen.carryScale
   let spread = plan.shot.spread * pen.spreadScale
+  // THE JUNK SPREAD FLOOR (JUNK-VERDICT.md SHIPPED): a bad lie imposes a
+  // minimum absolute scatter, because ×1.7 on a wedge's 4–6 yards priced
+  // greenside junk at nearly nothing. Applied here, at the lie-penalty
+  // stage, so cut-down, techniques and the cone cap all act ON the floored
+  // base — and because this is the one cone builder, the picture the player
+  // sees, the resolution and the harness planners all show the same doubt.
+  // A relieved lie skipped the table above and skips the floor with it.
+  if (!relieved && isJunk(lie)) spread = Math.max(spread, JUNK_SPREAD_FLOOR)
   let roll = plan.shot.rules.roll ?? 0
   let ignoreHazards = false
 

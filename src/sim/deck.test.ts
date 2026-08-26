@@ -1207,12 +1207,15 @@ describe('the encounters', () => {
     ...teed(seed), phase: 'encounter' as const, encounterOffer: id, earnings: cash,
   })
 
-  test('the save version gate turned for the shop-supply hybrid', () => {
+  test('the save version gate turned for the junk spread floor', () => {
     // v8: a tied WIN pays the mean of the covered places (season.ts
     // tiePayout). v9: the season boost budget makes a seventh BUY illegal
     // on replay, and the tiered stock draws from the new shop rng stream
     // (SHOP-SUPPLY.md) — a v8 log's shop offers replay differently.
-    expect(SAVE_VERSION).toBe(9)
+    // v10: the junk spread floor (JUNK-VERDICT.md SHIPPED) — buildCone
+    // imposes a 12-yard minimum scatter on the four junk lies, so every
+    // jungle shot in a v9 log resolves from a wider cone on replay.
+    expect(SAVE_VERSION).toBe(10)
   })
 
   test('who shows up is decided by the seed, at roughly one cut in three', () => {

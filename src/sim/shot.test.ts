@@ -4,7 +4,7 @@ import { CARD } from '../content/cards'
 import { MAX_CONE_TANGENT, whyNotPlayable, buildCone } from './effects'
 import { CARRY_JITTER, resolveShot } from './resolve/shot'
 import { makeRng, next, seedBank } from './rng'
-import { greenCentre, toPin } from './geometry'
+import { JUNK_SPREAD_FLOOR, greenCentre, toPin } from './geometry'
 import type { Point } from './types'
 
 const hole = PINE_HOLLOW.find(h => h.name === 'Two Ways Home')!  // par 5, 520 yds
@@ -95,6 +95,32 @@ describe('shots travel toward the pin, not away from the tee', () => {
         }
       }
     }
+  })
+})
+
+describe('the junk spread floor (JUNK-VERDICT.md SHIPPED)', () => {
+  test('a wedge from the rough fans at least the floor; from the fairway it does not', () => {
+    // Flop, spread 4, from 35 yards — greenside range. From rough it plays
+    // its full lie-scaled carry (0.9 × 35 = 31.5 ≤ 35), so the cut-down
+    // scale the cone applies to the base spread is exactly 1 and the cap
+    // (0.55 × 31.5 ≈ 17) is clear of the floor: the drawn spread must be
+    // the floor itself, 12 × that scale — not the 4 × 1.7 ≈ 7 the
+    // multiplier table alone would print.
+    const flop = CARD['flop'] as never
+    const rough = buildCone({ shot: flop, techniques: [], aim: 'pin' }, 'rough', 35).cone
+    expect(rough.spread).toBeGreaterThanOrEqual(JUNK_SPREAD_FLOOR)
+    expect(rough.spread).toBe(JUNK_SPREAD_FLOOR)
+    // The same shot from the fairway keeps its printed spread — the floor
+    // is a junk rule, not a wedge rule.
+    const fair = buildCone({ shot: flop, techniques: [], aim: 'pin' }, 'fairway', 35).cone
+    expect(fair.spread).toBe(4)
+    expect(fair.spread).toBeLessThan(JUNK_SPREAD_FLOOR)
+    // Relief makes the lie fairway, and a relieved lie skips the floor
+    // exactly as it skips the multiplier table (Soft Spikes here; New
+    // Grooves and ignoreLie cards resolve through the same `relieved` gate).
+    const spikes = [{ id: 'sp', name: '', icon: '', blurb: '', price: 0, roughRelief: true }]
+    const relieved = buildCone({ shot: flop, techniques: [], aim: 'pin' }, 'rough', 35, spikes).cone
+    expect(relieved.spread).toBe(4)
   })
 })
 

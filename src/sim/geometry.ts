@@ -13,6 +13,27 @@ export const LIE: Record<Surface, LiePenalty> = {
   ob:       { carryScale: 1.00, spreadScale: 1.0, penaltyStrokes: 2 },
 }
 
+/**
+ * THE JUNK SPREAD FLOOR (JUNK-VERDICT.md, shipped from the swept
+ * counterfactual): on the four junk lies — rough, deep, bunker, trees — the
+ * post-lie base spread is max(club.spread × spreadScale, this) yards. The
+ * multipliers above price the long game honestly but wave a wedge through
+ * (1.7 × tiny is still tiny — greenside rough measured +0.22 a visit, and
+ * mid-range light rough +0.11, the cheapest junk in the game); an absolute
+ * floor bites exactly the cards the multipliers leave under it. Floor 12 was
+ * chosen off the sweep: it lifts greenside rough toward +0.29 while moving
+ * the approach band a rounding error (floor 8 is inert, 16 brushes the short
+ * band). Applied in buildCone (sim/effects.ts) — the ONE place resolution,
+ * the drawn cone and every harness planner get their spread — and bypassed
+ * by relief exactly as the table is: a relieved lie IS fairway.
+ */
+export const JUNK_SPREAD_FLOOR = 12
+
+/** The lies the floor (and lie relief) call junk. Sand keeps its own rules. */
+export function isJunk(lie: Surface): boolean {
+  return lie === 'rough' || lie === 'deep' || lie === 'trees' || lie === 'bunker'
+}
+
 export const SURFACE_LABEL: Record<Surface, string> = {
   tee: 'the tee', fairway: 'the fairway', green: 'the green',
   rough: 'the rough', deep: 'deep rough', trees: 'the trees',

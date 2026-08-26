@@ -77,3 +77,40 @@ from the one suspected. Whether ×1.7 (or rough's 0.90 carry) should firm up is
 a separate question with different side effects (it touches every tee shot in
 the game), and this instrument is the tool to price any candidate before it
 ships.
+
+## SHIPPED — 26 Aug 2026: the floor-12 dial, turned
+
+The greens were judged too kind and the on-record candidate shipped:
+`JUNK_SPREAD_FLOOR = 12` (sim/geometry.ts, beside the LIE table it completes),
+applied in `buildCone` (sim/effects.ts) at the lie-penalty stage — junk lies
+(rough, deep, bunker, trees) now play `spread = max(club × lieScale, 12 yd)`,
+with cut-down, techniques and the P8 cone cap acting on the floored base
+exactly as the counterfactual modelled. Relief (Soft Spikes, New Grooves,
+ignoreLie cards) bypasses the floor as it bypasses the table: a relieved lie
+IS fairway. Because buildCone is the one cone builder, the resolution, the
+drawn cone and every harness planner (tools/policy.ts included) see the floor
+at once — no blind planners. SAVE_VERSION 9 → 10: v9 logs replay junk shots
+from narrower cones than the game now rolls.
+
+**Predicted vs measured** (`SEEDS=24`, same instrument, same seeds; predicted
+is the floor-12 counterfactual column above, measured is the live game after
+the change; the before-run reproduced the shipped table digit for digit):
+
+| lie    | greenside ≤35 | short 36–90 | approach 91–170 | long 171+ |
+|--------|--------------|-------------|-----------------|-----------|
+| rough  | pred +0.29 · got **+0.29** | pred +0.15 · got **+0.15** | pred +0.12 · got **+0.11** | pred +0.39 · got **+0.38** |
+| deep   | pred +0.30 · got **+0.30** | pred +0.26 · got **+0.26** | pred +0.29 · got **+0.28** | pred +0.66 · got **+0.66** |
+| bunker | pred +0.38 · got **+0.38** | pred +0.26 · got **+0.26** | pred +0.65 · got **+0.65** | pred +0.74 · got **+0.73** |
+| trees  | pred +0.32 · got **+0.32** | pred +0.26 · got **+0.26** | pred +0.37 · got **+0.37** | pred +0.69 · got **+0.68** |
+
+Every cell lands on its prediction to within ±0.01. Greenside junk average
++0.29 → +0.32 (90% of the approach band's +0.35, up from 83%); the approach
+band itself moved a rounding error, as promised. The instrument's floor-8 and
+floor-12 sweep columns now print identical to the measured table — the shipped
+floor subsumes them — which is the counterfactual machinery agreeing with the
+live game about what it predicted.
+
+The found docket stands: mid-range light rough is still the cheapest junk in
+the game (+0.11 at approach range) — the floor was never the dial for that
+cell, and the ×1.7 / 0.90-carry question remains open, with this instrument
+still the tool to price it.
