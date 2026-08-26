@@ -103,14 +103,12 @@ if (existsSync(RUNS)) {
   }
 }
 
-// best run per name, by verified money
-const best = new Map<string, Row>()
-for (const r of rows) {
-  const prev = best.get(r.name.replace(/-\d+$/, ''))
-  const key = r.name.replace(/-\d+$/, '')
-  if (!prev || r.gross > prev.gross) best.set(key, { ...r, name: key })
-}
-const board = [...best.values()].sort((a, b) => b.gross - a.gross || b.wins - a.wins)
+// Every verified season is its own line (owner ruling, 26 Aug 2026 — the
+// board is a season log, not best-per-name). The file suffix (-2, -3…)
+// folds into the player's name so ANDREW's four years all read ANDREW.
+const board = rows
+  .map(r => ({ ...r, name: r.name.replace(/-\d+$/, '') }))
+  .sort((a, b) => b.gross - a.gross || b.wins - a.wins)
 
 const rowsHtml = board.map((r, i) => `
   <tr>
