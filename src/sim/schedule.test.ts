@@ -67,14 +67,17 @@ describe('the pool assignment honours its slot constraints, every seed', () => {
     }
   })
 
-  test('a shared venue name means the same course — Bracken Ridge, 8 and 11', () => {
+  test('Bracken hosts its Classic; THE PGA it merely presents — REVIEW-7 ruling', () => {
+    // The old rule ("8 and 11 share a course") died when the reviewer ruled
+    // Bracken under major weight (+0.51 vs the +0.75 bar) and the owner
+    // un-pinned THE PGA (26 Aug 2026). Now: the Classic always plays at
+    // Bracken, and the PGA is hosted by a real major-capable course — never
+    // Bracken, until the venue earns its flag back.
     for (const seed of SEEDS) {
       const rota = assignCourses(seed)
-      expect(rota[7]).toBe(rota[10])
-      // and the shared course satisfies BOTH wearers: 11 is a major, 8 is not
-      const c = COURSES[rota[7]!]
-      expect(c.majorCapable).toBe(true)
-      expect(c.majorsOnly).toBe(false)
+      expect(rota[7]).toBe('brackenridge')          // the Classic stays home
+      expect(rota[10]).not.toBe('brackenridge')     // the PGA outgrew the venue
+      expect(COURSES[rota[10]!].majorCapable).toBe(true)
     }
   })
 

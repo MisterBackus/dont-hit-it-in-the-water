@@ -132,7 +132,12 @@ export const COURSES: Record<CourseId, Course> = {
    * mechanism that is not more corridor. fieldShift re-measured for the
    * new mean (fieldcheck sweep, target −0.26): −0.034 → −0.018.
    */
-  brackenridge: course('brackenridge', 'Bracken Ridge', BRACKEN_RIDGE, -0.018, 'brutal', true, false),
+  // major-capable STRIPPED per COURSE-REVIEW-7 and the owner's ruling
+  // (26 Aug 2026): +0.51 at N=800 after two hardening passes, against a
+  // +0.75 earn-back bar. THE PGA un-pinned and hosted by real major weight;
+  // the Bracken Ridge Classic (event 8) still plays here. The flag returns
+  // when a designer clears the bar — it is something to earn, not to keep.
+  brackenridge: course('brackenridge', 'Bracken Ridge', BRACKEN_RIDGE, -0.018, 'brutal', false, false),
   rivermouth: course('rivermouth', 'Rivermouth', RIVERMOUTH, -0.009, 'standard', false, false),
 }
 

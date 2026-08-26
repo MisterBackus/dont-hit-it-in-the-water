@@ -73,7 +73,10 @@ const PINS: Readonly<Record<number, CourseId>> = {
   6: 'rockdale',     // The Muni Championship
   7: 'saltflats',    // THE OPEN AT SALT FLATS
   8: 'brackenridge', // Bracken Ridge Classic
-  11: 'brackenridge',// THE PGA AT BRACKEN RIDGE
+  // 11, THE PGA AT BRACKEN RIDGE, is deliberately NOT pinned: REVIEW-7
+  // ruled the venue under major weight and the owner un-pinned the event —
+  // Bracken Ridge PRESENTS the PGA, hosted by a course that can carry it,
+  // until the venue earns its flag back (+0.75 at N=800). Very real golf.
 }
 
 /** Shared hosting-fiction venues — same name, same drawn course. Retired to
