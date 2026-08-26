@@ -51,14 +51,18 @@ const parsOf = (id: keyof typeof COURSES) => COURSES[id].holes.map(h => h.par)
  * measured against courses and planners that no longer exist; the standing
  * caveat that used to live here is settled. ALL targets below are the live
  * measured player deltas vs Pine Hollow from the ten-course coursecheck
- * record (N=400, mixed, depth engine — CHANGES-7 §10, re-measured verbatim
- * for the ruling): PH +0.81 · CW +0.46 · RD −1.94 · SF +1.19 · PAL −1.64 ·
- * MEA −0.60 · DRI −0.59 · FOX −0.27 · BR +0.29 · RIV +0.67.
+ * record (N=400, mixed, depth engine), as of CALIBRATION-2.md:
+ * PH +0.81 · CW +0.46 · RD −1.94 · SF +1.26 · PAL −1.15 · MEA −0.60 ·
+ * DRI −0.59 · FOX −0.27 · BR +0.55 · RIV +0.67. Three rows moved since the
+ * CHANGES-7 §10 record this table was first typed from: BR and SF at the
+ * COURSE-REVIEW-7 re-baseline (+0.29 → +0.55, +1.19 → +1.26 — the registry
+ * header had them, this table had gone stale), and PAL at the hole-2 rebuild
+ * (COURSE-CHANGES-8 §3.1: −1.64 → −1.15, so target Δ −2.45 → −1.96).
  */
 const TARGET: Record<string, number> = {
-  pinehollow: 0, cottonwood: -0.35, rockdale: -2.75, saltflats: 0.38,
-  palmetto: -2.45, meadowlark: -1.41, driftwood: -1.40,
-  foxglove: -1.08, brackenridge: -0.52, rivermouth: -0.14,
+  pinehollow: 0, cottonwood: -0.35, rockdale: -2.75, saltflats: 0.45,
+  palmetto: -1.96, meadowlark: -1.41, driftwood: -1.40,
+  foxglove: -1.08, brackenridge: -0.26, rivermouth: -0.14,
 }
 
 // WINNERGAP=only skips the coupling table and its sweep — sweep A's loop

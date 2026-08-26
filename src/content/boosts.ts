@@ -34,6 +34,15 @@ import type { Boost } from '../sim/types'
  * as the rotation added birdie courses — and Short Memory fell UNDER (see
  * its own comment). Forged Wedges crosses the premium line at its new
  * price, joining the major-drop shelf (shop.ts PREMIUM_BOOST).
+ *
+ * CALIBRATION-2 (26 Aug 2026 — the once-and-last pass with the MARQUEE RAMP
+ * in the field, same instrument and seeds): the star tier trimmed every
+ * return roughly proportionally, exactly as FIELD-CEILING §7.4 predicted —
+ * the whole shelf compressed toward ~1.6-1.9x and FIFTEEN of seventeen held
+ * the band untouched. The two that slipped under were the two cheapest
+ * (Soft Spikes 1.37x, Short Memory 1.22x — least cushion above the floor),
+ * both repriced to value over two, inside the pass's <= 2 budget. No tier
+ * line moved; nothing drifted over.
  */
 export const BOOSTS: readonly Boost[] = [
   {
@@ -91,7 +100,10 @@ export const BOOSTS: readonly Boost[] = [
   {
     id: 'spikes', name: 'Soft Spikes', icon: '⌇',
     blurb: 'The rough stops being a problem.',
-    roughRelief: true, price: 300_000,
+    // CALIBRATION-2 (stars in the field): $300k measured 1.37x ($412k a
+    // season) — the tier trims every return and the cheapest items had the
+    // least cushion. Repriced to value over two.
+    roughRelief: true, price: 200_000,
   },
   {
     id: 'headcover', name: 'Sponsor: Deiter’s Heating & Cooling', icon: '▣',
@@ -140,8 +152,12 @@ export const BOOSTS: readonly Boost[] = [
     // world — $508k and $625k on independent seed sets (1.02x / 1.25x at
     // the old sticker; a ten-course rotation full of scoring weeks has
     // fewer bogeys to insure). Repriced to the two-run mean over two.
+    // CALIBRATION-2 (stars in the field): $300k measured 1.22x ($366k a
+    // season) — its third repricing, every one downward, which is the
+    // measurement being swingy AND the world genuinely shrinking bogey
+    // insurance. Value over two, on the $50k grid.
     blurb: 'A bogey is not a story. Momentum survives one.',
-    momentumSlack: 1, price: 300_000,
+    momentumSlack: 1, price: 200_000,
   },
   {
     id: 'pontoon', name: 'Sponsor: Lakeview Pontoon Rentals', icon: '▥',

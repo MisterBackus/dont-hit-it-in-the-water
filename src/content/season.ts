@@ -199,7 +199,8 @@ export const EVENT_COUNT = SEASON.length
  * arrivals; survival mixed 37%, aggressive 36%, safe 2% (intent 36/45/3).
  * Checks 1-2 sit within a sigma of intent; mixed survival is on the nose.
  *
- * Two residuals, stated plainly:
+ * Two residuals, stated plainly (as of the third anchoring — the fourth
+ * re-scores them below):
  *   - Check 3 kills ~1% against 14% intent — WORSE than the 8% it managed
  *     before the drops existed, and no bar inside the win-pays-the-final-leg
  *     invariant's ceiling (deck.test.ts; $13.6M bought 1%, $16.5M bought 3%
@@ -212,11 +213,41 @@ export const EVENT_COUNT = SEASON.length
  *     the economy (aggressive banks slightly less gross through event 9
  *     under the rotation), not of these bars — no triple can reorder two
  *     policies facing the same numbers. Flagged for the dialogue.
+ *
+ * RE-ANCHORED A FOURTH TIME — CALIBRATION-2.md, 26 Aug 2026, the once-and-
+ * last pass after the MARQUEE RAMP (FIELD-CEILING.md) put four named stars
+ * in the field — and the first anchoring in the project's history to move
+ * bars DOWN. The stars eat cheques exactly where the win-heavy late season
+ * lives (late win rate 86% -> 51%), so at the old triple check 2 had gone to
+ * 49% kill against its 29% intent while check 1 sat untouched at 43% — the
+ * spring rule (stars are names only through event 4) measured in the
+ * economy's own books. Derived by shopcheck sweep under the finished world
+ * (stars on, Palmetto's re-derived fieldShift, final boost prices; 400
+ * seasons per policy, seeds 700000+): the triple below sends home
+ * 44% / 35% / 5% of arrivals; survival mixed 35%, aggressive 34%, safe 5%
+ * (intent 41/29/14 and 36/45/3); the mixed hoarder gets 10%, so shopping
+ * is still the difference between living and not, and mixed sits the
+ * point-or-so above aggressive the ordering law asks for.
+ *
+ * The residuals, re-scored:
+ *   - Check 3: FIELD-CEILING §8-2 predicted the bar moves DOWN and finally
+ *     buys >= 10% kill. Half right: it moved down ($13.3M -> $12.2M, pinned
+ *     to the invariant's ceiling over the new check 2 — the last leg is
+ *     $3.7M against a $3.4M major win), and it buys 5%, up from 1-3% but
+ *     nowhere near 14%. The sweep showed 2-5% at EVERY bar the invariant
+ *     permits: the escape clause governs. The residual is raw equipment
+ *     over-supply, not uncontested wins, and the named next dial is honest
+ *     rentals (consumable SKUs priced on their window, FIELD-CEILING §4) —
+ *     never sticker decay of owned goods, never a fifth re-anchoring.
+ *   - The aggressive-below-mixed inversion SURVIVED the stars (34 vs 35 —
+ *     the tier presses win-heavy play hardest, aggressive most of all).
+ *     Still an economy property, still no triple can reorder it, still
+ *     flagged for the dialogue; the 45% aggressive intent stays unmet.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
   { after: 5, need: 2_300_000 },
-  { after: 9, need: 10_000_000 },
-  { after: 12, need: 13_300_000 },
+  { after: 9, need: 8_500_000 },
+  { after: 12, need: 12_200_000 },
 ]
 
 export function checkAfter(event: number) {
@@ -270,11 +301,24 @@ export function money(n: number): string {
  * world with no drops, no rotation, and a pre-momentum economy; under it a
  * player scraping past check 3 read as 1st on the list, which is the "reads
  * like a typo" failure this ladder exists to prevent.
+ *
+ * RE-ANCHORED at CALIBRATION-2 (26 Aug 2026): same rule, new world — with
+ * the marquee ramp's stars eating cheques the same 400-season shopper
+ * median is $15.80M, and every rung re-scales to it (ratios unchanged,
+ * rounded to $100k). The star money is REAL money the board never sees —
+ * it goes to Vail, Maravilla, Boone and Ito, who are not on this ladder;
+ * what the ladder models is the rest of the tour, which got poorer the
+ * same way you did. Symptom cured by the re-anchor: a finished $23.92M
+ * season (the frozen andrew-2 row) read 15th against the fat pre-stars
+ * ladder; it now reads 8th, which is what ten wins deserves on a tour
+ * where nobody outearns the stars for free. Frozen board rows in
+ * runs/verified.json keep their ledgered numbers — the ladder is a lens,
+ * not a record.
  */
 const LADDER: readonly (readonly [number, number])[] = [
-  [1, 57_000_000], [3, 37_500_000], [5, 31_500_000], [10, 28_000_000],
-  [20, 19_600_000], [30, 14_700_000], [40, 10_700_000], [50, 7_400_000],
-  [60, 4_400_000], [72, 1_000_000],
+  [1, 45_900_000], [3, 30_200_000], [5, 25_400_000], [10, 22_600_000],
+  [20, 15_800_000], [30, 11_900_000], [40, 8_600_000], [50, 6_000_000],
+  [60, 3_500_000], [72, 800_000],
 ]
 
 /**
@@ -284,8 +328,16 @@ const LADDER: readonly (readonly [number, number])[] = [
  * events 1, 3, 6, 9, 12, 14. Flatter early and steeper late than the old
  * array — the majors' purses and the drops they hand out load the earning
  * curve onto the back half (the jump at 7 is Salt Flats's $20M purse).
+ *
+ * Re-measured again at CALIBRATION-2 from the LADDER re-anchor's own 400
+ * seasons (stars on): medians $146k / $813k / $3.52M / $7.63M / $13.46M /
+ * $15.80M at 1, 3, 6, 9, 12, 14. The curve tilts a few points EARLIER —
+ * the stars take their biggest bites out of the late wins, so the spring
+ * (which they leave alone, the spring rule) now carries a larger share of
+ * a smaller season. Mid-season paces read slightly richer for it: the
+ * denominator got honest.
  */
-const SHARE = [0.01, 0.02, 0.04, 0.09, 0.13, 0.17, 0.32, 0.39, 0.46, 0.53, 0.69, 0.76, 0.84, 1.00]
+const SHARE = [0.01, 0.03, 0.05, 0.12, 0.17, 0.22, 0.37, 0.43, 0.48, 0.54, 0.70, 0.77, 0.85, 1.00]
 
 /**
  * THE LIST IS THE FIELD YOU ALREADY SEE.
@@ -297,8 +349,9 @@ const SHARE = [0.01, 0.02, 0.04, 0.09, 0.13, 0.17, 0.32, 0.39, 0.46, 0.53, 0.69,
  * one tour, counted twice.
  *
  * The ladder is placed against measured earnings: a mixed shopper's median
- * season banks $19.6M under the finished world (drops modeled), which sits
- * 20th. Below that is a long tail of players who miss cuts.
+ * season banks $15.8M under the finished world (drops modeled, stars in the
+ * field — CALIBRATION-2), which sits 20th. Below that is a long tail of
+ * players who miss cuts.
  */
 export const TOUR_SIZE = 72
 

@@ -121,6 +121,21 @@ This is the Balatro blind requirement, wearing a visor.
 > provenance in `content/season.ts`; the drop model is in
 > `tools/shopcheck.ts`.
 
+> **RE-ANCHORED A FOURTH TIME — and DOWN for the first time
+> (CALIBRATION-2.md, 26 Aug 2026): $2.3M / $8.5M / $12.2M.** The MARQUEE
+> RAMP (`FIELD-CEILING.md`) put four named stars in the field who eat the
+> late season's cheques (the shopper's late win rate went 86% → 51%), and
+> at the old triple check 2's kill had run to 49% against its 29% intent
+> while check 1 sat untouched — the spring rule, visible in the books. The
+> new bars send home 44% / 35% / 5% of arrivals; survival mixed 35%,
+> aggressive 34%, safe 5% (hoarder 10%), against the 36/45/3 intent.
+> Check 3's bar moved DOWN exactly as FIELD-CEILING §8-2 registered — but
+> its kill topped out at 5% at every bar the win-pays-the-final-leg
+> invariant permits, so the 14% intent is formally unmet and the escape
+> clause governs: the residual is equipment over-supply, the named next
+> dial is honest rentals (consumable SKUs), and no fifth re-anchoring is
+> allowed to chase it. Provenance in `content/season.ts`.
+
 | Check | After event | Threshold | Kills, of those who arrive |
 |---|---|---|---|
 | First | 5 | **$420,000** | 41% |
@@ -153,11 +168,12 @@ minute 25 instead of minute 80.
 
 **The list itself.** The Money List is the **72 players you tee it up against
 every week** — the same population as the leaderboard, counted twice. A mixed
-shopper's median season banks $19.6M under the finished world (slice 4,
-drops modeled) and sits **20th**; the checks demand a pace worth roughly
-24th, 18th, then 24th again — the last one soft in pace terms because check
-3's kill is the standing residual. The squeeze is visible in your own
-position without the game ever having to state a demand in places.
+shopper's median season banks $15.8M under the finished world
+(CALIBRATION-2: drops modeled, stars in the field) and sits **20th**; the
+checks demand a pace worth roughly 26th, 17th, then 20th — the last one
+tighter in pace terms than it kills, because check 3's kill is the standing
+residual. The squeeze is visible in your own position without the game ever
+having to state a demand in places.
 
 ### 3.4 The squeeze — where difficulty actually comes from
 
@@ -270,6 +286,17 @@ place-based cut, N is the difficulty dial and the field can stay honest. Your ow
 median finishing position now moves from **28th to 17th** across a season as
 sharpness tightens and equipment arrives — you can see yourself getting better,
 on the same board, against the same people.
+
+> **Qualified twice since, each time by measurement.** FIELD RESPONSE
+> (`FIELD-RESPONSE.md`) found the sentence false about the CUT — the floor
+> now rises through the season (`fieldStrength`) — and FIELD-CEILING found
+> it false about the WIN: the frozen 0.85 ceiling made the finale a parade
+> for a strong player (83% of weekends won), so the MARQUEE RAMP ships four
+> named stars who find form from event 5 (`content/players.ts`,
+> `sim/resolve/field.ts`). The sentence survives only as it was originally
+> meant: the OTHER sixty-seven never improve, and the field median never
+> moves — the stars are surgery, not a transfusion. Calibrated consequences
+> in CALIBRATION-2.md.
 
 **Do not adjust any of this by feel.** `npx tsx src/tools/cutcheck.ts` re-derives
 the place distribution and the N curve against the live simulation.

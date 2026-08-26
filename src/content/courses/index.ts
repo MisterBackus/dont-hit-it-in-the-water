@@ -16,11 +16,12 @@
  * coursecheck ladder is canon — the newest honest measurement wins; the
  * plan-era four-course ladder is history). coursecheck, N=400, mixed policy,
  * full round vs par, depth engine (COURSE-REVIEW-7 re-baseline — Bracken
- * Ridge v4 and Salt Flats 6 v9 are the only movers since CHANGES-7 §10):
- *   Rockdale −1.94 · Palmetto −1.64 · Meadowlark −0.60 · Driftwood −0.59 ·
+ * Ridge v4 and Salt Flats 6 v9 — plus Palmetto's hole-2 rebuild, the one
+ * mover since: COURSE-CHANGES-8 §2, −1.64 → −1.15):
+ *   Rockdale −1.94 · Palmetto −1.15 · Meadowlark −0.60 · Driftwood −0.59 ·
  *   Foxglove −0.27 · Cottonwood +0.46 · Bracken Ridge +0.55 ·
  *   Rivermouth +0.67 · Pine Hollow +0.81 · Salt Flats +1.26
- * Deltas vs Pine Hollow, the anchor: RD −2.75 · PAL −2.45 · MEA −1.41 ·
+ * Deltas vs Pine Hollow, the anchor: RD −2.75 · PAL −1.96 · MEA −1.41 ·
  * DRI −1.40 · FOX −1.08 · CW −0.35 · BR −0.26 · RIV −0.14 · SF +0.45.
  */
 import type { HoleSpec } from '../../sim/types'
@@ -108,8 +109,16 @@ export const COURSES: Record<CourseId, Course> = {
    * tools/fieldcheck.ts sweeps the offset until the FIELD moves the same
    * amount (±0.1). The slate's Δ/8/1.9 starting guesses are recorded in
    * CHANGES-7 next to what the sweep actually chose.
+   *
+   * Palmetto RE-DERIVED at the calibration pass (CALIBRATION-2.md §4): the
+   * hole-2 rebuild (COURSE-CHANGES-8) moved the course −1.64 → −1.15, so
+   * the old −0.182 (coupled to target Δ −2.45) was making the FIELD half a
+   * stroke tougher there than the course now is. fieldcheck sweep against
+   * the live target Δ −1.96: −0.145 measures field Δ −1.99. The other nine
+   * confirmed within ±0.1 untouched, as FIELD-CEILING §7.4 predicted (the
+   * star tier is course-blind and never moved the median).
    */
-  palmetto: course('palmetto', 'Palmetto', PALMETTO, -0.182, 'gentle', false, false),
+  palmetto: course('palmetto', 'Palmetto', PALMETTO, -0.145, 'gentle', false, false),
   meadowlark: course('meadowlark', 'Meadowlark', MEADOWLARK, -0.114, 'gentle', false, false),
   driftwood: course('driftwood', 'Driftwood', DRIFTWOOD, -0.099, 'standard', false, false),
   foxglove: course('foxglove', 'Foxglove', FOXGLOVE, -0.078, 'brutal', false, false),

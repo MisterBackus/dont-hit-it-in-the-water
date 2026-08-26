@@ -97,19 +97,28 @@ export const WEEKS_END_AT = 10
 /**
  * What each played event typically ADDS to the season — measured, not the
  * purse: mean gross added per event across 1,000 baseline shopper seasons
- * (weekcheck §1, 26 Aug 2026, rounded to $10k). The schedule screen prints
- * this so the price of a withdrawal is visible before it is paid. Re-derive
- * with `npx tsx src/tools/weekcheck.ts` whenever the economy moves.
+ * (weekcheck §1, rounded to $10k). The schedule screen prints this so the
+ * price of a withdrawal is visible before it is paid. Re-derive with
+ * `npx tsx src/tools/weekcheck.ts` whenever the economy moves.
+ *
+ * RE-MEASURED at the calibration pass (CALIBRATION-2.md §5, 26 Aug 2026,
+ * stars on — the 26 Aug morning numbers were taken before the marquee ramp
+ * landed, and the schedule screen was overstating what a late event pays by
+ * ~22–26%: the stars now convert the shopper's late wins into 2nd/3rd
+ * cheques exactly where wins were the yield). Events 1–4 held within noise —
+ * the spring rule, visible in a third instrument. Same harness, N=1000,
+ * mixed shopper, seeds 800000+, weekcheck now carrying the same
+ * STARS/K/RAMP/BETA/CAP knobs as shopcheck.
  */
 export const EVENT_YIELDS: readonly number[] = [
-  280_000, 330_000, 360_000, 1_270_000, 770_000,        // events 1–5
-  790_000, 2_310_000, 1_140_000, 1_110_000,             // events 6–9
-  1_140_000, 2_890_000, 1_310_000, 1_290_000, 3_010_000, // events 10–14
+  300_000, 320_000, 360_000, 1_240_000, 710_000,        // events 1–5
+  720_000, 2_060_000, 920_000, 900_000,                 // events 6–9
+  860_000, 2_250_000, 1_000_000, 950_000, 2_360_000,    // events 10–14
 ]
 
 /** The same measurement by stage — the late mean is the UI's "by the fall". */
 export const STAGE_YIELD: Readonly<Record<'early' | 'mid' | 'late', number>> = {
-  early: 600_000, mid: 1_340_000, late: 1_930_000,
+  early: 590_000, mid: 1_150_000, late: 1_490_000,
 }
 
 export function eventStage(num: number): 'early' | 'mid' | 'late' {

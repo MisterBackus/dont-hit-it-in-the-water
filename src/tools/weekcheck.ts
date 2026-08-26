@@ -53,7 +53,13 @@ import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
-import { makeField, advanceField, rankCut, standings, yourPlace } from '../sim/resolve/field'
+import {
+  makeField, advanceField, overlayStars, rankCut, standings, starNamesFor,
+  starTarget, yourPlace, type FieldPlayer, type StarDials,
+} from '../sim/resolve/field'
+import {
+  STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
+} from '../content/players'
 import { surfaceAt, toPin } from '../sim/geometry'
 import { seedBank, type RngBank } from '../sim/rng'
 import { draw, shuffle } from '../sim/deck'
@@ -151,6 +157,28 @@ interface SeasonOut {
 /** best-affordable-first, one a week — shopcheck's shopper */
 const ORDER = [...BOOSTS].sort((a, b) => b.price - a.price)
 
+/**
+ * THE MARQUEE RAMP (FIELD-CEILING.md §6) — stars on by default, exactly as
+ * shopcheck models them, because EVENT_YIELDS is quoted from this harness and
+ * the schedule screen prints it: star cheques eat late yields, so a yields
+ * number measured star-blind overstates what a late event pays. STARS=0 for
+ * the pre-stars counterfactual; K/RAMP/BETA/CAP override the shipped dials.
+ */
+const STARS_ON = process.env.STARS !== '0'
+const STAR_K = Number(process.env.K ?? STAR_COUNT)
+const DIALS: StarDials = {
+  ramp: Number(process.env.RAMP ?? STAR_RAMP_END),
+  beta: Number(process.env.BETA ?? STAR_BAND_BETA),
+  cap: Number(process.env.CAP ?? STAR_BAND_CAP),
+}
+function withStars(
+  field: FieldPlayer[], seed: number, evNum: number, recent: readonly number[],
+): FieldPlayer[] {
+  if (!STARS_ON) return field
+  const trailing = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0
+  return overlayStars(field, starNamesFor(seed, STAR_K), starTarget(evNum, trailing, DIALS))
+}
+
 /** the sponsor's contract terms, read from content so this cannot drift */
 const SPONSOR = WEEK['sponsor']!.effect as
   { kind: 'sponsor'; amount: number; focusCost: number; events: number }
@@ -175,6 +203,8 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
   let lessonRefused = false
   const running: number[] = []
   const rota = scheduleFor(seed)
+  // trailing pace for the stars' band — last 3 made-cut rels, as GameState keeps
+  const recent: number[] = []
 
   // sponsor contracts, mirroring reducer.ts: one entry per focus point owed,
   // the value being events remaining; every completed event — played or sat
@@ -255,6 +285,7 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
     ctx.freeSinks = kit.reduce((n, b) => n + (b.freeSinks ?? 0), 0)
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
+    field = withStars(field, seed, ev.num, recent)
 
     const holes: number[] = []
     course.holes.slice(0, 4).forEach(hole => {
@@ -298,8 +329,10 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
         const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
         field = f2; ctx.bank = { ...ctx.bank, field: r2 }
       })
-      const cheque = payout(ev.purse,
-        yourPlace(standings(field, holes.reduce((a, b) => a + b, 0) - course.par, 8, false)))
+      const rel8 = holes.reduce((a, b) => a + b, 0) - course.par
+      recent.push(rel8)
+      if (recent.length > 3) recent.shift()
+      const cheque = payout(ev.purse, yourPlace(standings(field, rel8, 8, false)))
       banked += cheque
       earned += cheque
     }
@@ -361,7 +394,8 @@ const dm = (n: number) => (n < 0 ? '-' : '+') + money(Math.round(Math.abs(n)))
 const pp = (n: number) => (n < 0 ? '-' : '+') + Math.abs(Math.round(n * 100)) + 'pp'
 
 console.log(`\nIS A WEEK OFF EVER WORTH AN EVENT?  ${N} seasons per row · ${POLICY} play` +
-  ` · ${SHOP ? 'shopper' : 'non-shopper'} · seeds ${SEED0}+`)
+  ` · ${SHOP ? 'shopper' : 'non-shopper'} · seeds ${SEED0}+` +
+  ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}`)
 
 /* ------------------------------------------------------------------ *
  * 1 · OPPORTUNITY COST — what an average played event yields at each
@@ -383,6 +417,11 @@ const avg = (a: number, b: number) => base.perEvent.slice(a, b).reduce((x, y) =>
 console.log(`    stage means: early(1-5) ${money(Math.round(avg(0, 5)))}` +
   ` · mid(6-9) ${money(Math.round(avg(5, 9)))} · late(10-14) ${money(Math.round(avg(9, 14)))}`)
 console.log('    that is what a week COSTS; every option below has to beat it.\n')
+
+// YIELDS=1 stops here: section 1 is all weeks.ts EVENT_YIELDS/STAGE_YIELD
+// quote, and re-measuring it at N=1000 should not drag the full 21-row
+// option-timing matrix along (CALIBRATION-2.md, work-order item 5).
+if (process.env.YIELDS === '1') process.exit(0)
 
 /* ------------------------------------------------------------------ *
  * 2 · EACH OPTION AT EACH TIMING vs never. Early sits before check 1

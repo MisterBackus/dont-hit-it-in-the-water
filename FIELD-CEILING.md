@@ -509,3 +509,34 @@ Instrument knobs, for the record: `STARS=0` turns the tier off in
 cutcheck/shopcheck; `K/RAMP/BETA/CAP` override the shipped dials;
 fieldcheck `WINNERGAP=only [GRID=1] [PACE=…]` runs the promoted probe by
 itself; shopcheck `WINS=1` prints the win-rate section this sweep used.
+
+### POSTSCRIPT — the calibration pass ran (CALIBRATION-2.md, 26 Aug 2026)
+
+The §7.4 session is done; full receipts live in CALIBRATION-2.md. What it
+settles for THIS file's ledger:
+
+- **§8-2, scored: half right, and the wrong half is the informative one.**
+  The bar moved DOWN — $13.3M → **$12.2M**, with check 2 at $8.5M — exactly
+  the registered direction. But the kill topped out at **5%**, not ≥10%:
+  the sweep read 2–5% at every bar the win-pays-the-final-leg invariant
+  permits, and lowering check 2 toward its own intent LOWERS check 3's
+  ceiling with it (the invariant couples the bars — a fact §7.4 didn't
+  price). Below even the 8–9% "one more re-sweep" line, so **the escape
+  clause governs**: the residual is raw equipment over-supply, the next
+  dial is the honest-rental reframe of §4 — consumable SKUs that say they
+  expire — never sticker decay of owned goods, never another threshold
+  move. That conversation now has a measured floor under it: cheque-eating
+  was worth +2–4 points of check-3 kill and no more.
+- **The rest of §7.4's predictions hit.** Shipped triple $2.3M/$8.5M/$12.2M
+  kills 44/35/5 (checks 1–2 within their bands; check 1 digit-stable at
+  the spring rule); the mid-band absorbed the tier (15/17 boosts in band,
+  the two cheapest repriced, inside the ≤2 budget); all ten fieldShifts
+  confirmed ±0.1 with Palmetto re-derived for its rebuild (−0.182 →
+  −0.145, a CHANGES-8 debt, not a star effect); EVENT_YIELDS re-measured
+  (late yields fell 22–26% — the schedule screen now prices a withdrawal
+  honestly).
+- The economy's other star-shadow numbers: shopper median season
+  $19.6M → **$15.8M** (LADDER re-anchored; a finished $23.92M season reads
+  8th, was 15th), and the aggressive-below-mixed inversion survived the
+  tier (34 vs 35 — the stars press win-heavy play hardest), still flagged
+  for the dialogue.
