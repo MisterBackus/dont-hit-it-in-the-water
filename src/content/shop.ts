@@ -106,3 +106,72 @@ export const REROLL_PRICE = 70_000
  */
 export const PREMIUM_BOOST = 1_000_000
 export const EARLY_SHOP_UNTIL = 3
+
+/**
+ * THE SEASON ALLOWANCE — SHOP-SUPPLY.md, 26 Aug 2026 (owner-approved hybrid).
+ *
+ * Every Money List bar since slice 4 was derived under a four-purchase season
+ * budget that lived only in the harness (`if (bought >= 4) break`) — the live
+ * game had no such rule, and the best player bought the entire shelf (16
+ * items, 100% conversion, 10 wins). The budget is that missing rule, shipped:
+ * SIX boost purchases a season, counted by the reducer, rendered as pips.
+ * Cards are exempt — they are not the power curve (0% conversion above $1M
+ * live), and the bag cap already makes every card a swap.
+ *
+ * Six, not four: the harness's four assumed a naive spender; measured at the
+ * hybrid's center (budget 6 × weights 6/3/1 × early gate) the mixed shopper's
+ * late win rate reads ~53% against the 51% calibrated reference, and the
+ * patient counter-play (bank the slots, buy tour-issue only) collapses to
+ * ~12% survival — the tiers are what make the budget honest. Swept in the
+ * SHIPPED section of SHOP-SUPPLY.md.
+ */
+export const SHOP_BUDGET = 6
+
+/**
+ * RARITY TIERS, on the bands the measured prices already draw (price is
+ * value over two, so the price bands ARE the value tiers — same rule that
+ * tiered the major drops). The names are golf's own: off the rack, special
+ * order, tour issue. A tour-issue week at the shop is an event: the truck
+ * came.
+ *
+ * The weekly stock's two boost slots each draw a TIER first (weights below,
+ * among tiers with unowned stock), then an item uniformly within it; the
+ * early weeks (through EARLY_SHOP_UNTIL) still stock below the premium
+ * line, which under the tiers means: the truck only carries the rack.
+ * REROLL redraws items WITHIN the week's drawn tiers — you can re-ask what
+ * the truck brought, not summon a different truck (at ~13% premium odds per
+ * slot, $70k tier-fishing would be a solved slot machine).
+ */
+export type BoostTier = 'rack' | 'special' | 'tour'
+export const BOOST_TIERS: readonly BoostTier[] = ['rack', 'special', 'tour']
+export const TIER_LABEL: Readonly<Record<BoostTier, string>> = {
+  rack: 'Off the Rack', special: 'Special Order', tour: 'Tour Issue',
+}
+/** draw weights 6/3/1 — swept against 8/3/1 and 6/2/1 (SHOP-SUPPLY SHIPPED) */
+export const TIER_WEIGHTS: Readonly<Record<BoostTier, number>> = {
+  rack: 6, special: 3, tour: 1,
+}
+/**
+ * THE SPRING SLOT. Rarity alone taxed the spring — the one place difficulty
+ * must never go (the spring rule, four instruments deep): at the hybrid's
+ * center the check-1 kill read 54% against the tie-world's calibrated 48
+ * (SHOP-SUPPLY SHIPPED — the early gate itself measured only ~1 point of
+ * that, and deepening the commons to nine bought nothing; the tax is the
+ * weighted draw showing a spring wallet stickers it cannot act on). The
+ * fix is the doc's own named lever: through the first Money List check,
+ * the truck's FIRST slot always carries the rack — the shop knows what a
+ * rookie can spend. Slot two draws weighted as ever. Measured worth two
+ * points of spring kill (54 → 52 at $2.3M); the remainder of the spring
+ * tax is the offer stream itself — two dealt items against the legacy
+ * instrument's pick-of-seventeen catalogue — and was absorbed where the
+ * re-derivation moved check 1 (season.ts, SHOP-SUPPLY SHIPPED).
+ */
+export const SPRING_RACK_UNTIL = 5
+
+/** the tour-issue line — the top price band of the measured shelf */
+export const TOUR_ISSUE = 1_600_000
+export function tierOf(price: number): BoostTier {
+  if (price >= TOUR_ISSUE) return 'tour'
+  if (price >= PREMIUM_BOOST) return 'special'
+  return 'rack'
+}

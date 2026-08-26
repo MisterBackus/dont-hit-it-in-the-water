@@ -194,6 +194,9 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .deckbtn b i{font-style:normal;font-size:12px;color:var(--faint)}
 .deckdrawer{background:var(--panel);border:1px solid var(--line);border-radius:3px;
   padding:12px 14px;margin-bottom:14px}
+/* share the run from inside the drawer — mid-round, without backing out */
+.drawershare{margin-top:12px;padding:9px;font-size:12px;font-family:var(--fm);
+  letter-spacing:.03em;color:var(--faint)}
 .deckpanel{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .chip{font-family:var(--fm);font-size:11px;background:var(--paper);border:1px solid var(--line);
   border-radius:2px;padding:3px 7px;color:var(--soft)}
@@ -207,6 +210,19 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .offercard.is-boost{border-left:3px solid var(--sand)}
 @media(hover:hover){.offercard.is-boost:hover{border-color:var(--sand);box-shadow:inset 0 0 0 1px var(--sand)}}
 .boost-icon{font-size:32px;line-height:1;color:var(--sand);padding:6px 0 2px}
+/* RARITY TIERS (SHOP-SUPPLY.md): the label wears the tier's colour and the
+   card's left edge follows — off the rack stays quiet, special order reads
+   water-blue, tour issue is the star gold: the truck came. */
+.offercard.is-boost.tier-rack{border-left-color:var(--line)}
+.offercard.is-boost.tier-special{border-left-color:var(--water)}
+.offercard.is-boost.tier-tour{border-left-color:var(--star)}
+.offer-tier.tier-rack{color:var(--faint)}
+.offer-tier.tier-special{color:var(--water)}
+.offer-tier.tier-tour{color:var(--star);font-weight:600}
+/* THE SEASON ALLOWANCE — budget pips on the shop header */
+.pips{font-family:var(--fm);font-size:11.5px;letter-spacing:.05em;color:var(--soft);
+  margin:0 0 14px}
+.pips .pip-marks{letter-spacing:2px;color:var(--sand);font-weight:400}
 .stat.bag b{letter-spacing:2px;color:var(--sand)}
 .chip.boost{border-color:var(--sand);color:var(--sand)}
 .redraw{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;
@@ -287,6 +303,41 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .enc-choices .weekcard{min-height:44px;justify-content:center}
 .enc-choices .enc-walk .week-name{color:var(--soft)}
 .betnote{margin-top:2px}
+
+/* ============================================================
+   THE FINALE + THE EPILOGUE — the season knows when it is ending.
+   One gold banner line on the finale's first tee, and the season-in-
+   review screen: ceremony, the three bars, the record vs the stars,
+   and the clubhouse-board post (platform/share.ts).
+   ============================================================ */
+.encounterline.finale{color:var(--sand);border-color:var(--sand)}
+.ceremony{font-size:15px;line-height:1.6;color:var(--ink);font-style:italic;
+  background:var(--panel);border-left:3px solid var(--sand);border-radius:3px;
+  padding:13px 15px;margin:0 0 20px;max-width:58ch}
+.checkbars{display:flex;flex-direction:column;gap:6px;margin:8px 0 16px}
+.checkbar{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  font-family:var(--fm);font-size:12.5px;background:var(--panel);
+  border:1px solid var(--line);border-radius:3px;padding:8px 11px}
+.checkbar .ok{color:var(--good);font-weight:600}
+.checkbar .no{color:var(--bad);text-align:right}
+.checkbar .na{color:var(--faint)}
+.starrows{display:flex;flex-direction:column;gap:6px;margin:8px 0 16px}
+.starrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:8px 11px}
+.starrow b{font-family:var(--fd);font-weight:700;font-size:13px}
+.starrow .lbstar{font-size:10px;margin-right:5px}
+.starrow .rec{font-family:var(--fm);font-size:12px;color:var(--soft);white-space:nowrap}
+.starrow .rec i{font-style:normal;font-weight:600}
+.starrow .rec .w{color:var(--good)}
+.starrow .rec .l{color:var(--bad)}
+.sharerow{display:grid;grid-template-columns:minmax(130px,0.8fr) 1.2fr;gap:8px;margin-top:8px}
+@media(max-width:520px){.sharerow{grid-template-columns:1fr}}
+.namefield{font:inherit;font-size:14px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:3px;padding:11px 12px;min-height:44px}
+.namefield::placeholder{color:var(--faint)}
+.namefield:focus{outline:2px solid var(--cone);outline-offset:1px}
+.sharerow .ghost{margin-top:0}
+.sharenote{margin-top:6px}
 
 /* ============================================================
    Course art toggle + SUNDAY TAPE hole rendering

@@ -109,16 +109,26 @@ export const WEEKS_END_AT = 10
  * the spring rule, visible in a third instrument. Same harness, N=1000,
  * mixed shopper, seeds 800000+, weekcheck now carrying the same
  * STARS/K/RAMP/BETA/CAP knobs as shopcheck.
+ *
+ * RE-MEASURED at SHOP-SUPPLY SHIPPED (26 Aug 2026, same harness and seeds,
+ * now under the split purse and the offer-stream shop with the season
+ * budget of 6). Two forces pull opposite ways and the LATE season is where
+ * they resolve: the tie split trims every shared win, but the honest
+ * shopper carries a 9-boost kit by the finale where the old 4-buy harness
+ * modeled 7 — so late yields rose ~9% (event 11 $2.25M -> $2.42M) while
+ * the early-mid season eased (event 5 $710k -> $610k, the budget slowing
+ * the midsummer kit). Events 1-3 held within noise — the spring rule,
+ * still visible here.
  */
 export const EVENT_YIELDS: readonly number[] = [
-  300_000, 320_000, 360_000, 1_240_000, 710_000,        // events 1–5
-  720_000, 2_060_000, 920_000, 900_000,                 // events 6–9
-  860_000, 2_250_000, 1_000_000, 950_000, 2_360_000,    // events 10–14
+  300_000, 320_000, 360_000, 1_140_000, 610_000,        // events 1–5
+  630_000, 1_950_000, 990_000, 1_010_000,               // events 6–9
+  1_030_000, 2_420_000, 1_160_000, 1_090_000, 2_410_000, // events 10–14
 ]
 
 /** The same measurement by stage — the late mean is the UI's "by the fall". */
 export const STAGE_YIELD: Readonly<Record<'early' | 'mid' | 'late', number>> = {
-  early: 590_000, mid: 1_150_000, late: 1_490_000,
+  early: 550_000, mid: 1_150_000, late: 1_620_000,
 }
 
 export function eventStage(num: number): 'early' | 'mid' | 'late' {

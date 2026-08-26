@@ -136,11 +136,32 @@ This is the Balatro blind requirement, wearing a visor.
 > dial is honest rentals (consumable SKUs), and no fifth re-anchoring is
 > allowed to chase it. Provenance in `content/season.ts`.
 
-| Check | After event | Threshold | Kills, of those who arrive |
-|---|---|---|---|
-| First | 5 | **$420,000** | 41% |
-| Second | 9 | **$1,300,000** | 29% |
-| Last | 12 | **$2,700,000** | 14% |
+> **RE-ANCHORED A FIFTH TIME (SHOP-SUPPLY.md SHIPPED, 26 Aug 2026):
+> $2.1M / $8.1M / $11.1M — and the intent table below is RE-SET.** Two
+> worlds landed at once: the split purse (a tied win pays the mean of the
+> covered cheques — and in this score space winning groups tie
+> constantly, so the split taxed even the spring), and the shop-supply
+> hybrid (a six-purchase season budget with tiered stock — the scarcity
+> every prior calibration silently assumed, finally shipped). The new
+> bars send home **44% / 31% / 1%** of arrivals; survival mixed 38%,
+> aggressive 30%, safe 1% (hoarder 7%). The old 41/29/14 intent triple
+> is retired with receipts: its product (36% survival) is delivered, but
+> 14% at check 3 is unreachable inside the spring rule and the
+> win-pays-the-final-leg invariant — which now prices the leg on the
+> EXPECTED win cheque (the modal winning group is 2–3, so a win is worth
+> `tiePayout(purse,1,2)` ≈ $2.71M, capping the leg at ~$3.0M). Check 3
+> is a pace check whose real teeth are the leg's demand for a major win;
+> its kill is structurally small. The difficulty owner for "too easy" is
+> the supply dial (`shop.ts` SHOP_BUDGET and the tier weights), never a
+> sixth re-anchoring. Provenance in `content/season.ts`.
+
+**The intent table (re-set at SHOP-SUPPLY, was 41/29/14):**
+
+| Check | After event | Threshold | Kill intent, of arrivals | Measured |
+|---|---|---|---|---|
+| First | 5 | **$2,100,000** | 44% — the spring rule's number | 44% |
+| Second | 9 | **$8,100,000** | 33% — the season's real wall | 31% |
+| Last | 12 | **$11,100,000** | ≤ 8% ceiling — a pace check; its teeth are the win the leg demands | 1% |
 
 **The last check is not after the last event, and that matters.** It used to be,
 and a check after the final tournament is not a checkpoint — it is a verdict on
@@ -559,6 +580,26 @@ sees the cone move and clubs down.
 
 Prices now target a **1.4×–2.5× return** over the part of a season you will
 actually own the thing for. Re-derive with `npx tsx src/tools/shopcheck.ts`.
+
+> **THE SUPPLY RULE (SHOP-SUPPLY.md SHIPPED, 26 Aug 2026).** Price was
+> never the binding constraint — conversion on offered boosts measured
+> **100%** (the best live run bought all sixteen items the shop ever
+> showed it), and every Money List bar since slice 4 had been derived
+> under a four-purchase harness budget the live game didn't have. The
+> shop now ships the scarcity the calibration always assumed: a **season
+> allowance of six boost purchases** (cards exempt, rendered as pips),
+> **rarity tiers** on the measured price bands — off the rack (<$1M,
+> weight 6) / special order ($1M–$1.55M, weight 3) / tour issue (≥$1.6M,
+> weight 1) — drawn per weekly slot from the unowned pool, a **spring
+> slot** (through the first check the first slot always carries the
+> rack), and a reroll that redraws **within** the week's drawn tiers.
+> The decision stops being *whether* (it never was) and becomes
+> *which* — measured conversion falls to ~23%, the season kit becomes a
+> 9-boost draft with ~3 tour-issue sightings, and the patient
+> counter-play (bank the slots, buy tour-issue only) dies at 11%
+> survival against the naive shopper's 38. Difficulty tuning for "too
+> easy" belongs to `SHOP_BUDGET` and the tier weights now, not to
+> thresholds or prices.
 
 ### 6.4 The bag — your deck cap
 

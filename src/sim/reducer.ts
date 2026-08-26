@@ -5,7 +5,7 @@ import {
   CUT_AFTER_HOLE, MAX_FOCUS, courseOf, currentEvent, currentHole, focusPenaltyOf,
   freshHole, holeCount, initialState, parThrough, trailingPace,
 } from './state'
-import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
+import { EVENT_COUNT, SEASON, checkAfter, payout, tiePayout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
 import {
   advanceField, makeField, overlayStars, rankCut, standings, starNamesFor,
@@ -13,8 +13,9 @@ import {
 } from './resolve/field'
 import { BAG_CAP, CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
 import {
-  cardPrice, CUT_PRICE, EARLY_SHOP_UNTIL, PREMIUM_BOOST, REROLL_PRICE,
-  type ShopItem,
+  BOOST_TIERS, cardPrice, CUT_PRICE, EARLY_SHOP_UNTIL, PREMIUM_BOOST,
+  REROLL_PRICE, SPRING_RACK_UNTIL, TIER_WEIGHTS, tierOf,
+  type BoostTier, type ShopItem,
 } from '../content/shop'
 import {
   LESSON_FEE, PRACTICE_BIAS_UNTIL, PRACTICE_WEEK_IDS, WEEK, WEEKS, WEEKS_END_AT,
@@ -22,7 +23,7 @@ import {
 import {
   ENCOUNTER, ENCOUNTERS, ENCOUNTER_BOOSTS, ENCOUNTER_CHANCE, type Outcome,
 } from '../content/encounters'
-import { next as rollEvents } from './rng'
+import { next as rollEvents, next as rollShop, type RngState } from './rng'
 import { BOOST } from '../content/boosts'
 import { buildCone, focusCost, focusRegen, gimmeRange, maxFocus, whyNotPlayable } from './effects'
 import { dropPoint, resolveShot } from './resolve/shot'
@@ -139,27 +140,86 @@ export function reduce(state: GameState, action: Action): GameState {
 }
 
 /**
+ * The weekly boost pool, split by tier (SHOP-SUPPLY.md). Encounter-only
+ * superstitions are never for sale — you cannot buy somebody else's tiger
+ * (content/encounters.ts ENCOUNTER_BOOSTS) — and the opening weeks stay
+ * below the premium line: the first Money List check is $2.3M, and a $2.4M
+ * sticker at event 2 is a price tag the wallet cannot act on. Under the
+ * tiers the gate reads simply: the early truck only carries the rack.
+ */
+function tierShelves(
+  owned: ReadonlySet<string>, taken: ReadonlySet<string>, gate: boolean,
+): Record<BoostTier, string[]> {
+  const shelves: Record<BoostTier, string[]> = { rack: [], special: [], tour: [] }
+  for (const b of BOOSTS) {
+    if (owned.has(b.id) || taken.has(b.id) || ENCOUNTER_BOOSTS.has(b.id)) continue
+    if (gate && b.price >= PREMIUM_BOOST) continue
+    shelves[tierOf(b.price)].push(b.id)
+  }
+  return shelves
+}
+
+/** One weighted tier draw among tiers with stock; null when the shelf is bare. */
+function drawTier(
+  shelves: Record<BoostTier, string[]>, rng: RngState,
+): readonly [BoostTier | null, RngState] {
+  const avail = BOOST_TIERS.filter(t => shelves[t].length > 0)
+  if (avail.length === 0) return [null, rng]
+  const total = avail.reduce((n, t) => n + TIER_WEIGHTS[t], 0)
+  const [u, r] = rollShop(rng)
+  let x = u * total
+  for (const t of avail) {
+    x -= TIER_WEIGHTS[t]
+    if (x < 0) return [t, r]
+  }
+  return [avail[avail.length - 1]!, r]
+}
+
+/** Uniform pick from a shelf. Callers guarantee it is not empty. */
+function pickFrom(shelf: readonly string[], rng: RngState): readonly [string, RngState] {
+  const [u, r] = rollShop(rng)
+  return [shelf[Math.min(shelf.length - 1, Math.floor(u * shelf.length))]!, r]
+}
+
+/**
  * Stock the shop: two pieces of equipment you do not own, two shots.
  * Everything is priced, and every price comes out of the same pot the Money
  * List reads from.
  *
- * The opening weeks stay below the premium line (content/shop.ts): the first
- * Money List check is $2.3M, and a $2.4M sticker at event 2 is a price tag
- * the wallet cannot act on. Cards are priced one by one, from measurement.
+ * SHOP-SUPPLY.md: each boost slot draws a TIER first — off the rack 6,
+ * special order 3, tour issue 1, among tiers with unowned stock — then an
+ * item uniformly within it. The drawn tier layout is recorded on the state
+ * so a reroll can redraw items WITHIN the week's tiers (restockShelf); all
+ * shop randomness lives on the bank's own `shop` stream (rng.ts salt 8).
+ * Cards are priced one by one, from measurement.
  */
 function stock(state: GameState): GameState {
+  const owned = new Set(state.boosts)
+  const gate = state.event <= EARLY_SHOP_UNTIL
+  let rng = state.rng.shop
+  const tiers: BoostTier[] = []
+  const ids: string[] = []
+  for (let slot = 0; slot < 2; slot++) {
+    const shelves = tierShelves(owned, new Set(ids), gate)
+    // THE SPRING SLOT (content/shop.ts SPRING_RACK_UNTIL): through the
+    // first Money List check the first slot always carries the rack —
+    // rarity must not tax the spring. Weighted draw everywhere else.
+    const spring = slot === 0 && state.event <= SPRING_RACK_UNTIL
+      && shelves.rack.length > 0
+    const [tier, r1] = spring ? [('rack' as BoostTier), rng] as const : drawTier(shelves, rng)
+    rng = r1
+    if (tier === null) break
+    const [id, r2] = pickFrom(shelves[tier], rng)
+    rng = r2
+    tiers.push(tier)
+    ids.push(id)
+  }
   return produce(state, d => {
-    const owned = new Set(d.boosts)
-    const budget = state.event <= EARLY_SHOP_UNTIL
-    // encounter-only superstitions are never for sale — you cannot buy
-    // somebody else's tiger (content/encounters.ts ENCOUNTER_BOOSTS)
-    const pool = BOOSTS.filter(b => !owned.has(b.id) && !ENCOUNTER_BOOSTS.has(b.id)
-      && (!budget || b.price < PREMIUM_BOOST))
-    const [bs, r1] = shuffle(pool.map(b => b.id), d.rng.draw)
-    const [cs, r2] = shuffle(REWARD_POOL, r1)
-    d.rng = { ...d.rng, draw: r2 }
+    const [cs, r] = shuffle(REWARD_POOL, rng)
+    d.rng = { ...d.rng, shop: r }
+    d.shopTiers = tiers
     d.offer = [
-      ...bs.slice(0, 2).map((id): ShopItem => ({ kind: 'boost', id, price: BOOST[id]!.price })),
+      ...ids.map((id): ShopItem => ({ kind: 'boost', id, price: BOOST[id]!.price })),
       ...cs.slice(0, 2).map((id): ShopItem => ({ kind: 'card', id, price: cardPrice(id) })),
     ]
     d.cutIsPaid = false
@@ -167,14 +227,52 @@ function stock(state: GameState): GameState {
   })
 }
 
+/**
+ * Re-ask what the truck brought: redraw items WITHIN the tiers this week's
+ * stock drew (state.shopTiers), never the tiers themselves — at ~13%
+ * tour-issue odds per slot, $70k tier-fishing would be a solved slot
+ * machine and the rarity would be decoration. The same item can come back
+ * (a small tier is a small tier); a tier with nothing left unowned drops
+ * its slot. Cards reshuffle fully, as ever.
+ */
+function restockShelf(state: GameState): GameState {
+  const owned = new Set(state.boosts)
+  let rng = state.rng.shop
+  const tiers: BoostTier[] = []
+  const ids: string[] = []
+  for (const tier of state.shopTiers) {
+    const shelves = tierShelves(owned, new Set(ids), false)
+    if (shelves[tier].length === 0) continue
+    const [id, r] = pickFrom(shelves[tier], rng)
+    rng = r
+    tiers.push(tier)
+    ids.push(id)
+  }
+  return produce(state, d => {
+    const [cs, r] = shuffle(REWARD_POOL, rng)
+    d.rng = { ...d.rng, shop: r }
+    d.shopTiers = tiers
+    d.offer = [
+      ...ids.map((id): ShopItem => ({ kind: 'boost', id, price: BOOST[id]!.price })),
+      ...cs.slice(0, 2).map((id): ShopItem => ({ kind: 'card', id, price: cardPrice(id) })),
+    ]
+    d.phase = 'shop'
+  })
+}
+
 function buy(state: GameState, index: number): GameState {
   const item = state.offer[index]
   if (!item || item.price > state.earnings) return state
+  // THE SEASON ALLOWANCE (SHOP-SUPPLY.md): a boost past the budget is as
+  // illegal as one past the wallet. Cards are exempt — they are not the
+  // power curve, and the bag cap already makes each one a swap.
+  if (item.kind === 'boost' && state.buysLeft <= 0) return state
   return produce(state, d => {
     d.earnings -= item.price
     d.spent += item.price
     d.offer = d.offer.filter((_, i) => i !== index)
     if (item.kind === 'boost') {
+      d.buysLeft -= 1
       d.boosts.push(item.id)
       const b = BOOST[item.id]!
       if (b.freeSinks) d.freeSinks += b.freeSinks
@@ -208,7 +306,8 @@ function buyCut(state: GameState): GameState {
 function reroll(state: GameState): GameState {
   if (REROLL_PRICE > state.earnings) return state
   const paid = produce(state, d => { d.earnings -= REROLL_PRICE; d.spent += REROLL_PRICE })
-  return stock(paid)
+  // within the week's drawn tiers — see restockShelf
+  return restockShelf(paid)
 }
 
 function removeCard(state: GameState, id: string | null): GameState {
@@ -634,16 +733,43 @@ function settle(state: GameState, madeCut: boolean): GameState {
     if (!madeCut) {
       d.lastPlace = 0
       d.lastPaid = 0
+      // the record still gets its line: stars who played the weekend
+      // finished ahead of you; a star cut alongside you is a wash
+      d.seasonRecord.push({
+        event: ev.num, madeCut: false, place: 0, tied: 1, paid: 0,
+        aheadOf: [],
+        behind: d.field.filter(p => !p.cut && p.star === true).map(p => p.name),
+      })
     } else {
       const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(d, d.scores.length)
       // the trailing window the marquee band reads — last three made cuts,
       // written here so it is only ever visible to the NEXT event's field
       d.recentCutRels = [...d.recentCutRels, rel].slice(-3)
-      const place = yourPlace(standings(d.field, rel, d.scores.length, false))
-      const paid = payout(ev.purse, place)
+      const rows = standings(d.field, rel, d.scores.length, false)
+      const place = yourPlace(rows)
+      // SPLIT AT THE TOP ONLY (season.ts tiePayout, owner ruling 26 Aug
+      // 2026): a tie for FIRST pools the covered cheques and divides them —
+      // a T1 is still a win, lastPlace is still 1, only the money splits.
+      // Every other tied rank keeps the pre-existing rule: the whole group
+      // takes the best place's full cheque. The blanket split measured
+      // 35% → 17% survival, because everything here ties (see season.ts).
+      const tied = rows.filter(r => r.place === place).length
+      const paid = place === 1 ? tiePayout(ev.purse, 1, tied) : payout(ev.purse, place)
       d.lastPlace = place
       d.lastPaid = paid
       d.earnings += paid
+      // the season's own ledger, for the epilogue: a star out-placed is
+      // beaten; one who missed the cut you made is beaten too; a star who
+      // out-placed you (they all made this cut — the field's cut flag says
+      // so) finished ahead. A dead tie with one counts as neither.
+      d.seasonRecord.push({
+        event: ev.num, madeCut: true, place, tied, paid,
+        aheadOf: [
+          ...rows.filter(r => r.star && r.place > place).map(r => r.name),
+          ...d.field.filter(p => p.cut && p.star === true).map(p => p.name),
+        ],
+        behind: rows.filter(r => r.star && r.place < place).map(r => r.name),
+      })
       // sponsor money for the made cut (Boost.cutBonus) — paid into the same
       // gross number the Money List reads, like any other winnings
       for (const id of d.boosts) {

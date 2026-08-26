@@ -14,7 +14,7 @@ import {
 } from '../content/season'
 import { PUNCH_OUT, CHIP_OUT, HAND_SIZE, CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
-import { CUT_PRICE, REROLL_PRICE } from '../content/shop'
+import { CUT_PRICE, REROLL_PRICE, SHOP_BUDGET, TIER_LABEL, tierOf } from '../content/shop'
 import { WEEK, LESSON_FEE, EVENT_YIELDS, STAGE_YIELD, eventStage } from '../content/weeks'
 import { ENCOUNTER } from '../content/encounters'
 import { buildCone, focusCost, gimmeRange, maxFocus, whyNotPlayable } from '../sim/effects'
@@ -22,9 +22,11 @@ import { SURFACE_LABEL, toPin } from '../sim/geometry'
 import { baseputts } from '../sim/resolve/putt'
 import { HoleView } from './HoleView'
 import { Leaderboard } from './Leaderboard'
-import { standings } from '../sim/resolve/field'
+import { standings, starNamesFor } from '../sim/resolve/field'
+import { STARS } from '../content/players'
 import { ShotButton, TechButton, DeckPanel } from './Cards'
 import { SAVE_VERSION, archiveRun, loadArchive, loadSave, persistSave } from '../platform/storage'
+import { SHARE_ENDPOINT, SHARE_NOTE, postRun } from '../platform/share'
 import { useGameAudio } from './sound'
 
 const START_SEED = 20260824
@@ -105,6 +107,9 @@ export function App() {
   const pv = previewCone(s)
   const techs = handTechs(s).filter(t => s.selectedTechs.includes(t.id))
   const spent = focusCost(techs)
+  // Bail Out armed: the shot ignores water and OB (resolve/shot.ts reads them
+  // as rough). Display only — the picture is told so it can say so.
+  const bailOut = techs.some(t => t.effects.some(e => e.op === 'ignoreHazards'))
   const dist = Math.round(toPin(hole, s.hole.ball))
   const rel = toPar(s)
   const board = standings(s.field, rel, s.scores.length, s.madeCut === false)
@@ -153,10 +158,17 @@ export function App() {
     // ever survived to 13. Found live, the hard way, 25 Aug 2026.
     const next = MONEY_CHECKS.find(c => c.after >= s.event)
     const short = next ? next.need - grossEarnings(s) : 0
+    // THE FINALE knows it is the finale. By construction the Money List is
+    // done by now (last check after 12) — if a bar ever did still stand,
+    // the moneynote below already prints the demand — so the framing here
+    // is about the only thing event 14 can still decide: the title.
+    const finale = s.event === EVENT_COUNT
+    const arriveRank = moneyListRank(grossEarnings(s), Math.max(1, s.event - 1))
     return (
       <div className="shell intro">
         <div className="mini-eyebrow">
-          Event {s.event} of {EVENT_COUNT} · {money(grossEarnings(s))} earned
+          {finale ? `The season finale · event ${EVENT_COUNT} of ${EVENT_COUNT}`
+            : `Event ${s.event} of ${EVENT_COUNT}`} · {money(grossEarnings(s))} earned
         </div>
         <h1 className={`small ${ev.major ? 'major' : ''}`}>{ev.name}</h1>
         <div className="evfacts">
@@ -168,10 +180,21 @@ export function App() {
           </div>
         </div>
         <p className="tagline">
-          {ev.major
-            ? `A major, at ${courseOf(s).label}. Survive the cut and you pick up equipment.`
-            : `${countWord(holeCount(s))} holes at ${courseOf(s).label}. Top ${ev.advance} and ties play the weekend.`}
+          {finale
+            ? `The last one. A major, at ${courseOf(s).label} — thirteen weeks got you here, and this is the week they were for.`
+            : ev.major
+              ? `A major, at ${courseOf(s).label}. Survive the cut and you pick up equipment.`
+              : `${countWord(holeCount(s))} holes at ${courseOf(s).label}. Top ${ev.advance} and ties play the weekend.`}
         </p>
+        {finale && (
+          <p className="weeknote">
+            {arriveRank === 1
+              ? 'You arrive first on the Money List. Nothing left can end this season — the only question is whether anybody catches you.'
+              : arriveRank <= 5
+                ? `You arrive ${ordinal(arriveRank)} on the list, playing for the title — and the top five leave with a two-year exemption.`
+                : `You arrive ${ordinal(arriveRank)} on the list. One more cheque decides what kind of year this was.`}
+          </p>
+        )}
         <div className="ladder">
           {SEASON.map(e => (
             <span key={e.num}
@@ -286,16 +309,28 @@ export function App() {
     const total = s.scores.reduce((a, b) => a + b, 0)
     const rel = total - parThrough(s, s.scores.length)
     const made = s.madeCut !== false
+    // the event just settled is the last line of the season record — the
+    // tie count lives there. Only a tie for FIRST splits the cheque (owner
+    // ruling: split at the top only), so only a tied win gets the line.
+    const rec = s.seasonRecord[s.seasonRecord.length - 1]
+    const tied = made && rec && rec.event === s.event ? rec.tied : 1
+    const splitWin = made && s.lastPlace === 1 && tied > 1
+    const ways = ['', '', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+    const way = ways[tied] ?? String(tied)
     return (
       <div className="shell intro">
         <div className="mini-eyebrow">{currentEvent(s).name}</div>
         <h1 className={`small ${made ? 'good' : 'bad'}`}>
-          {made ? `${ordinal(s.lastPlace)} place` : 'Missed the cut'}
+          {made
+            ? splitWin ? 'Tied 1st' : `${ordinal(s.lastPlace)} place`
+            : 'Missed the cut'}
         </h1>
         <p className="tagline">
-          {made
-            ? `${total} strokes, ${relStr(rel)}. That is ${money(s.lastPaid)}.`
-            : `${relStr(rel)} through ${s.scores.length}. No cheque this week.`}
+          {!made
+            ? `${relStr(rel)} through ${s.scores.length}. No cheque this week.`
+            : splitWin
+              ? `${total} strokes, ${relStr(rel)} — a ${way}-way tie at the top. It still counts as a win; the cheque splits ${way} ways, and ${money(s.lastPaid)} of it is yours.`
+              : `${total} strokes, ${relStr(rel)}. That is ${money(s.lastPaid)}.`}
         </p>
         <div className="evfacts">
           <div><b>{money(grossEarnings(s))}</b><span>season earnings</span></div>
@@ -347,15 +382,29 @@ export function App() {
               ? ` You have earned ${money(grossEarnings(s))} of the ${money(next.need)} event ${next.after} demands.`
               : ` You are clear of event ${next.after}'s line — the rest is investment.`}
         </p>
+        {/* THE SEASON ALLOWANCE (SHOP-SUPPLY.md): six equipment changes a
+            year, cards exempt. Filled pips are what is left. */}
+        <div className="pips" title="Six equipment purchases a season. Cards are exempt, and a major's free pick arrives on top.">
+          Changes left this season{' '}
+          <b className="pip-marks">
+            {'▮'.repeat(s.buysLeft)}{'▯'.repeat(Math.max(0, SHOP_BUDGET - s.buysLeft))}
+          </b>
+          {s.buysLeft > 0
+            ? ' — nobody re-learns a bag in October.'
+            : ' — the bag is set for the year.'}
+        </div>
         <div className="offer">
           {s.offer.map((item, i) => {
             const afford = item.price <= s.earnings
             if (item.kind === 'boost') {
               const b = BOOST[item.id]!
+              const tier = tierOf(item.price)
+              // past the allowance, a boost is as unbuyable as an unaffordable one
+              const canBuy = afford && s.buysLeft > 0
               return (
-                <button key={item.id} className={`offercard is-boost ${afford ? '' : 'off'}`}
-                  disabled={!afford} onClick={() => dispatch({ type: 'BUY', index: i })}>
-                  <span className="offer-kind">Equipment · always on</span>
+                <button key={item.id} className={`offercard is-boost tier-${tier} ${canBuy ? '' : 'off'}`}
+                  disabled={!canBuy} onClick={() => dispatch({ type: 'BUY', index: i })}>
+                  <span className={`offer-kind offer-tier tier-${tier}`}>{TIER_LABEL[tier]} · always on</span>
                   <span className="boost-icon">{b.icon}</span>
                   <span className="offer-name">{b.name}</span>
                   <span className="offer-blurb">{b.blurb}</span>
@@ -539,69 +588,8 @@ export function App() {
   }
 
   if (s.phase === 'over') {
-    const finished = s.event >= EVENT_COUNT && s.keptJob !== false
-    const played = finished ? EVENT_COUNT : s.event
-    const rank = moneyListRank(grossEarnings(s), played)
-    const failed = MONEY_CHECKS.find(c => c.after === s.event && s.keptJob === false)
-    const grade = !finished ? null
-      : rank === 1 ? 'You won the Money List. Nobody earned more.'
-        : rank <= 5 ? 'Top five. You are exempt for two years.'
-          : rank <= 15 ? 'A career year. Nothing to explain to anybody.'
-            : rank <= 28 ? 'Card renewed, comfortably.'
-              : 'You kept your card. Same time next year.'
-    return (
-      <div className="shell intro">
-        <div className="mini-eyebrow">
-          {finished ? 'Season complete' : `Your season ended at event ${s.event}`}
-        </div>
-        <h1 className={finished ? 'good' : ''}>{money(grossEarnings(s))}</h1>
-        <p className="tagline">
-          {ordinal(rank)} on the Money List. {finished ? grade : 'Back to Qualifying. Everyone goes back eventually.'}
-        </p>
-
-        {/* THE ACCOUNTING. "Not close enough" told you nothing you could act on. */}
-        <div className="evfacts">
-          <div><b>{s.cutsMade}/{s.cutsMade + s.cutsMissed}</b><span>cuts made</span></div>
-          <div><b>{money(s.spent)}</b><span>spent in the shop</span></div>
-          <div><b>{s.skipped}</b><span>weeks sat out</span></div>
-        </div>
-        {failed && (
-          <p className="moneynote">
-            You needed {money(failed.need)} by event {failed.after} and won {money(grossEarnings(s))}
-            {' '}— {money(failed.need - grossEarnings(s))} short.
-            {s.cutsMissed > 0 && ` You missed ${s.cutsMissed} cut${s.cutsMissed > 1 ? 's' : ''}.`}
-            {s.skipped > 0 && ` You sat out ${s.skipped} week${s.skipped > 1 ? 's' : ''}.`}
-          </p>
-        )}
-
-        <div className="ladder big-ladder">
-          {SEASON.map(e => (
-            <span key={e.num}
-              className={`rung ${e.num < s.event ? 'done' : ''} ${e.num === s.event ? 'now' : ''} ${e.major ? 'maj' : ''}`}
-              title={`${e.name} · ${courseFor(s.seed, e.num).label}`}>{e.num}</span>
-          ))}
-        </div>
-        {s.boosts.length > 0 && (
-          <>
-            <div className="lbl">What you were carrying</div>
-            <div className="deckpanel">
-              {s.boosts.map(id => (
-                <span key={id} className="chip boost" title={BOOST[id]!.blurb}>{BOOST[id]!.icon} {BOOST[id]!.name}</span>
-              ))}
-            </div>
-          </>
-        )}
-        <p className="note" style={{ textAlign: 'center' }}>
-          <button className="ghost" onClick={copyRun}>
-            {copied ? 'Copied — paste it in the chat' : 'Copy this season for the board'}
-          </button>
-          {' '}<a href="board.html">the clubhouse board →</a>
-        </p>
-        <button className="big" onClick={() => dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7 })}>
-          New season
-        </button>
-      </div>
-    )
+    return <Epilogue s={s} dispatch={dispatch} copyRun={copyRun} copied={copied}
+      log={logRef.current} />
   }
 
   const holed = s.phase === 'holed'
@@ -669,6 +657,11 @@ export function App() {
               </div>
             </>
           )}
+          {/* the run is shareable from wherever you are standing — the board
+              submission IS the action log, so mid-round is a legal paste */}
+          <button className="ghost drawershare" onClick={copyRun}>
+            {copied ? 'Copied — paste it in the chat' : 'Copy this run for the board'}
+          </button>
         </div>
       )}
 
@@ -682,10 +675,19 @@ export function App() {
         <div className={`encounterline ${s.lastEncounter.tone}`}>{s.lastEncounter.text}</div>
       )}
 
+      {/* one line of finale weight, on the first tee of event 14 only —
+          the same banner idiom as an encounter's moment, then gone */}
+      {s.event === EVENT_COUNT && s.hole.index === 0 && s.hole.strokes === 0 && !holed && (
+        <div className="encounterline finale">
+          The last first tee of the year. After this, the season is just arithmetic.
+        </div>
+      )}
+
       <div className="board">
         <div className="figure">
           <HoleView hole={hole} ball={s.hole.ball} cone={pv?.cone ?? null}
-            showCone={!!pv && !pv.blocked && s.phase === 'playing'} />
+            showCone={!!pv && !pv.blocked && s.phase === 'playing'}
+            ignoreHazards={bailOut} />
           <div className="note">{hole.note}</div>
         </div>
 
@@ -885,6 +887,195 @@ export function App() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Where the typed board name lives between seasons — a convenience, not a save. */
+const NAME_KEY = 'dont-hit-it-in-the-water/name'
+
+/**
+ * THE EPILOGUE — the season in review (phase 'over').
+ *
+ * The old screen was a number and a restart button, which meant a player
+ * could finish a whole season without noticing they had finished a whole
+ * season. This one is the payoff: the card ceremony, the ladder the Money
+ * List made you walk, the record against the four names that ate your
+ * cheques all autumn, and the two doors out — post the season to the
+ * clubhouse board, or copy it for the chat. Everything shown here derives
+ * from state (seasonRecord is written at settle); nothing is rolled.
+ */
+function Epilogue({ s, dispatch, copyRun, copied, log }: {
+  s: GameState
+  dispatch: (a: Action) => void
+  copyRun: () => void
+  copied: boolean
+  log: { seed: number; actions: Action[] }
+}) {
+  const [name, setName] = useState<string>(() => {
+    try { return localStorage.getItem(NAME_KEY) ?? '' } catch { return '' }
+  })
+  // 'off' straight away when no endpoint is configured (platform/share.ts) —
+  // the button greys rather than promising a post that cannot land
+  const [share, setShare] = useState<'idle' | 'sending' | 'ok' | 'off' | 'fail'>(
+    SHARE_ENDPOINT ? 'idle' : 'off')
+  const post = () => {
+    if (share === 'sending' || share === 'off') return
+    setShare('sending')
+    postRun({ version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] }, name.trim())
+      .then(r => setShare(r === 'ok' ? 'ok' : r))
+  }
+  const typeName = (v: string) => {
+    setName(v)
+    try { localStorage.setItem(NAME_KEY, v) } catch { /* private mode — fine */ }
+  }
+
+  const finished = s.event >= EVENT_COUNT && s.keptJob !== false
+  const played = finished ? EVENT_COUNT : s.event
+  const rank = moneyListRank(grossEarnings(s), played)
+  const failed = MONEY_CHECKS.find(c => c.after === s.event && s.keptJob === false)
+  const grade = !finished ? null
+    : rank === 1 ? 'You won the Money List. Nobody earned more.'
+      : rank <= 5 ? 'Top five. You are exempt for two years.'
+        : rank <= 15 ? 'A career year. Nothing to explain to anybody.'
+          : rank <= 28 ? 'Card renewed, comfortably.'
+            : 'You kept your card. Same time next year.'
+
+  const wins = s.seasonRecord.filter(r => r.place === 1).length
+  // the record against the run's stars, event by event, from settle's ledger
+  const vsStars = starNamesFor(s.seed).map(n => ({
+    name: n,
+    blurb: STARS.find(st => st.name === n)?.blurb ?? '',
+    ahead: s.seasonRecord.filter(r => r.aheadOf.includes(n)).length,
+    behind: s.seasonRecord.filter(r => r.behind.includes(n)).length,
+  }))
+
+  return (
+    <div className="shell intro">
+      <div className="mini-eyebrow">
+        {finished ? 'Season complete · fourteen events, start to finish'
+          : `Your season ended at event ${s.event}`}
+      </div>
+      <h1 className={finished ? 'good' : 'bad'}>
+        {finished ? 'You kept the card' : 'You lost the card'}
+      </h1>
+      <p className="tagline">
+        {money(grossEarnings(s))} won · {ordinal(rank)} on the Money List
+        {finished ? `. ${grade}` : ' when it ended.'}
+      </p>
+
+      {/* THE CARD CEREMONY — the quiet line, or the honest one. */}
+      <p className="ceremony">
+        {finished
+          ? 'In the scorer’s trailer they slide next year’s card across the desk without a word — the word would have ruined it. Same locker in the spring.'
+          : 'Nobody takes the card off you at a podium. An envelope, a handshake, a parking lot. Back to Qualifying — everyone goes back eventually, and now you know exactly what staying costs.'}
+      </p>
+
+      {/* THE ACCOUNTING. "Not close enough" told you nothing you could act on. */}
+      <div className="evfacts">
+        <div><b>{s.seasonRecord.length}</b><span>events played</span></div>
+        <div><b>{wins}</b><span>{wins === 1 ? 'win' : 'wins'}</span></div>
+        <div><b>{s.cutsMade}/{s.cutsMade + s.cutsMissed}</b><span>cuts made</span></div>
+        <div><b>{money(s.spent)}</b><span>spent in the shop</span></div>
+        <div><b>{s.skipped}</b><span>weeks sat out</span></div>
+      </div>
+      {failed && (
+        <p className="moneynote">
+          You needed {money(failed.need)} by event {failed.after} and won {money(grossEarnings(s))}
+          {' '}— {money(failed.need - grossEarnings(s))} short.
+          {s.cutsMissed > 0 && ` You missed ${s.cutsMissed} cut${s.cutsMissed > 1 ? 's' : ''}.`}
+          {s.skipped > 0 && ` You sat out ${s.skipped} week${s.skipped > 1 ? 's' : ''}.`}
+        </p>
+      )}
+
+      {/* THE LADDER WALKED — the season's gross against the three bars. */}
+      <div className="lbl">The Money List — the three bars</div>
+      <div className="checkbars">
+        {MONEY_CHECKS.map(c => {
+          const isTheFailure = failed && failed.after === c.after
+          const cleared = !isTheFailure && (finished || s.event >= c.after)
+          return (
+            <div key={c.after} className="checkbar">
+              <span>{money(c.need)} after event {c.after}</span>
+              {isTheFailure
+                ? <span className="no">{money(c.need - grossEarnings(s))} short — the season ended here</span>
+                : cleared
+                  ? <span className="ok">cleared</span>
+                  : <span className="na">never faced</span>}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* THE RECORD AGAINST THE STARS — settle keeps score every week. */}
+      {s.seasonRecord.length > 0 && vsStars.length > 0 && (
+        <>
+          <div className="lbl">
+            Your record against the stars
+            <em> — weeks you finished ahead of them, and weeks they finished ahead of you</em>
+          </div>
+          <div className="starrows">
+            {vsStars.map(v => (
+              <div key={v.name} className="starrow" title={v.blurb}>
+                <b><span className="lbstar">★</span>{v.name}</b>
+                <span className="rec">
+                  ahead <i className="w">{v.ahead}</i> · behind <i className="l">{v.behind}</i>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="ladder big-ladder">
+        {SEASON.map(e => (
+          <span key={e.num}
+            className={`rung ${e.num < s.event ? 'done' : ''} ${e.num === s.event ? 'now' : ''} ${e.major ? 'maj' : ''}`}
+            title={`${e.name} · ${courseFor(s.seed, e.num).label}`}>{e.num}</span>
+        ))}
+      </div>
+      {s.boosts.length > 0 && (
+        <>
+          <div className="lbl">What you were carrying</div>
+          <div className="deckpanel">
+            {s.boosts.map(id => (
+              <span key={id} className="chip boost" title={BOOST[id]!.blurb}>{BOOST[id]!.icon} {BOOST[id]!.name}</span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* THE CLUBHOUSE BOARD — nothing is ever sent silently (share.ts):
+          the consent note sits beside the button, and the button greys
+          when no board inbox is configured rather than pretending. */}
+      <div className="lbl" style={{ marginTop: 18 }}>The clubhouse board</div>
+      <div className="sharerow">
+        <input className="namefield" maxLength={24} placeholder="Name for the board"
+          value={name} onChange={e => typeName(e.target.value)}
+          aria-label="Name for the clubhouse board" />
+        <button className="ghost postbtn"
+          disabled={share === 'off' || share === 'sending' || name.trim() === ''}
+          onClick={post}>
+          {share === 'ok' ? 'Posted — it’s on the board'
+            : share === 'sending' ? 'Posting…'
+              : share === 'fail' ? 'It didn’t go — try again'
+                : share === 'off' ? 'Post to the board'
+                  : 'Post this season to the board'}
+        </button>
+      </div>
+      <p className="note sharenote">
+        {SHARE_NOTE}
+        {share === 'off' && ' The board inbox isn’t connected in this build — copy the run below instead.'}
+      </p>
+      <p className="note" style={{ textAlign: 'center' }}>
+        <button className="ghost" onClick={copyRun}>
+          {copied ? 'Copied — paste it in the chat' : 'Copy this season for the board'}
+        </button>
+        {' '}<a href="board.html">the clubhouse board →</a>
+      </p>
+      <button className="big" onClick={() => dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7 })}>
+        New season
+      </button>
     </div>
   )
 }

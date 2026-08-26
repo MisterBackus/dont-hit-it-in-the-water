@@ -44,16 +44,13 @@ const FILL: Record<string, string> = {
  * tail. Two tones only, both var(--cone) — the glance test is unchanged:
  * is any part of the trouble inside anything shaded?
  */
-function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Cone }) {
+function coneGeom(hole: HoleSpec, from: Point, cone: Cone) {
   const { dir, perp } = aimFrame(hole, from)
+  const o = cone.aimOffset
   const at = (fwd: number, lat: number): Point => ({
     down: from.down + dir.down * fwd + perp.down * lat,
     side: from.side + dir.side * fwd + perp.side * lat,
   })
-  const o = cone.aimOffset
-  const a = project(from, hole)
-  const mid = project(at(cone.carry, o), hole)
-  const near = project(at(cone.carry * 0.94, o), hole)
   // one edge arc per depth: full lateral width — a ball pitching short still
   // scatters the full spread, so the bands are strips, not a narrowing wedge
   const edge = (fwd: number) => ({
@@ -67,6 +64,21 @@ function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Co
     return `M ${n.l.x},${n.l.y} ${arc(1)} ${n.r.x},${n.r.y} ` +
       `L ${f.r.x},${f.r.y} ${arc(0)} ${f.l.x},${f.l.y} Z`
   }
+  const apex = project(from, hole)
+  const wedge = (fwd: number) => {
+    const e = edge(fwd)
+    return `M ${apex.x},${apex.y} L ${e.l.x},${e.l.y} ${arc(1)} ${e.r.x},${e.r.y} Z`
+  }
+  return { at, edge, arc, strip, apex, wedge }
+}
+
+function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Cone }) {
+  const geo = coneGeom(hole, from, cone)
+  const o = cone.aimOffset
+  const a = geo.apex
+  const mid = project(geo.at(cone.carry, o), hole)
+  const near = project(geo.at(cone.carry * 0.94, o), hole)
+  const { edge, arc, strip } = geo
   const pn = edge(cone.pitchNear)
   const pf = edge(cone.pitchFar)
   const hasTail = cone.restFar > cone.pitchFar
@@ -107,6 +119,56 @@ function ConeShape({ hole, from, cone }: { hole: HoleSpec; from: Point; cone: Co
         stroke="var(--cone)" strokeWidth="1.2" strokeDasharray="4 6"
         vectorEffect="non-scaling-stroke" opacity=".8" />
       <circle cx={mid.x} cy={mid.y} r="3.5" fill="var(--cone)" opacity=".9" />
+    </g>
+  )
+}
+
+/**
+ * BAIL OUT, IN THE PICTURE. When the armed technique carries ignoreHazards,
+ * resolve/shot.ts reads any water or OB the ball finds as ROUGH — so the
+ * water and OB the cone covers are painted rough here, clipped to exactly the
+ * shape the cone draws. Nothing outside the cone changes: the lake is still a
+ * lake everywhere you could still find it, which is the honest reading of the
+ * card. Display only — no geometry, no resolution, no sim.
+ *
+ * Both looks. The tape's wobbled shapes reuse the same feature seeds as
+ * TapeCourse, so the tint lands on the drawn shoreline, not beside it.
+ */
+function SafeTint({ hole, from, cone, tape }: {
+  hole: HoleSpec; from: Point; cone: Cone; tape: boolean
+}) {
+  const geo = coneGeom(hole, from, cone)
+  const clip = `h${hole.num}-safe`
+  const teeY = project({ down: 0, side: 0 }, hole).y
+  return (
+    <g className="safetint">
+      <defs>
+        {/* the union of the two drawn regions: the wedge body, and the band
+            from the shortest pitch to the end of the run-out */}
+        <clipPath id={clip}>
+          <path d={geo.wedge(cone.pitchNear)} />
+          <path d={geo.strip(cone.pitchNear, cone.restFar)} />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${clip})`} fill="var(--rough)" fillOpacity=".88">
+        {hole.hazards.map((h, i) => {
+          if (h.surface !== 'water') return null   // sand and trees still bite
+          const c = project(h.at, hole)
+          return tape
+            ? <path key={i} d={holeEdgeEllipse(hole, 100 + i, h.at, h.rDown, h.rSide)} />
+            : <ellipse key={i} cx={c.x} cy={c.y} rx={h.rSide} ry={h.rDown} />
+        })}
+        {/* OB: only the tape look paints the field beyond the trees (and the
+            ground behind the tee) — in classic that ground is already rough */}
+        {tape && (
+          <>
+            <path d={holeEdgeBand(hole, -1, TREES_BAND, 95)} />
+            <path d={holeEdgeBand(hole, 1, TREES_BAND, 95)} />
+            <rect x={-HALF_WIDTH} y={teeY} width={HALF_WIDTH * 2}
+              height={Math.max(totalDepth(hole) - teeY, 0)} />
+          </>
+        )}
+      </g>
     </g>
   )
 }
@@ -378,8 +440,12 @@ function writeArtFlag(on: boolean): void {
 }
 
 export function HoleView({
-  hole, ball, cone, showCone,
-}: { hole: HoleSpec; ball: Point; cone: Cone | null; showCone: boolean }) {
+  hole, ball, cone, showCone, ignoreHazards = false,
+}: {
+  hole: HoleSpec; ball: Point; cone: Cone | null; showCone: boolean
+  /** the armed plan carries Bail Out — water and OB inside the cone are rough */
+  ignoreHazards?: boolean
+}) {
   // Art toggle lives HERE, not in App: flip old/new live, default = classic.
   const [tape, setTape] = useState(readArtFlag)
   const toggle = () => setTape(t => {
@@ -427,6 +493,10 @@ export function HoleView({
       <svg ref={svgRef} className="holeview" viewBox={viewBox(hole, from)}
         preserveAspectRatio="xMidYMin meet">
         {tape ? <TapeCourse hole={hole} /> : <ClassicCourse hole={hole} />}
+
+        {/* the lake the Bail Out has taken out of play, under the cone */}
+        {showCone && cone && ignoreHazards
+          && <SafeTint hole={hole} from={ball} cone={cone} tape={tape} />}
 
         {/* cone — identical in both looks, always above the terrain */}
         {showCone && cone && <ConeShape hole={hole} from={ball} cone={cone} />}

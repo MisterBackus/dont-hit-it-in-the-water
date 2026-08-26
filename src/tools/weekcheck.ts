@@ -47,7 +47,11 @@ import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
-import { PREMIUM_BOOST } from '../content/shop'
+import {
+  BOOST_TIERS, EARLY_SHOP_UNTIL, PREMIUM_BOOST, SHOP_BUDGET,
+  SPRING_RACK_UNTIL, TIER_WEIGHTS, tierOf, type BoostTier,
+} from '../content/shop'
+import { ENCOUNTER_BOOSTS } from '../content/encounters'
 import { WEEK, WEEKS, LESSON_FEE, WEEKS_END_AT } from '../content/weeks'
 import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
@@ -61,7 +65,7 @@ import {
   STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
 } from '../content/players'
 import { surfaceAt, toPin } from '../sim/geometry'
-import { seedBank, type RngBank } from '../sim/rng'
+import { hash, makeRng, next, seedBank, type RngBank, type RngState } from '../sim/rng'
 import { draw, shuffle } from '../sim/deck'
 import type { Boost, HoleSpec, Point, Surface } from '../sim/types'
 
@@ -154,8 +158,48 @@ interface SeasonOut {
   readonly lessonRefused: boolean
 }
 
-/** best-affordable-first, one a week — shopcheck's shopper */
-const ORDER = [...BOOSTS].sort((a, b) => b.price - a.price)
+/**
+ * THE OFFER-STREAM SHOPPER (SHOP-SUPPLY.md) — shopcheck's model, mirrored:
+ * the shop after a played event deals two weighted tier slots (rack 6 /
+ * special 3 / tour 1, unowned pool, gated below the premium line through
+ * EARLY_SHOP_UNTIL), and the shopper takes the best affordable offer, one
+ * a week, at most SHOP_BUDGET a season. EVENT_YIELDS is quoted from this
+ * harness, so the shopper here must be the calibration's shopper.
+ */
+function drawOffers(
+  kit: readonly Boost[], gate: boolean, spring: boolean, rng0: RngState,
+): readonly [Boost[], RngState] {
+  let rng = rng0
+  const owned = new Set(kit.map(k => k.id))
+  const offers: Boost[] = []
+  for (let slot = 0; slot < 2; slot++) {
+    const shelves: Record<BoostTier, Boost[]> = { rack: [], special: [], tour: [] }
+    for (const b of BOOSTS) {
+      if (owned.has(b.id) || ENCOUNTER_BOOSTS.has(b.id)) continue
+      if (offers.some(o => o.id === b.id)) continue
+      if (gate && b.price >= PREMIUM_BOOST) continue
+      shelves[tierOf(b.price)].push(b)
+    }
+    const avail = BOOST_TIERS.filter(t => shelves[t].length > 0)
+    if (avail.length === 0) break
+    let tier: BoostTier
+    if (slot === 0 && spring && shelves.rack.length > 0) {
+      tier = 'rack'   // the spring slot — reducer.ts stock()
+    } else {
+      const total = avail.reduce((n, t) => n + TIER_WEIGHTS[t], 0)
+      const [u, r1] = next(rng)
+      rng = r1
+      let x = u * total
+      tier = avail[avail.length - 1]!
+      for (const t of avail) { x -= TIER_WEIGHTS[t]; if (x < 0) { tier = t; break } }
+    }
+    const [v, r2] = next(rng)
+    rng = r2
+    const shelf = shelves[tier]
+    offers.push(shelf[Math.min(shelf.length - 1, Math.floor(v * shelf.length))]!)
+  }
+  return [offers, rng] as const
+}
 
 /**
  * THE MARQUEE RAMP (FIELD-CEILING.md §6) — stars on by default, exactly as
@@ -203,6 +247,8 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
   let lessonRefused = false
   const running: number[] = []
   const rota = scheduleFor(seed)
+  // the offer stream's own dice — same salt-8 family as the game's shop
+  let shopRng = makeRng(hash(seed, 8))
   // trailing pace for the stars' band — last 3 made-cut rels, as GameState keeps
   const recent: number[] = []
 
@@ -223,16 +269,20 @@ function season(seed: number, policy: Policy, plan: Plan): SeasonOut {
 
     let weekId = plan.weeks?.[ev.num]
 
-    // The shop after LAST week's event — one buy, the best thing affordable
-    // (shopcheck's shopper, purchase cap 4; drops arrive on top). No shop
-    // opens after a week off (reducer: stock() only follows a payout), and a
+    // The shop after LAST week's event — the offer-stream shopper (budget
+    // SHOP_BUDGET, weighted tiers; drops arrive on top). No shop opens
+    // after a week off (reducer: stock() only follows a payout), and a
     // player planning this week's lesson keeps the wallet shut for the fee.
     if (SHOP && ev.num > 1 && prevPlayed && weekId !== 'lesson') {
-      for (const b of ORDER) {
-        if (kit.some(k => k.id === b.id)) continue
-        if (b.price > banked) continue
-        if (bought >= 4) break
-        banked -= b.price; kit.push(b); bought += 1; break
+      const gate = ev.num - 1 <= EARLY_SHOP_UNTIL
+      const spring = ev.num - 1 <= SPRING_RACK_UNTIL
+      const [offers, r] = drawOffers(kit, gate, spring, shopRng)
+      shopRng = r
+      if (bought < SHOP_BUDGET) {
+        const pick = offers
+          .filter(b => b.price <= banked)
+          .sort((a, b) => b.price - a.price)[0]
+        if (pick) { banked -= pick.price; kit.push(pick); bought += 1 }
       }
     }
 

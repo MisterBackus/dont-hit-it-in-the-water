@@ -1,7 +1,8 @@
 import type { AimChoice, HoleSpec, Point, Surface } from './types'
 import type { RngBank } from './rng'
 import type { FieldPlayer } from './resolve/field'
-import type { ShopItem } from '../content/shop'
+import type { BoostTier, ShopItem } from '../content/shop'
+import { SHOP_BUDGET } from '../content/shop'
 import type { Course } from '../content/courses'
 import type { PendingBet } from '../content/encounters'
 import { seedBank } from './rng'
@@ -68,6 +69,19 @@ export interface GameState {
   readonly madeCut: boolean | null
   /** what the pro shop has in this week */
   readonly offer: readonly ShopItem[]
+  /**
+   * THE SEASON ALLOWANCE (SHOP-SUPPLY.md): boost purchases remaining this
+   * season, starting at SHOP_BUDGET. Boosts only — cards are exempt, and a
+   * major's free drop arrives on top. Rendered as pips on the shop header;
+   * a BUY of a boost at zero is illegal, exactly like an unaffordable one.
+   */
+  readonly buysLeft: number
+  /**
+   * The tiers the week's two boost slots drew (content/shop.ts) — what the
+   * truck brought. REROLL redraws items WITHIN these tiers rather than
+   * re-rolling the tiers themselves; restocked at every shop open.
+   */
+  readonly shopTiers: readonly BoostTier[]
   /** true when a purchase sent you to the cut-a-card screen */
   readonly cutIsPaid: boolean
   /**
@@ -137,6 +151,38 @@ export interface GameState {
    * the band relaxes only as made-cut pace actually cools.
    */
   readonly recentCutRels: readonly number[]
+  /**
+   * The season as it was actually played, one entry per settled event —
+   * where you finished, what it paid, how many shared the cheque, and which
+   * of the run's stars you beat. Written only at settle, read only by the
+   * epilogue. Adding it was a save-version event like any state change the
+   * reducer writes (v8, with the split purse).
+   */
+  readonly seasonRecord: readonly EventRecord[]
+}
+
+/**
+ * One line per event PLAYED (skipped weeks write nothing — `skipped` counts
+ * those), appended at settle for the season-in-review screen. Everything in
+ * it is derived from data settle already had in hand — no new draws, no new
+ * rolls — so a replay writes the identical record. The star lists are the
+ * week's marquee names (FieldPlayer.star) split by where they finished
+ * against you: a star you out-placed — or who missed a cut you made — is in
+ * `aheadOf`; a star who out-placed you (or played a weekend you didn't) is
+ * in `behind`; a dead tie, or a Friday you both packed up on, is neither.
+ */
+export interface EventRecord {
+  readonly event: number
+  readonly madeCut: boolean
+  /** finishing place, 0 when the cut was missed */
+  readonly place: number
+  /** players sharing that place, 1 for a solo finish (split-purse ties) */
+  readonly tied: number
+  readonly paid: number
+  /** star names you finished ahead of this week */
+  readonly aheadOf: readonly string[]
+  /** star names that finished ahead of you */
+  readonly behind: readonly string[]
 }
 
 export function freshHole(index: number): HoleState {
@@ -172,6 +218,8 @@ export function initialState(seed: number): GameState {
     lastShot: null,
     madeCut: null,
     offer: [],
+    buysLeft: SHOP_BUDGET,
+    shopTiers: [],
     cutIsPaid: false,
     mustSwap: false,
     weekOptions: [],
@@ -193,6 +241,7 @@ export function initialState(seed: number): GameState {
     cutsMissed: 0,
     spent: 0,
     recentCutRels: [],
+    seasonRecord: [],
   }
 }
 

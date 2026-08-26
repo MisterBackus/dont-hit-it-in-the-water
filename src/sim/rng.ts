@@ -2,7 +2,7 @@
 
 export interface RngState { readonly s: number }
 
-export type Stream = 'shot' | 'putt' | 'draw' | 'field' | 'events'
+export type Stream = 'shot' | 'putt' | 'draw' | 'field' | 'events' | 'shop'
 
 // NB: a mapped type must be a `type`, not an `interface` (TS7061).
 export type RngBank = { readonly [K in Stream]: RngState }
@@ -61,5 +61,9 @@ export function seedBank(seed: number): RngBank {
     // streams. The encounters own this one — an independent stream, so an
     // encounter roll can never perturb a shot, a draw, or the field.
     events: makeRng(hash(seed, 6)),
+    // salt 8: the pro shop (SHOP-SUPPLY.md) — the weekly tier draw, the
+    // within-tier stock picks and the card shelf all live here, so a reroll
+    // can never perturb what the deck deals on the next tee.
+    shop: makeRng(hash(seed, 8)),
   }
 }

@@ -239,6 +239,55 @@ function sndMoneyList(kept: boolean): void {
   notes.forEach((f, i) => tone(c, t + i * 0.13, f, i === 2 ? 0.24 : 0.12, 0.22))
 }
 
+/**
+ * SOMEBODY IS WAITING (content/encounters.ts) — a footfall on the path and a
+ * rising fourth that never resolves. A question, asked quietly: the offer is
+ * on the table and walking on is still free.
+ */
+function sndEncounter(): void {
+  const c = gate('encounter'); if (!c) return
+  const t = c.currentTime + 0.05
+  noise(c, t, 0.06, 0.11, 0.012, { type: 'bandpass', f0: 1500, q: 0.9 })
+  tone(c, t + 0.05, 349, 0.10, 0.15, 'triangle')
+  tone(c, t + 0.16, 466, 0.17, 0.15, 'triangle')
+}
+
+/** The answer, keyed to the outcome's tone. A push shrugs: same note twice. */
+function sndEncounterOutcome(mood: 'good' | 'bad' | 'flat'): void {
+  const c = gate('encout'); if (!c) return
+  const t = c.currentTime + 0.08
+  const notes = mood === 'good' ? [587, 784] : mood === 'bad' ? [415, 311] : [440, 440]
+  notes.forEach((f, i) => tone(c, t + i * 0.12, f, i === 1 ? 0.18 : 0.11, 0.17, 'triangle'))
+}
+
+/** A bet armed: the stake leaves the wallet. Low, dry, nothing settled yet. */
+function sndBetOn(): void {
+  const c = gate('beton'); if (!c) return
+  const t = c.currentTime + 0.05
+  noise(c, t, 0.03, 0.22, 0.003, { type: 'bandpass', f0: 900, q: 1.4 })
+  tone(c, t, 196, 0.11, 0.16, 'triangle', 165)
+}
+
+/**
+ * THE BET SETTLES — its own note, because the hole just answered it. The
+ * cash motif pays out on a win; a loss is the same interval, downhill and
+ * duller; a push lands on one note and stops.
+ */
+function sndBetSettle(mood: 'good' | 'bad' | 'flat'): void {
+  const c = gate('betsettle'); if (!c) return
+  const t = c.currentTime + 0.5   // after the putt has finished rattling
+  if (mood === 'good') {
+    tone(c, t, 1245, 0.05, 0.15)
+    tone(c, t + 0.07, 1661, 0.09, 0.15)
+    tone(c, t + 0.17, 1976, 0.2, 0.1)
+  } else if (mood === 'bad') {
+    tone(c, t, 415, 0.12, 0.16, 'triangle')
+    tone(c, t + 0.13, 311, 0.24, 0.16, 'triangle')
+  } else {
+    tone(c, t, 392, 0.2, 0.13, 'triangle')
+  }
+}
+
 /** First tee: the gallery murmurs, very quietly. The one long sound. */
 function sndMurmur(): void {
   const c = gate('murmur'); if (!c) return
@@ -281,6 +330,16 @@ function diff(p: GameState, s: GameState): void {
       else if (rel !== null && rel >= 2) sndDouble()
     }
 
+    // Somebody on the walk to the fifth: the sting when they appear, and the
+    // answer when you ENGAGE. WALK ON stays silent — walking on is free, and
+    // the season does not notice (content/encounters.ts).
+    if (s.phase === 'encounter') sndEncounter()
+    if (p.phase === 'encounter' && s.phase !== 'encounter') {
+      if (s.lastEncounter && s.lastEncounter !== p.lastEncounter) {
+        sndEncounterOutcome(s.lastEncounter.tone)
+      } else if (s.pendingBet && !p.pendingBet) sndBetOn()
+    }
+
     if (s.phase === 'cut') sndCut(s.madeCut === true)
     if (s.phase === 'moneylist') sndMoneyList(s.keptJob === true)
     if (s.phase === 'payout' && s.lastPaid > 0) sndCash()
@@ -293,6 +352,7 @@ function diff(p: GameState, s: GameState): void {
   if (s.log.length > p.log.length) {
     for (const line of s.log.slice(p.log.length)) {
       if (line.text.startsWith('Momentum')) sndMomentum()
+      else if (line.text.startsWith('The bet settles')) sndBetSettle(line.tone)
       else if (line.text.startsWith('Bought') || line.text.startsWith('Picked up')) sndCash()
     }
   }

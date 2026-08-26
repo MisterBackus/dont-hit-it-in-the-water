@@ -4,14 +4,17 @@ import { initialState } from './state'
 import { draw } from './deck'
 import { reduce, boostsOf, handShots, sinkPrice } from './reducer'
 import { PUNCH_OUT, freeShot } from '../content/cards'
-import { SEASON, MONEY_CHECKS, EVENT_COUNT, payout } from '../content/season'
-import { CARD_PRICES, CUT_PRICE, PREMIUM_BOOST, cardPrice } from '../content/shop'
+import { SEASON, MONEY_CHECKS, EVENT_COUNT, payout, tiePayout } from '../content/season'
+import {
+  CARD_PRICES, CUT_PRICE, PREMIUM_BOOST, SHOP_BUDGET, TOUR_ISSUE, cardPrice,
+  tierOf,
+} from '../content/shop'
 import { BOOST, BOOSTS } from '../content/boosts'
 import { baseputts, resolvePutting, sinkCost } from './resolve/putt'
 import { LESSON_FEE } from '../content/weeks'
 import { PINE_HOLLOW } from '../content/courses/pinehollow'
 import { dropPoint } from './resolve/shot'
-import { standings, rankCut } from './resolve/field'
+import { standings, rankCut, type FieldPlayer } from './resolve/field'
 import { MAX_FOCUS, courseOf, currentHole } from './state'
 import { toPin, greenCentre } from './geometry'
 import { buildCone, focusRegen, whyNotPlayable } from './effects'
@@ -196,6 +199,140 @@ describe('the pro shop — money finally does something', () => {
   })
 })
 
+/**
+ * THE SEASON ALLOWANCE (SHOP-SUPPLY.md, 26 Aug 2026) — six boost purchases
+ * a season, cards exempt. Every Money List bar since slice 4 was derived
+ * under a season budget that lived only in the harness; the live game had
+ * none, and the best player bought the entire shelf. This is that missing
+ * rule, and these tests are what keep it from going missing again.
+ */
+describe('the season allowance — the budget the calibration always assumed', () => {
+  const shop = (seed: number, cash: number) => {
+    const teed = reduce(reduce(initialState(seed), { type: 'START' }), { type: 'NEXT' })
+    return reduce({ ...teed, phase: 'payout' as const, earnings: cash, madeCut: true }, { type: 'NEXT' })
+  }
+
+  test('a fresh season carries the full allowance', () => {
+    expect(initialState(1).buysLeft).toBe(SHOP_BUDGET)
+  })
+
+  test('buying a boost spends a pip; buying a card does not', () => {
+    const s = shop(11, 50_000_000)
+    const bi = s.offer.findIndex(i => i.kind === 'boost')
+    const afterBoost = reduce(s, { type: 'BUY', index: bi })
+    expect(afterBoost.buysLeft).toBe(s.buysLeft - 1)
+    const ci = s.offer.findIndex(i => i.kind === 'card')
+    const afterCard = reduce(s, { type: 'BUY', index: ci })
+    expect(afterCard.buysLeft).toBe(s.buysLeft)
+  })
+
+  test('a boost past the budget is as illegal as one past the wallet', () => {
+    const s = { ...shop(11, 50_000_000), buysLeft: 0 }
+    const bi = s.offer.findIndex(i => i.kind === 'boost')
+    expect(reduce(s, { type: 'BUY', index: bi })).toBe(s)
+    // cards are exempt — they are not the power curve
+    const ci = s.offer.findIndex(i => i.kind === 'card')
+    expect(reduce(s, { type: 'BUY', index: ci })).not.toBe(s)
+    // and the cut and the reroll never touch the allowance
+    expect(reduce(s, { type: 'BUY_CUT' }).buysLeft).toBe(0)
+  })
+
+  test('a major\'s free drop arrives on top of the budget', () => {
+    const teed = reduce(reduce(initialState(17), { type: 'START' }), { type: 'NEXT' })
+    const atMajorCut = { ...teed, event: 4, phase: 'cut' as const, madeCut: true,
+      scores: [4, 4, 4, 4], buysLeft: 0 }
+    const offered = reduce(atMajorCut, { type: 'NEXT' })
+    expect(offered.phase).toBe('boost')
+    const took = reduce(offered, { type: 'TAKE_BOOST', id: offered.boostOffer[0]! })
+    expect(took.boosts).toContain(offered.boostOffer[0]!)
+    expect(took.buysLeft).toBe(0)   // free, and no pip either way
+  })
+})
+
+/**
+ * THE TIERED TRUCK (SHOP-SUPPLY.md) — the weekly stock draws a tier first
+ * (off the rack 6 / special order 3 / tour issue 1), then an item within
+ * it, all on the bank's own shop stream; a reroll redraws items WITHIN the
+ * week's drawn tiers. Rarity that a $70k reroll could re-ask for a
+ * different truck would be decoration.
+ */
+describe('the tiered truck', () => {
+  const shop = (seed: number, cash = 5_000_000, event = 5) => {
+    const teed = reduce(reduce(initialState(seed), { type: 'START' }), { type: 'NEXT' })
+    return reduce(
+      { ...teed, event, phase: 'payout' as const, earnings: cash, madeCut: true },
+      { type: 'NEXT' })
+  }
+
+  test('the tier bands are the measured price bands', () => {
+    expect(tierOf(200_000)).toBe('rack')
+    expect(tierOf(PREMIUM_BOOST - 50_000)).toBe('rack')
+    expect(tierOf(PREMIUM_BOOST)).toBe('special')
+    expect(tierOf(TOUR_ISSUE - 50_000)).toBe('special')
+    expect(tierOf(TOUR_ISSUE)).toBe('tour')
+    expect(tierOf(2_450_000)).toBe('tour')
+  })
+
+  test('same seed, same truck — the stock is deterministic', () => {
+    const a = shop(23)
+    const b = shop(23)
+    expect(a.offer).toEqual(b.offer)
+    expect(a.shopTiers).toEqual(b.shopTiers)
+  })
+
+  test('the offer wears the tiers it drew', () => {
+    const s = shop(23)
+    const boosts = s.offer.filter(i => i.kind === 'boost')
+    expect(s.shopTiers.length).toBe(boosts.length)
+    boosts.forEach((item, i) => {
+      expect(tierOf(item.price)).toBe(s.shopTiers[i])
+    })
+  })
+
+  test('the early truck only carries the rack', () => {
+    for (const seed of [7, 8, 9]) {
+      const s = shop(seed, 5_000_000, 1)
+      expect(s.shopTiers.every(t => t === 'rack')).toBe(true)
+      for (const item of s.offer.filter(i => i.kind === 'boost')) {
+        expect(BOOST[item.id]!.price).toBeLessThan(PREMIUM_BOOST)
+      }
+    }
+  })
+
+  test('a reroll re-asks the same truck — items change tiers do not', () => {
+    // find a seed whose reroll actually draws different items, then hold
+    // the tier layout fixed across several rerolls
+    const s = shop(31, 5_000_000)
+    let cur = s
+    for (let i = 0; i < 3; i++) {
+      const re = reduce(cur, { type: 'REROLL' })
+      expect(re.shopTiers).toEqual(s.shopTiers)
+      const boosts = re.offer.filter(x => x.kind === 'boost')
+      boosts.forEach((item, k) => {
+        expect(tierOf(item.price)).toBe(s.shopTiers[k])
+      })
+      cur = re
+    }
+  })
+
+  test('across many seeds the truck is mostly the rack, and the pool splits 9/8/7', () => {
+    // the draw weights are 6/3/1 — sanity-check the shape, not the digits:
+    // rack must be the modal tier by a wide margin over 40 fresh shops
+    const tally = { rack: 0, special: 0, tour: 0 }
+    for (let seed = 100; seed < 140; seed++) {
+      for (const t of shop(seed).shopTiers) tally[t] += 1
+    }
+    expect(tally.rack).toBeGreaterThan(tally.special)
+    expect(tally.special).toBeGreaterThan(tally.tour)
+    // and the deepened pool the weights were swept against (SHOP-SUPPLY §7)
+    const forSale = BOOSTS.filter(b => b.price > 0)
+    const count = (t: string) => forSale.filter(b => tierOf(b.price) === t).length
+    expect(count('rack')).toBe(9)
+    expect(count('special')).toBe(8)
+    expect(count('tour')).toBe(7)
+  })
+})
+
 describe('the season', () => {
   test('cones tighten and the cut tightens with them', () => {
     const first = SEASON[0]!, last = SEASON[SEASON.length - 1]!
@@ -234,18 +371,22 @@ describe('the season', () => {
     // What a win still is: the entire last leg of the climb in one cheque —
     // everything the list demands between the second check and the third. The
     // doomed-but-alive run keeps its target; it just has to be alive at 9.
-    const major = Math.max(...SEASON.map(e => payout(e.purse, 1)))
+    //
+    // RE-PRICED at the SHOP-SUPPLY pass (26 Aug 2026), for the split purse:
+    // under top-only ties (season.ts tiePayout) the MODAL winning group in
+    // this compressed score space is 2-3 players, so the cheque a win can be
+    // EXPECTED to pay is tiePayout's 2-way value (~$2.71M at a $20M purse),
+    // not the solo $3.4M — a leg priced against the solo cheque would demand
+    // a win AND the luck of winning alone, which is a lottery, not a leg.
+    // The invariant now prices the leg on the expected win.
+    const expectedWin = Math.max(...SEASON.map(e => tiePayout(e.purse, 1, 2)))
     const c = MONEY_CHECKS
     const lastLeg = c[c.length - 1]!.need - c[c.length - 2]!.need
-    // Slice 4 re-anchored the checks for the free major-cut drops and the
-    // ten-course world (season.ts): the leg calibrated to $3.3M against a
-    // $3.4M win, so a win now covers the final leg OUTRIGHT — the invariant
-    // is literally true again, not merely within its 0.9 tolerance. The
-    // tolerance stays: the leg is the residual of two measured bars and has
-    // drifted past the win before (it sat at $3.6M under the field-response
-    // triple).
-    expect(major).toBeGreaterThan(lastLeg * 0.9)
-    expect(major).toBeLessThan(c[c.length - 1]!.need)   // one win is not a season
+    // The 0.9 tolerance stays: the leg is the residual of two measured bars
+    // and has drifted past the win before (it sat at $3.6M under the
+    // field-response triple).
+    expect(expectedWin).toBeGreaterThan(lastLeg * 0.9)
+    expect(expectedWin).toBeLessThan(c[c.length - 1]!.need)  // one win is not a season
     // and the leg must not be coverable by simply turning up — you have to win
     expect(payout(SEASON[13]!.purse, 10)).toBeLessThan(lastLeg)
   })
@@ -258,6 +399,61 @@ describe('the season', () => {
     }
     // and the spread from first to the back of the weekend stays golf-shaped
     expect(payout(9_000_000, 1) / payout(9_000_000, 30)).toBeGreaterThan(8)
+  })
+
+  test('split-purse ties pay the mean of the covered places', () => {
+    // Tied at place p with k of you, the cheques for p..p+k-1 pool and split
+    // evenly — the real tour's rule. A known purse, three-way tie at 1:
+    const purse = 9_000_000
+    const expected = Math.round((payout(purse, 1) + payout(purse, 2) + payout(purse, 3)) / 3)
+    expect(tiePayout(purse, 1, 3)).toBe(expected)
+    // less than a solo win, more than solo 3rd — a mean, not a discount
+    expect(tiePayout(purse, 1, 3)).toBeLessThan(payout(purse, 1))
+    expect(tiePayout(purse, 1, 3)).toBeGreaterThan(payout(purse, 3))
+    // a solo finish is payout() unchanged
+    expect(tiePayout(purse, 5, 1)).toBe(payout(purse, 5))
+    // a tie hanging off the paid places splits only what the places carry
+    expect(tiePayout(purse, 65, 2)).toBe(Math.round(payout(purse, 65) / 2))
+  })
+
+  test('settle splits only a tied WIN, and a T1 is still a win', () => {
+    const teed = reduce(reduce(initialState(9), { type: 'START' }), { type: 'NEXT' })
+    const pars = courseOf(teed).holes.map(h => h.par)
+    const rival = (name: string, total: number, star = false, cut = false): FieldPlayer =>
+      ({ name, skill: 0.5, total, thru: 8, cut, star })
+    const filler = Array.from({ length: 10 }, (_, i) => rival(`Filler ${i}`, 6 + (i % 3)))
+
+    // you at level par, two rivals level, a star three clear, a star cut
+    // Friday — a NON-FIRST tie, which keeps the pre-existing rule: the
+    // whole group takes the best place's full cheque (owner ruling,
+    // split at the top only)
+    const field = [
+      rival('Wes Hollis', 0), rival('Bo Pike', 0),
+      rival('Cyrus Vail', -3, true),
+      rival('Kaz Ito', 2, true, true),
+      ...filler,
+    ]
+    const done = reduce({ ...teed, scores: pars, phase: 'holed' as const,
+      madeCut: true, field }, { type: 'NEXT' })
+    expect(done.phase).toBe('payout')
+    expect(done.lastPlace).toBe(2)                            // Vail is 1st
+    expect(done.lastPaid).toBe(payout(9_000_000, 2))          // full 2nd money
+    const rec = done.seasonRecord[done.seasonRecord.length - 1]!
+    expect(rec).toMatchObject({ event: 1, madeCut: true, place: 2, tied: 3 })
+    expect(rec.behind).toEqual(['Cyrus Vail'])                // he beat you
+    expect(rec.aheadOf).toContain('Kaz Ito')                  // you outlasted him
+
+    // the same week without Vail: a three-way T1 — lastPlace is still 1,
+    // the win still counts, and THIS is the one cheque that divides
+    const won = reduce({ ...teed, scores: pars, phase: 'holed' as const,
+      madeCut: true, field: [rival('Wes Hollis', 0), rival('Bo Pike', 0), ...filler] },
+      { type: 'NEXT' })
+    expect(won.lastPlace).toBe(1)
+    expect(won.lastPaid).toBe(tiePayout(9_000_000, 1, 3))
+    expect(won.lastPaid).not.toBe(payout(9_000_000, 1))       // it really split
+    // and a split win still out-earns everyone below it
+    expect(won.lastPaid).toBeGreaterThan(payout(9_000_000, 2))
+    expect(won.seasonRecord[won.seasonRecord.length - 1]!.place).toBe(1)
   })
 
   test('the cut is judged on the front four, so they must be a real test', () => {
@@ -1011,10 +1207,12 @@ describe('the encounters', () => {
     ...teed(seed), phase: 'encounter' as const, encounterOffer: id, earnings: cash,
   })
 
-  test('the save version gate turned for the weeks redesign', () => {
-    // the week draw is biased early and silent at majors and from event 10,
-    // and a sponsor now expires — a v6 log replays as a different season
-    expect(SAVE_VERSION).toBe(7)
+  test('the save version gate turned for the shop-supply hybrid', () => {
+    // v8: a tied WIN pays the mean of the covered places (season.ts
+    // tiePayout). v9: the season boost budget makes a seventh BUY illegal
+    // on replay, and the tiered stock draws from the new shop rng stream
+    // (SHOP-SUPPLY.md) — a v8 log's shop offers replay differently.
+    expect(SAVE_VERSION).toBe(9)
   })
 
   test('who shows up is decided by the seed, at roughly one cut in three', () => {

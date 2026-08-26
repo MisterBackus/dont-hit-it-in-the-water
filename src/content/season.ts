@@ -243,11 +243,54 @@ export const EVENT_COUNT = SEASON.length
  *     the tier presses win-heavy play hardest, aggressive most of all).
  *     Still an economy property, still no triple can reorder it, still
  *     flagged for the dialogue; the 45% aggressive intent stays unmet.
+ *
+ * RE-ANCHORED A FIFTH TIME — SHOP-SUPPLY.md SHIPPED, 26 Aug 2026: the one
+ * derivation that absorbs BOTH the split purse (v8) and the shop-supply
+ * hybrid (v9 — season budget 6, tiered offer stream, spring slot, seven
+ * new SKUs). Two worlds moved under the old bars at once: the tie split
+ * alone took the calibrated model's survival 35% -> 28% at the standing
+ * triple (kills 44/35/5 -> 48/44/2 on the same 400 seeds — early winning
+ * groups tie constantly in this score space, so the split taxes even the
+ * spring), and the offer-stream shop (the honest model of the game as it
+ * NOW is) reads the spring ~4 points hotter still than the legacy
+ * pick-of-the-catalogue shopper. Derived by shopcheck sweep under the
+ * finished world (offer stream, budget 6, weights 6/3/1, gate + spring
+ * slot, 24-SKU shelf at final prices; 400 seasons per policy, seeds
+ * 700000+): the triple below sends home 44% / 31% / 1% of arrivals;
+ * survival mixed 38%, aggressive 30%, safe 1%, mixed hoarder 7%. Against
+ * the RE-SET intent table (44 / 33 / <= 8, DESIGN.md §3.2): check 1
+ * prints the intent digit itself — the bar came down $2.3M -> $2.1M to
+ * pay the split purse's measured spring tax and the offer stream's, and
+ * the spring feel is back to the calibrated 44; check 2 sits two points
+ * off intent; check 3 prints 1% against its 8-point ceiling,
+ * structurally small ON PURPOSE (see below). Mixed beats aggressive by
+ * eight points — scarce supply is worth most to balanced golf — and
+ * beats the hoarder ~5x, so the shop is still the difference between
+ * living and not. Two sensitivities recorded for the next reader: the
+ * pass's two $200-300k rack repricings (band check) moved check 1's kill
+ * 48 -> 44 and mixed survival 34 -> 38 on identical seeds — cheap
+ * commons are spring power, and these bars stay honest to ±2 ONLY at
+ * the exact live shelf (CALIBRATION-2 verdict 4, twice as true now) —
+ * and safe survival reads 1% against the old 3% intent, the tiers
+ * starving a policy that never banks enough for the mid shelf.
+ *
+ * CHECK 3 AND THE INVARIANT, re-priced for the split purse: the
+ * win-pays-the-final-leg invariant (deck.test.ts) now prices the last leg
+ * against the EXPECTED win cheque — the modal winning group under
+ * top-only ties is 2-3 players, so a "win" is worth tiePayout(purse,1,2)
+ * ≈ $2.71M at a major, not the solo $3.4M. That caps the leg at ~$3.0M
+ * (was $3.78M), and at every bar that cap permits, check 3's kill is
+ * 0-1%: the third check is a pace check whose real teeth are the leg's
+ * demand for a major win, exactly as SHOP-SUPPLY §5 argued when it
+ * retired the 14% intent. Nobody should try to buy check-3 kill with a
+ * bar move again — the ceiling is the invariant, and the difficulty
+ * owner for "too easy" is the supply dial (shop.ts SHOP_BUDGET and the
+ * tier weights), never a sixth re-anchoring.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
-  { after: 5, need: 2_300_000 },
-  { after: 9, need: 8_500_000 },
-  { after: 12, need: 12_200_000 },
+  { after: 5, need: 2_100_000 },
+  { after: 9, need: 8_100_000 },
+  { after: 12, need: 11_100_000 },
 ]
 
 export function checkAfter(event: number) {
@@ -268,6 +311,40 @@ export function checkAfter(event: number) {
 export function payout(purse: number, place: number): number {
   if (place < 1 || place > 65) return 0
   return Math.round(purse * 0.17 / Math.pow(place, 0.75))
+}
+
+/**
+ * SPLIT THE PURSE — AT THE TOP ONLY (owner ruling, 26 Aug 2026).
+ *
+ * A tie for FIRST with k of you pays the MEAN of the cheques for places 1
+ * through k: the money those places would have carried, pooled and split
+ * evenly. A T1 is still a win everywhere but the cheque — lastPlace stays
+ * 1, the board says T1, only the money divides — and a split win still
+ * out-earns everyone below it, by construction of the mean.
+ *
+ * Every OTHER tied rank keeps the pre-existing rule: the whole group takes
+ * the best place's full cheque (settle simply calls payout()). The real
+ * tour splits every tie, and the first cut of this feature did too — and
+ * shopcheck measured survival 35% → 17% and median gross −21%, because in
+ * THIS world every finish ties about twenty ways (short events, a tiny
+ * integer score space; DESIGN.md §3.4b said "and ties overflows hard here"
+ * about the cut and it is just as true of the cheques). The owner ruled
+ * top-only rather than re-anchor; the deeper fix — spread the field — is
+ * §3.4b's, and stays on the ledger.
+ *
+ * WHAT A WIN IS WORTH, once this rule exists: the modal winning group is
+ * 2-3 players, so the cheque a player can EXPECT a win to pay is the
+ * 2-way value — tiePayout(purse, 1, 2), ~$2.71M at a major — not the
+ * solo payout(purse, 1). The win-pays-the-final-leg invariant
+ * (deck.test.ts) and the MONEY_CHECKS derivation above both price the
+ * final leg on that expected cheque (SHOP-SUPPLY SHIPPED): a leg priced
+ * on the solo cheque would demand a win AND the luck of winning alone.
+ */
+export function tiePayout(purse: number, place: number, tied: number): number {
+  if (tied <= 1) return payout(purse, place)
+  let pool = 0
+  for (let i = 0; i < tied; i++) pool += payout(purse, place + i)
+  return Math.round(pool / tied)
 }
 
 export function money(n: number): string {
@@ -314,11 +391,19 @@ export function money(n: number): string {
  * where nobody outearns the stars for free. Frozen board rows in
  * runs/verified.json keep their ledgered numbers — the ladder is a lens,
  * not a record.
+ *
+ * RE-ANCHORED at SHOP-SUPPLY SHIPPED (26 Aug 2026): same rule again — the
+ * split purse and the shop-supply hybrid together thin the same shopper's
+ * 400-season median to $15.05M (the split takes its bite out of every
+ * tied win; the budget caps the kit the late season converts), and every
+ * rung re-scales to the new anchor at its old ratio, rounded to $100k.
+ * The moved medians were checked against the quoted tolerance before
+ * anything moved: -$750k on a $100k-grid ladder is not a rounding.
  */
 const LADDER: readonly (readonly [number, number])[] = [
-  [1, 45_900_000], [3, 30_200_000], [5, 25_400_000], [10, 22_600_000],
-  [20, 15_800_000], [30, 11_900_000], [40, 8_600_000], [50, 6_000_000],
-  [60, 3_500_000], [72, 800_000],
+  [1, 43_700_000], [3, 28_800_000], [5, 24_200_000], [10, 21_500_000],
+  [20, 15_100_000], [30, 11_300_000], [40, 8_200_000], [50, 5_700_000],
+  [60, 3_300_000], [72, 800_000],
 ]
 
 /**
@@ -336,8 +421,14 @@ const LADDER: readonly (readonly [number, number])[] = [
  * (which they leave alone, the spring rule) now carries a larger share of
  * a smaller season. Mid-season paces read slightly richer for it: the
  * denominator got honest.
+ *
+ * Re-measured at SHOP-SUPPLY SHIPPED from the new anchor's own 400
+ * seasons (offer stream, budget 6, split purse, final prices): medians
+ * $146k / $746k / $2.98M / $6.99M / $12.65M / $15.05M at 1, 3, 6, 9,
+ * 12, 14. The middle eases a few points (the budget slows the midsummer
+ * kit, so midsummer earns less of the season) while both ends hold.
  */
-const SHARE = [0.01, 0.03, 0.05, 0.12, 0.17, 0.22, 0.37, 0.43, 0.48, 0.54, 0.70, 0.77, 0.85, 1.00]
+const SHARE = [0.01, 0.03, 0.05, 0.12, 0.15, 0.20, 0.33, 0.38, 0.46, 0.54, 0.69, 0.77, 0.84, 1.00]
 
 /**
  * THE LIST IS THE FIELD YOU ALREADY SEE.
@@ -349,9 +440,9 @@ const SHARE = [0.01, 0.03, 0.05, 0.12, 0.17, 0.22, 0.37, 0.43, 0.48, 0.54, 0.70,
  * one tour, counted twice.
  *
  * The ladder is placed against measured earnings: a mixed shopper's median
- * season banks $15.8M under the finished world (drops modeled, stars in the
- * field — CALIBRATION-2), which sits 20th. Below that is a long tail of
- * players who miss cuts.
+ * season banks $15.05M under the finished world (drops modeled, stars in
+ * the field, split purse, season shop budget — SHOP-SUPPLY SHIPPED),
+ * which sits 20th. Below that is a long tail of players who miss cuts.
  */
 export const TOUR_SIZE = 72
 

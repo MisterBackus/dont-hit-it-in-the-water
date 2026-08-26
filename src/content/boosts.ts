@@ -177,6 +177,103 @@ export const BOOSTS: readonly Boost[] = [
     redrawDiscount: 1, price: 550_000,
   },
 
+  // ---- added 26 Aug 2026, the SHOP-SUPPLY pass (§7 content work) ----
+  // The tiered shop leans hardest on the thin tiers: five commons exhausted
+  // by midsummer and the offer stream silted up with rares. Each SKU below
+  // was measured through rewardcheck (SECTION=boosts, N=250, mixed, seeds
+  // 600000+, verified on independent seeds 900000+) BEFORE the tier weights
+  // were swept — the pool arithmetic the weights answer to includes these.
+  // Prices are measured value over two on the $50k grid, as ever. The
+  // stars-on band check at the end of the pass (shopcheck top section,
+  // split purse in) found the tie split had compressed the WHOLE shelf
+  // ~8% (bare season $5.96M -> $5.48M) — five SKUs under the 1.4 floor,
+  // the two deepest both from this batch (rewardcheck is star- and
+  // tie-blind, and the cheap end has the least cushion). Both repriced
+  // to band-instrument value over two, inside the pass's <= 2 budget;
+  // Fresh Grips / A Three Wood You Trust / The Circle of Friendship sit
+  // at 1.36-1.37, inside the instrument's noise of the floor, and are a
+  // standing verdict for the next calibration, not a third reprice. Axes
+  // from ITEMS-PROPOSAL's unspent ledger: a second paying sponsor, momentum
+  // insurance, a putting band below the Leather's, tee accuracy, long-iron
+  // accuracy. An eighth candidate, Flushing It (carryAdd 10, any swing),
+  // measured $3.89M — value over two prices it at $1.95M, which is the
+  // TOUR ISSUE shelf, and premiums need no deepening (SHOP-SUPPLY §7):
+  // culled for landing in the one tier whose whole job is being rare.
+  {
+    id: 'glove', name: 'New Glove', icon: '◇',
+    // Measured $977k / $1.68M a season on independent seed sets — a
+    // Short-Memory-grade spread (one focus point pays most in seasons
+    // that need it least), first priced on the two-run mean over two.
+    // SHOP-SUPPLY band check (stars + split purse, the instrument of
+    // record): $743k a season, 1.14x at the $650k sticker — rewardcheck
+    // is star-blind and the tie split compressed the whole shelf (bare
+    // season $5.96M -> $5.48M), so the cheap end slipped hardest, same
+    // shape as CALIBRATION-2's Soft Spikes. Repriced to value over two
+    // on the measured $743k, inside the pass's <= 2 budget.
+    blurb: 'One more focus to spend.',
+    maxFocusBonus: 1, price: 350_000,
+  },
+  {
+    id: 'bait', name: 'Sponsor: Shorty’s Bait & Tackle', icon: '▧',
+    // The second sponsor that PAYS — Pontoon's shape at a lower price
+    // point, exactly the axis §7 named. Measured $921k / $927k a season
+    // on independent seed sets (~9.2 made cuts; the analytic agrees to
+    // within noise, and so do the two runs). Value over two.
+    blurb: 'A patch on the other sleeve. $100k every cut you make.',
+    cutBonus: 100_000, price: 450_000,
+  },
+  {
+    id: 'circle', name: 'The Circle of Friendship', icon: '◎',
+    // The putting band below the Leather's: six feet against its eight.
+    // gimmeRange takes the MAX, so this never stacks with the Leather —
+    // buying up is an upgrade, not an addition, and the shop says so in
+    // the price. Measured $2.59M / $2.51M a season on independent seed
+    // sets; two-run mean over two.
+    blurb: 'Inside six feet is good. Pick it up.',
+    gimmeFeet: 6, price: 1_300_000,
+  },
+  {
+    id: 'threewood', name: 'A Three Wood You Trust', icon: '⌐',
+    // Tee-only accuracy — the first boost on the appliesTo:'tee' spread
+    // axis (Long Tees is carry). Measured $1.48M / $2.09M a season on
+    // independent seed sets — swingy like the other cheap SKUs, priced
+    // on the two-run mean over two.
+    blurb: 'A quarter straighter off the tee.',
+    spreadScale: 0.75, appliesTo: 'tee', price: 900_000,
+  },
+  {
+    id: 'concrete', name: 'Sponsor: Tri-County Concrete', icon: '▩',
+    // The paying sponsor at special-order money: triple Shorty's rate,
+    // triple the sticker. Measured $2.76M / $2.78M a season on
+    // independent seed sets — the steadiest measurement in the batch,
+    // because made cuts are. Value over two.
+    blurb: 'Their name on your bag. $300k every cut you make.',
+    cutBonus: 300_000, price: 1_400_000,
+  },
+  {
+    id: 'slate', name: 'Clean Slate', icon: '□',
+    // Momentum insurance above Short Memory's: two strokes of slack, so a
+    // double keeps the well refilling. Stacks with Short Memory by sum
+    // (effects.ts) — three slack between them, priced separately on their
+    // own measurements. Measured $434k / $778k a season on independent
+    // seed sets — bogey insurance is the swingiest thing this shelf
+    // measures (see Short Memory) — first priced on the two-run mean
+    // over two. SHOP-SUPPLY band check (stars + split purse): $332k a
+    // season, 1.11x at the $300k sticker — repriced to value over two on
+    // the measured number, the second of the pass's <= 2 repricings.
+    // Still the smallest live value in the batch, and priced like it.
+    blurb: 'A double is not a story either. Momentum survives two over.',
+    momentumSlack: 2, price: 150_000,
+  },
+  {
+    id: 'fade', name: 'A Baby Fade', icon: '◠',
+    // Long-iron accuracy shy of the Golden Driver's (0.80 vs 0.66), at a
+    // special-order sticker. Measured $2.19M / $2.38M a season on
+    // independent seed sets; two-run mean over two.
+    blurb: 'Anything long flies a fifth straighter. It just sits down.',
+    spreadScale: 0.80, appliesTo: 'long', price: 1_150_000,
+  },
+
   // ---- encounter-only, 25 Aug 2026 ----
   {
     id: 'foundtiger', name: 'Somebody’s Tiger', icon: '◐',

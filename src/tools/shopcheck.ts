@@ -17,9 +17,13 @@
 import { COURSES } from '../content/courses'
 import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
-import { SEASON, MONEY_CHECKS, payout, money } from '../content/season'
+import { SEASON, MONEY_CHECKS, payout, tiePayout, money } from '../content/season'
 import { BOOSTS } from '../content/boosts'
-import { PREMIUM_BOOST } from '../content/shop'
+import {
+  EARLY_SHOP_UNTIL, PREMIUM_BOOST, SHOP_BUDGET, SPRING_RACK_UNTIL,
+  TIER_WEIGHTS, BOOST_TIERS, tierOf, type BoostTier,
+} from '../content/shop'
+import { ENCOUNTER_BOOSTS } from '../content/encounters'
 import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
@@ -32,7 +36,7 @@ import {
   STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
 } from '../content/players'
 import { surfaceAt, toPin } from '../sim/geometry'
-import { seedBank, type RngBank } from '../sim/rng'
+import { hash, makeRng, next, seedBank, type RngBank, type RngState } from '../sim/rng'
 import { draw, shuffle } from '../sim/deck'
 import type { Boost, HoleSpec, Point, Surface } from '../sim/types'
 
@@ -159,7 +163,12 @@ function seasonEarningsWithDeck(
     const rel = holes.reduce((a, b) => a + b, 0) - course.par
     recent.push(rel)
     if (recent.length > 3) recent.shift()
-    earned += payout(ev.purse, yourPlace(standings(field, rel, 8, false)))
+    // split at the top only, exactly as settle pays it (reducer.ts)
+    const rows = standings(field, rel, 8, false)
+    const place = yourPlace(rows)
+    earned += place === 1
+      ? tiePayout(ev.purse, 1, rows.filter(r => r.place === 1).length)
+      : payout(ev.purse, place)
   }
   return earned
 }
@@ -232,9 +241,91 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
  * ------------------------------------------------------------------ */
 {
   const R = Number(process.env.SEASONS ?? 250)
+  // EXCLUDE=id,id removes SKUs from every pool this section models (shop,
+  // offers, drops) — the validation row runs the 17-SKU pre-supply shelf:
+  // EXCLUDE=glove,bait,circle,threewood,concrete,slate,fade
+  const EXCLUDE = new Set((process.env.EXCLUDE ?? '').split(',').filter(Boolean))
+  const SHELF = BOOSTS.filter(b => !EXCLUDE.has(b.id))
   // Best thing you can afford, not cheapest — buying Soft Spikes first because
   // it is $150k is a harness artefact, not a player.
-  const order = [...BOOSTS].sort((a, b) => b.price - a.price)
+  const order = [...SHELF].sort((a, b) => b.price - a.price)
+
+  /* ---------------------------------------------------------------- *
+   * THE SUPPLY KNOBS (SHOP-SUPPLY.md §6-1, promoted from the
+   * scratchpad instrument — no number ships from a scratchpad).
+   *
+   * The default shopper is the OFFER-STREAM model, mirroring the live
+   * reducer: each week the shop deals two boost slots by weighted tier
+   * draw (rack/special/tour, weights from content/shop.ts) from the
+   * unowned pool, gated below the premium line through EARLY_SHOP_UNTIL,
+   * and the shopper may buy at most one a week, at most BUDGET a season.
+   *
+   *   BUDGET=6        season purchase budget (boosts only)
+   *   W=6,3,1         tier draw weights rack,special,tour
+   *   EGATE=3         early gate — shops after events 1..EGATE stock
+   *                   the rack only; EGATE=0 turns the gate off
+   *   MINBUY=1600000  the PATIENT counter-policy: buy nothing under
+   *                   this sticker (SHOP-SUPPLY sweep B — patience must
+   *                   measure >= 10 survival points WORSE than naive,
+   *                   or the weights are too generous)
+   *   FULLSHELF=1     the legacy full-shelf-greedy shopper (BUDGET
+   *                   defaults to 4 there) — the validation row: it must
+   *                   reproduce CALIBRATION-2's 44/35/5 before anything
+   *                   else in this file is believed.
+   *
+   * The offer stream draws from the same salt-8 family as the game's
+   * shop stream (rng.ts seedBank), so the model and the reducer share a
+   * random-number diet even though their sequences differ by play.
+   * ---------------------------------------------------------------- */
+  const FULLSHELF = process.env.FULLSHELF === '1'
+  const BUDGET = Number(process.env.BUDGET ?? (FULLSHELF ? 4 : SHOP_BUDGET))
+  const EGATE = Number(process.env.EGATE ?? EARLY_SHOP_UNTIL)
+  const MINBUY = Number(process.env.MINBUY ?? 0)
+  // SPRING=0 turns the spring slot off (content/shop.ts SPRING_RACK_UNTIL)
+  const SPRING = Number(process.env.SPRING ?? SPRING_RACK_UNTIL)
+  const TW: Record<BoostTier, number> = (() => {
+    const w = (process.env.W ?? '').split(',').map(Number)
+    return w.length === 3 && w.every(n => Number.isFinite(n) && n > 0)
+      ? { rack: w[0]!, special: w[1]!, tour: w[2]! }
+      : { ...TIER_WEIGHTS }
+  })()
+
+  /** the reducer's stock(), statistically: two weighted tier slots, the
+   * first forced to the rack through the spring (SPRING_RACK_UNTIL) */
+  function drawOffers(
+    kit: readonly Boost[], gate: boolean, spring: boolean, rng0: RngState,
+  ): readonly [Boost[], RngState] {
+    let rng = rng0
+    const owned = new Set(kit.map(k => k.id))
+    const offers: Boost[] = []
+    for (let slot = 0; slot < 2; slot++) {
+      const shelves: Record<BoostTier, Boost[]> = { rack: [], special: [], tour: [] }
+      for (const b of SHELF) {
+        if (owned.has(b.id) || ENCOUNTER_BOOSTS.has(b.id)) continue
+        if (offers.some(o => o.id === b.id)) continue
+        if (gate && b.price >= PREMIUM_BOOST) continue
+        shelves[tierOf(b.price)].push(b)
+      }
+      const avail = BOOST_TIERS.filter(t => shelves[t].length > 0)
+      if (avail.length === 0) break
+      let tier: BoostTier
+      if (slot === 0 && spring && shelves.rack.length > 0) {
+        tier = 'rack'   // the spring slot — reducer.ts stock()
+      } else {
+        const total = avail.reduce((n, t) => n + TW[t], 0)
+        const [u, r1] = next(rng)
+        rng = r1
+        let x = u * total
+        tier = avail[avail.length - 1]!
+        for (const t of avail) { x -= TW[t]; if (x < 0) { tier = t; break } }
+      }
+      const [v, r2] = next(rng)
+      rng = r2
+      const shelf = shelves[tier]
+      offers.push(shelf[Math.min(shelf.length - 1, Math.floor(v * shelf.length))]!)
+    }
+    return [offers, rng] as const
+  }
   // THE FREE MAJOR-CUT DROPS (DROPS=0 to measure the world without them).
   // Found live by the owner and absent from every prior threshold derivation:
   // surviving a major's cut hands you a premium boost for free
@@ -254,6 +345,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   function shoppingSeason(
     seed: number, policy: Policy, _needs: readonly number[], shop: boolean,
     perEvent?: EvResult[],
+    stats?: { buys: number; kit: number; offered: number; kits?: string[] },
   ): number[] {
     const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5, freeSinks: 0 }
     const kit: Boost[] = []
@@ -270,17 +362,39 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     let bought = 0
     const running: number[] = []
     const rota = scheduleFor(seed)
+    // the offer stream's own dice — same salt-8 family as the game's shop
+    let shopRng = makeRng(hash(seed, 8))
 
     for (const ev of SEASON) {
       const course = COURSES[rota[ev.num - 1]!]
-      if (shop && ev.num > 1) {
+      if (shop && ev.num > 1 && FULLSHELF) {
+        // the legacy full-shelf greedy shopper — the calibration lineage's
+        // model, kept as the validation row (and the counterfactual: this
+        // is the catalogue the live game used to be)
         for (const b of order) {
           if (kit.some(k => k.id === b.id)) continue
           if (b.price > banked) continue
-          // the cap counts PURCHASES: free major-cut drops arrive on top of
-          // the four-buy budget, exactly as they do for a live player
-          if (bought >= 4) break
+          // the cap counts PURCHASES: free major-cut drops arrive on top
+          // of the budget, exactly as they do for a live player
+          if (bought >= BUDGET) break
           banked -= b.price; kit.push(b); bought += 1; break
+        }
+      } else if (shop && ev.num > 1) {
+        // THE OFFER STREAM: the shop after last week's event dealt two
+        // weighted tier slots (the gate reads the PREVIOUS event's number,
+        // as the reducer stocks it); the shopper takes the best affordable
+        // offer, one a week, budget permitting. MINBUY is the patient
+        // counter-policy: hold the slots for the top shelf.
+        const gate = ev.num - 1 <= EGATE
+        const spring = ev.num - 1 <= SPRING
+        const [offers, r] = drawOffers(kit, gate, spring, shopRng)
+        shopRng = r
+        if (stats) stats.offered += offers.length
+        if (bought < BUDGET) {
+          const pick = offers
+            .filter(b => b.price <= banked && b.price >= MINBUY)
+            .sort((a, b) => b.price - a.price)[0]
+          if (pick) { banked -= pick.price; kit.push(pick); bought += 1 }
         }
       }
 
@@ -312,8 +426,8 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
         // two, so price order IS value order to within the calibration).
         if (DROPS && ev.major) {
           const owned = new Set(kit.map(k => k.id))
-          const premium = BOOSTS.filter(b => !owned.has(b.id) && b.price >= PREMIUM_BOOST)
-          const any = BOOSTS.filter(b => !owned.has(b.id))
+          const premium = SHELF.filter(b => !owned.has(b.id) && b.price >= PREMIUM_BOOST)
+          const any = SHELF.filter(b => !owned.has(b.id))
           const pool = premium.length > 0 ? premium : any
           if (pool.length > 0) {
             const [ids, r] = shuffle(pool.map(b => b.id), ctx.bank.draw)
@@ -347,8 +461,12 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
         const rel8 = holes.reduce((a, b) => a + b, 0) - course.par
         recent.push(rel8)
         if (recent.length > 3) recent.shift()
-        const place = yourPlace(standings(field, rel8, 8, false))
-        const cheque = payout(ev.purse, place)
+        const rows = standings(field, rel8, 8, false)
+        const place = yourPlace(rows)
+        // split at the top only, exactly as settle pays it (reducer.ts)
+        const cheque = place === 1
+          ? tiePayout(ev.purse, 1, rows.filter(r => r.place === 1).length)
+          : payout(ev.purse, place)
         banked += cheque
         earned += cheque
         if (perEvent) {
@@ -362,6 +480,8 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
       }
       running.push(earned)
     }
+    if (stats) { stats.buys += bought; stats.kit += kit.length }
+    if (stats?.kits) stats.kits.push(kit.map(k => k.id).sort().join('+'))
     return running
   }
 
@@ -378,7 +498,11 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
 
   console.log(`  THE MONEY LIST vs A PLAYER WHO SHOPS · ${R} seasons per policy` +
     `${DROPS ? '' : ' · DROPS OFF'}` +
-    ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}\n`)
+    ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}`)
+  console.log(FULLSHELF
+    ? `  supply: FULL SHELF (legacy validation model) · budget ${BUDGET}\n`
+    : `  supply: offer stream · budget ${BUDGET} · weights ${TW.rack}/${TW.special}/${TW.tour}` +
+      ` · gate thru ev ${EGATE}${MINBUY > 0 ? ` · PATIENT >= ${money(MINBUY)}` : ''}\n`)
 
   /* ---------------------------------------------------------------- *
    * WINS=1 — THE MARQUEE RAMP's target dial (FIELD-CEILING.md §6–7,
@@ -386,11 +510,23 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
    * weekend they play? Mixed shopper, drops modeled — the closest
    * harness to the evidenced 83%-of-weekends player.
    * ---------------------------------------------------------------- */
+  // KITS=1 — SHOP-SUPPLY prediction 6 (run identity): print the finale kit
+  // of the first ten seasons and how many are distinct. Under the full
+  // shelf every strong run converged on the same kit; under the weighted
+  // offer stream the season kit is a draft.
+  if (process.env.KITS === '1') {
+    const stats = { buys: 0, kit: 0, offered: 0, kits: [] as string[] }
+    for (let i = 0; i < 10; i++) shoppingSeason(700_000 + i, 'mixed', [], true, undefined, stats)
+    console.log(`  RUN IDENTITY · finale kits of ten seasons · ${new Set(stats.kits).size} distinct`)
+    for (const k of stats.kits) console.log(`    ${k}`)
+    console.log()
+  }
   if (process.env.WINS === '1') {
     const per: EvResult[][] = []
+    const stats = { buys: 0, kit: 0, offered: 0 }
     for (let i = 0; i < R; i++) {
       const p: EvResult[] = []
-      shoppingSeason(700_000 + i, 'mixed', [], true, p)
+      shoppingSeason(700_000 + i, 'mixed', [], true, p, stats)
       per.push(p)
     }
     const rate = (rs: EvResult[]) => {
@@ -416,7 +552,12 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     console.log(`    weekends played, events 10-14 ${String(late.n).padStart(5)}   won ${late.pct.toFixed(0)}%`)
     console.log(`    the finale                    ${String(finale.n).padStart(5)}   won ${finale.pct.toFixed(0)}%`)
     console.log(`    hot weeks (rel ≤ -8), 10-14   ${String(hotRate.n).padStart(5)}   won ${hotRate.pct.toFixed(0)}%`)
-    console.log(`    late weekends lost: a star took ${starShare.toFixed(0)}% of them\n`)
+    console.log(`    late weekends lost: a star took ${starShare.toFixed(0)}% of them`)
+    console.log(`    buys ${(stats.buys / R).toFixed(1)} · kit@14 ${(stats.kit / R).toFixed(1)}` +
+      (stats.offered > 0
+        ? ` · conversion by offer ${(stats.buys / stats.offered * 100).toFixed(0)}%` +
+          ` of ${(stats.offered / R).toFixed(1)} slots`
+        : '') + '\n')
   }
   // SHARE=1: median cumulative gross per event for the mixed shopper — the
   // season.ts SHARE array (median share banked by each event) and the
