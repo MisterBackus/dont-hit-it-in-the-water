@@ -10,7 +10,8 @@
       "played": 12,
       "firedAt": null,
       "rank": 1,
-      "finished": false
+      "finished": false,
+      "date": "2026-08-25"
     },
     {
       "file": "andrew-2.json",
@@ -21,7 +22,8 @@
       "played": 14,
       "firedAt": null,
       "rank": 15,
-      "finished": true
+      "finished": true,
+      "date": "2026-08-26"
     },
     {
       "file": "andrew-3.json",
@@ -32,7 +34,8 @@
       "played": 13,
       "firedAt": null,
       "rank": 3,
-      "finished": true
+      "finished": true,
+      "date": "2026-08-26"
     },
     {
       "file": "andrew-4.json",
@@ -43,7 +46,8 @@
       "played": 14,
       "firedAt": null,
       "rank": 8,
-      "finished": true
+      "finished": true,
+      "date": "2026-08-26"
     }
   ]
 }

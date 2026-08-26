@@ -27,10 +27,12 @@ interface Row {
   readonly firedAt: number | null
   readonly rank: number
   readonly finished: boolean
+  /** The day the season was posted or verified — display only, never replayed. */
+  readonly date: string | null
 }
 
 function replay(name: string, raw: string): Row | string {
-  let parsed: { version?: number; seed?: number; actions?: Action[] }
+  let parsed: { version?: number; seed?: number; actions?: Action[]; postedAt?: string }
   try { parsed = JSON.parse(raw) } catch { return `${name}: not JSON` }
   if (parsed.version !== SAVE_VERSION) {
     return `${name}: save version ${parsed.version} (board is v${SAVE_VERSION}) — from an older build, skipped`
@@ -57,6 +59,7 @@ function replay(name: string, raw: string): Row | string {
     firedAt: s.keptJob === false ? s.event : null,
     rank: moneyListRank(gross, Math.max(1, played)),
     finished: s.phase === 'over' && s.keptJob !== false,
+    date: typeof parsed.postedAt === 'string' ? parsed.postedAt : null,
   }
 }
 
@@ -81,7 +84,7 @@ if (existsSync(ledgerPath)) {
     for (const r of ledger.rows ?? []) {
       frozen.add(r.file)
       rows.push({ name: r.name, gross: r.gross, wins: r.wins, played: r.played,
-        firedAt: r.firedAt, rank: r.rank, finished: r.finished })
+        firedAt: r.firedAt, rank: r.rank, finished: r.finished, date: r.date ?? null })
     }
   } catch { notes.push('verified.json unreadable — frozen rows skipped') }
 }
@@ -120,6 +123,7 @@ const rowsHtml = board.map((r, i) => `
     <td class="${r.firedAt ? 'bad' : 'good'}">${
       r.firedAt ? `fired at ${r.firedAt}` : r.finished ? 'kept the card' : `thru ${r.played}`
     }</td>
+    <td class="when">${r.date ?? '·'}</td>
   </tr>`).join('')
 
 const html = `<!doctype html>
@@ -134,7 +138,7 @@ const html = `<!doctype html>
   td,th{padding:9px 14px;border-bottom:1px solid #2A3A33;font-size:14px;text-align:left}
   th{color:#6C7D74;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
   .pos{color:#6C7D74}.name{font-weight:700}.money{color:#9AD8F5;font-variant-numeric:tabular-nums}
-  .good{color:#7BA860}.bad{color:#D4574C}
+  .good{color:#7BA860}.bad{color:#D4574C}.when{color:#6C7D74;font-size:12px}
   .empty{color:#6C7D74;padding:40px 0;font-size:13px}
   .notes{color:#6C7D74;font-size:11px;margin-top:24px;max-width:640px}
   a{color:#9AD8F5;text-decoration:none;font-size:12px;margin-top:28px}
@@ -142,7 +146,7 @@ const html = `<!doctype html>
 <h1>The Clubhouse Board</h1>
 <div class="sub">every line verified by replay — a score that didn't happen won't post<br>
 season gross earnings · playtest, ${new Date().toISOString().slice(0, 10)}</div>
-${board.length ? `<table><tr><th></th><th>player</th><th>earned</th><th>wins</th><th>events</th><th>status</th></tr>${rowsHtml}</table>`
+${board.length ? `<table><tr><th></th><th>player</th><th>earned</th><th>wins</th><th>events</th><th>status</th><th>when</th></tr>${rowsHtml}</table>`
     : `<div class="empty">Nobody has posted a round yet. In the game: Copy this run, and send it in.</div>`}
 ${notes.length ? `<div class="notes">${notes.map(n => `· ${n}`).join('<br>')}</div>` : ''}
 <a href="./">← back to the course</a>

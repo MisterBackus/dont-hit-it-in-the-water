@@ -88,8 +88,10 @@ async function main(): Promise<void> {
     const n = nextIndex.get(name) ?? 1
     nextIndex.set(name, n + 1)
     const file = `${name}-${n}.json`
+    // postedAt: the day the mail was collected — the board's date column.
+    // Replay ignores the extra field; only display reads it.
     writeFileSync(join(RUNS, file), JSON.stringify(
-      { version: run.version, seed: run.seed, actions: run.actions },
+      { version: run.version, seed: run.seed, postedAt: new Date().toISOString().slice(0, 10), actions: run.actions },
     ))
     console.log(`fetchruns: ${file} (seed ${run.seed}, ${run.actions.length} actions)`)
     fetched++
