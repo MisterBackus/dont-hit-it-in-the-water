@@ -3,6 +3,7 @@
   --line:#C7CDC0; --fairway:#9DBE79; --rough:#5E7C4A; --trees:#3E5A33;
   --green:#BEDC96; --greenline:#6E8F4E; --sand:#DFCC98; --water:#5E97AE;
   --pin:#C4453A; --cone:#0F3D57; --grid:#2b3a30; --good:#3C7A2E; --bad:#B0402F;
+  --star:#A07B2A;
   --fd:"Archivo",system-ui,sans-serif; --fb:"IBM Plex Sans",system-ui,sans-serif;
   --fm:"IBM Plex Mono",ui-monospace,monospace;
 }
@@ -11,6 +12,7 @@
   --line:#2A3A33; --fairway:#5B7D42; --rough:#31462A; --trees:#22331C;
   --green:#7FA45C; --greenline:#A8C583; --sand:#A8955F; --water:#3F6E82;
   --pin:#D4574C; --cone:#9AD8F5; --grid:#C7E0D2; --good:#7BA860; --bad:#D4574C;
+  --star:#C9A84C;
 }}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -238,6 +240,7 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .lbpos{font-family:var(--fm);font-size:11px;color:var(--faint);text-align:right}
 .lbrow.you .lbpos{color:var(--ink)}
 .lbname{color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lbstar{color:var(--star);font-size:9px;margin-right:4px;vertical-align:1px}
 .lbtot{font-family:var(--fm);font-variant-numeric:tabular-nums;text-align:right}
 .lbtot.under{color:var(--good)} .lbtot.over{color:var(--faint)}
 .lbthru{font-family:var(--fm);font-size:10.5px;color:var(--faint);text-align:right}

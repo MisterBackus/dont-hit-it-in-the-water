@@ -13,8 +13,13 @@
  * Run: npx tsx src/tools/fieldcheck.ts     (N=2000, F=0.15 by default)
  */
 import { COURSES, COURSE_POOL } from '../content/courses'
-import { makeField, advanceField } from '../sim/resolve/field'
+import {
+  makeField, advanceField, overlayStars, starTarget, type StarDials,
+} from '../sim/resolve/field'
 import { makeRng, type RngState } from '../sim/rng'
+import {
+  STARS, STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
+} from '../content/players'
 
 const N = Number(process.env.N ?? 2000)
 /** field response floor lift — 0 spring, 0.30 finale; default mid-season */
@@ -56,6 +61,10 @@ const TARGET: Record<string, number> = {
   foxglove: -1.08, brackenridge: -0.52, rivermouth: -0.14,
 }
 
+// WINNERGAP=only skips the coupling table and its sweep — sweep A's loop
+// only needs the winner-gap section below.
+if (process.env.WINNERGAP !== 'only') {
+
 const base = fieldMean(parsOf('pinehollow'), 0)
 console.log(`\nFIELD COUPLING · ${N} fields per cell · floorLift ${F}`)
 console.log(`  Pine Hollow baseline: field mean ${base.toFixed(2)} over 8 holes\n`)
@@ -86,3 +95,80 @@ for (const id of COURSE_POOL) {
   console.log(`  ${c.label.padEnd(13)} target ${TARGET[id]!.toFixed(1).padStart(5)}   ${rows.join('  ')}`)
 }
 console.log()
+
+}
+
+/* ------------------------------------------------------------------ *
+ * THE WINNER-GAP PROBE — the §2 table of FIELD-CEILING.md, promoted to a
+ * permanent section (house law: no number ships from a scratchpad).
+ * Methodology exactly as registered there: real makeField/advanceField,
+ * Pine Hollow's par sequence, no courseShift, N = 3000 fields, seed
+ * 13371337. The star rows overlay the top K draws at the marquee ramp's
+ * effective-skill target (FIELD-CEILING.md §6) — call counts untouched.
+ *
+ * Knobs: WGN fields per row · K stars · RAMP finale ramp-equivalent ·
+ * BETA/CAP band dials · PACE trailing player rel the band chases (0 =
+ * ordinary player, band asleep) · GRID=1 prints the sweep-A K×RAMP grid ·
+ * WINNERGAP=only skips the coupling sections above.
+ * ------------------------------------------------------------------ */
+{
+  const WGN = Number(process.env.WGN ?? 3000)
+  const K = Number(process.env.K ?? STAR_COUNT)
+  const DIALS: StarDials = {
+    ramp: Number(process.env.RAMP ?? STAR_RAMP_END),
+    beta: Number(process.env.BETA ?? STAR_BAND_BETA),
+    cap: Number(process.env.CAP ?? STAR_BAND_CAP),
+  }
+  const PACE = Number(process.env.PACE ?? 0)
+  const pars = parsOf('pinehollow')
+
+  function probe(F: number, k: number, target: number) {
+    let rng: RngState = makeRng(13371337)
+    const names = STARS.slice(0, k).map(s => s.name)
+    const winners: number[] = []
+    const medians: number[] = []
+    for (let i = 0; i < WGN; i++) {
+      let [field, r] = makeField(rng, F)
+      rng = r
+      if (k > 0) field = overlayStars(field, names, target)
+      for (const par of pars) {
+        const [f2, r2] = advanceField(field, par, rng, 0)
+        field = f2
+        rng = r2
+      }
+      const totals = field.map(p => p.total).sort((a, b) => a - b)
+      winners.push(totals[0]!)
+      medians.push(totals[Math.floor(totals.length / 2)]!)
+    }
+    const sorted = [...winners].sort((a, b) => a - b)
+    const mean = winners.reduce((a, b) => a + b, 0) / WGN
+    const at = (p: number) => sorted[Math.floor(WGN * p)]!
+    const le = (v: number) => winners.filter(w => w <= v).length / WGN * 100
+    const med = medians.reduce((a, b) => a + b, 0) / WGN
+    return `${mean.toFixed(2).padStart(6)} ${String(at(.1)).padStart(5)} ` +
+      `${String(at(.5)).padStart(5)} ${le(-6).toFixed(1).padStart(6)} ` +
+      `${le(-8).toFixed(1).padStart(6)}   ${med.toFixed(2).padStart(7)}`
+  }
+
+  console.log(`\nWINNER GAP · ${WGN} fields per row · Pine Hollow pars · seed 13371337`)
+  console.log('  winner of the 71 over 8 holes                 mean   p10   p50   %≤-6   %≤-8    field med')
+  console.log('  ' + '-'.repeat(92))
+  console.log(`  spring  F=0     no stars                    ${probe(0, 0, 0)}`)
+  console.log(`  finale  F=.30   no stars                    ${probe(0.30, 0, 0)}`)
+  const target = starTarget(14, PACE, DIALS)
+  console.log(
+    `  finale  F=.30   ${K} stars @${target.toFixed(2)} ` +
+    `(R=${DIALS.ramp}, pace ${PACE})`.padEnd(28) +
+    probe(0.30, K, target),
+  )
+  if (process.env.GRID === '1') {
+    console.log('\n  SWEEP A GRID · ramp only (band asleep, pace 0)')
+    for (const k of [3, 4]) {
+      for (const ramp of [1.2, 1.4, 1.6]) {
+        const t = starTarget(14, 0, { ...DIALS, ramp })
+        console.log(`  finale  F=.30   ${k} stars @${t.toFixed(2)}              ${probe(0.30, k, t)}`)
+      }
+    }
+  }
+  console.log()
+}

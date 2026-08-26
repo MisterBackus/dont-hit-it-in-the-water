@@ -24,7 +24,13 @@ import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
-import { makeField, advanceField, rankCut, standings, yourPlace } from '../sim/resolve/field'
+import {
+  makeField, advanceField, overlayStars, rankCut, standings, starNamesFor,
+  starTarget, yourPlace, type FieldPlayer, type StarDials,
+} from '../sim/resolve/field'
+import {
+  STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
+} from '../content/players'
 import { surfaceAt, toPin } from '../sim/geometry'
 import { seedBank, type RngBank } from '../sim/rng'
 import { draw, shuffle } from '../sim/deck'
@@ -89,6 +95,23 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: readonly Boost[], policy: Po
   return strokes
 }
 
+/** THE MARQUEE RAMP (FIELD-CEILING.md §6): STARS=0 off; K/RAMP/BETA/CAP sweep. */
+const STARS_ON = process.env.STARS !== '0'
+const STAR_K = Number(process.env.K ?? STAR_COUNT)
+const DIALS: StarDials = {
+  ramp: Number(process.env.RAMP ?? STAR_RAMP_END),
+  beta: Number(process.env.BETA ?? STAR_BAND_BETA),
+  cap: Number(process.env.CAP ?? STAR_BAND_CAP),
+}
+/** the game's overlay, from a tool's running trailing-pace window */
+function withStars(
+  field: FieldPlayer[], seed: number, evNum: number, recent: readonly number[],
+): FieldPlayer[] {
+  if (!STARS_ON) return field
+  const trailing = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0
+  return overlayStars(field, starNamesFor(seed, STAR_K), starTarget(evNum, trailing, DIALS))
+}
+
 /** Total prize money across a whole season, carrying the named boosts all year. */
 function seasonEarnings(seed: number, policy: Policy, kit: readonly Boost[]): number {
   return seasonEarningsWithDeck(seed, policy, kit, STARTING_DECK)
@@ -100,6 +123,8 @@ function seasonEarningsWithDeck(
   const ctx: Ctx = { bank: seedBank(seed), deck: [...startDeck], discard: [], focus: 5, freeSinks: 0 }
   const cutBonus = kit.reduce((n, b) => n + (b.cutBonus ?? 0), 0)
   let earned = 0
+  // trailing pace for the band — last 3 made-cut full-event rels, as the game
+  const recent: number[] = []
   // the real rotation for this seed — the same pool draw the game makes
   const rota = scheduleFor(seed)
   for (const ev of SEASON) {
@@ -112,6 +137,7 @@ function seasonEarningsWithDeck(
     ctx.freeSinks = kit.reduce((n, b) => n + (b.freeSinks ?? 0), 0)
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
     ctx.bank = { ...ctx.bank, field: fr }
+    field = withStars(field, seed, ev.num, recent)
 
     const holes: number[] = []
     course.holes.slice(0, 4).forEach(hole => {
@@ -131,6 +157,8 @@ function seasonEarningsWithDeck(
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
     const rel = holes.reduce((a, b) => a + b, 0) - course.par
+    recent.push(rel)
+    if (recent.length > 3) recent.shift()
     earned += payout(ev.purse, yourPlace(standings(field, rel, 8, false)))
   }
   return earned
@@ -213,11 +241,24 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   // (reducer.ts offerBoosts). Modeled below by mirroring that reducer exactly.
   const DROPS = process.env.DROPS !== '0'
 
+  interface EvResult {
+    readonly played: boolean
+    /** your finishing place when you made the cut, else 0 */
+    readonly place: number
+    /** your full-event rel when you made the cut, else null */
+    readonly rel8: number | null
+    /** a star posted (or shared) the field's best total this week */
+    readonly starWon: boolean
+  }
+
   function shoppingSeason(
     seed: number, policy: Policy, _needs: readonly number[], shop: boolean,
+    perEvent?: EvResult[],
   ): number[] {
     const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5, freeSinks: 0 }
     const kit: Boost[] = []
+    // trailing pace for the band — last 3 made-cut rels, as GameState keeps
+    const recent: number[] = []
     // The check runs on GROSS earnings now, so the wallet and the list are
     // separate numbers: `banked` is what the shop can take, `earned` is what
     // the Money List sees, and buying moves only the first. The old
@@ -251,6 +292,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
       ctx.freeSinks = kit.reduce((n, b) => n + (b.freeSinks ?? 0), 0)
       let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)
       ctx.bank = { ...ctx.bank, field: fr }
+      field = withStars(field, seed, ev.num, recent)
 
       const holes: number[] = []
       course.holes.slice(0, 4).forEach(hole => {
@@ -302,9 +344,21 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
           const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
           field = f2; ctx.bank = { ...ctx.bank, field: r2 }
         })
-        const cheque = payout(ev.purse, yourPlace(standings(field, holes.reduce((a, b) => a + b, 0) - course.par, 8, false)))
+        const rel8 = holes.reduce((a, b) => a + b, 0) - course.par
+        recent.push(rel8)
+        if (recent.length > 3) recent.shift()
+        const place = yourPlace(standings(field, rel8, 8, false))
+        const cheque = payout(ev.purse, place)
         banked += cheque
         earned += cheque
+        if (perEvent) {
+          const live = field.filter(p => !p.cut)
+          const best = Math.min(...live.map(p => p.total))
+          const starWon = place > 1 && live.some(p => p.total === best && p.star === true)
+          perEvent.push({ played: true, place, rel8, starWon })
+        }
+      } else if (perEvent) {
+        perEvent.push({ played: false, place: 0, rel8: null, starWon: false })
       }
       running.push(earned)
     }
@@ -323,7 +377,47 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   const IDX = MONEY_CHECKS.map(c => c.after - 1)
 
   console.log(`  THE MONEY LIST vs A PLAYER WHO SHOPS · ${R} seasons per policy` +
-    `${DROPS ? '' : ' · DROPS OFF'}\n`)
+    `${DROPS ? '' : ' · DROPS OFF'}` +
+    ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}\n`)
+
+  /* ---------------------------------------------------------------- *
+   * WINS=1 — THE MARQUEE RAMP's target dial (FIELD-CEILING.md §6–7,
+   * sweep B): does the strong late-season player still win every
+   * weekend they play? Mixed shopper, drops modeled — the closest
+   * harness to the evidenced 83%-of-weekends player.
+   * ---------------------------------------------------------------- */
+  if (process.env.WINS === '1') {
+    const per: EvResult[][] = []
+    for (let i = 0; i < R; i++) {
+      const p: EvResult[] = []
+      shoppingSeason(700_000 + i, 'mixed', [], true, p)
+      per.push(p)
+    }
+    const rate = (rs: EvResult[]) => {
+      const played = rs.filter(r => r.played)
+      const wins = played.filter(r => r.place === 1).length
+      return { n: played.length, wins, pct: played.length ? wins / played.length * 100 : NaN }
+    }
+    const slice = (lo: number, hi: number) => per.flatMap(s => s.slice(lo - 1, hi))
+    const all = rate(slice(1, 14))
+    const late = rate(slice(10, 14))
+    const finale = rate(slice(14, 14))
+    const hot = slice(10, 14).filter(r => r.played && r.rel8 !== null && r.rel8 <= -8)
+    const hotRate = rate(hot)
+    const lateLost = slice(10, 14).filter(r => r.played && r.place > 1)
+    const starShare = lateLost.length
+      ? lateLost.filter(r => r.starWon).length / lateLost.length * 100 : NaN
+    console.log(`  WIN RATE · mixed shopper · ${R} seasons`)
+    console.log('    win% by event: ' + SEASON.map((_, e) => {
+      const r = rate(per.map(s => s[e]!).filter(Boolean))
+      return r.pct.toFixed(0).padStart(3)
+    }).join(' '))
+    console.log(`    weekends played, all season   ${String(all.n).padStart(5)}   won ${all.pct.toFixed(0)}%`)
+    console.log(`    weekends played, events 10-14 ${String(late.n).padStart(5)}   won ${late.pct.toFixed(0)}%`)
+    console.log(`    the finale                    ${String(finale.n).padStart(5)}   won ${finale.pct.toFixed(0)}%`)
+    console.log(`    hot weeks (rel ≤ -8), 10-14   ${String(hotRate.n).padStart(5)}   won ${hotRate.pct.toFixed(0)}%`)
+    console.log(`    late weekends lost: a star took ${starShare.toFixed(0)}% of them\n`)
+  }
   // SHARE=1: median cumulative gross per event for the mixed shopper — the
   // season.ts SHARE array (median share banked by each event) and the
   // LADDER's 20th-place anchor are re-measured from this line.

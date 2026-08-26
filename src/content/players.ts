@@ -22,3 +22,53 @@ export const LAST = [
 ] as const
 
 export const FIELD_SIZE = 71
+
+/**
+ * THE STARS (FIELD-CEILING.md §5–6) — the tour's marquee names. This tour ran
+ * fourteen seasons of 71 anonymous re-rolled names before it had one worth
+ * beating; these are the names. A run carries STAR_COUNT of them, drawn once
+ * per run (sim/resolve/field.ts starNamesFor, salted hash, salt 7), and each
+ * week they are painted onto the top skill draws — names only in the spring,
+ * and from event 5 they start finding the form the season's marquee ramp
+ * says they find (starTarget). Surnames are deliberately NOT in LAST, so a
+ * star can never collide with a generated name.
+ */
+export interface Star {
+  readonly name: string
+  /** one line of who they are — for any screen that ever wants to say */
+  readonly blurb: string
+}
+
+export const STARS: readonly Star[] = [
+  {
+    name: 'Cyrus Vail',
+    blurb: 'The metronome. Has not changed his putter, his Sunday shirt, or his expression since turning pro.',
+  },
+  {
+    name: 'Angel Maravilla',
+    blurb: 'Plays the shot the hole is daring him to play. The gallery loves him; his caddie has aged forty years.',
+  },
+  {
+    name: 'Harlan Boone',
+    blurb: 'Twenty-two seasons, no swing to speak of, and the meanest short game ever issued to one man.',
+  },
+  {
+    name: 'Kaz Ito',
+    blurb: 'Peaks in October, every October. Nobody has ever found out what he does all summer.',
+  },
+] as const
+
+/**
+ * THE MARQUEE RAMP's dials (FIELD-CEILING.md §6–7, derived by sweep — see the
+ * SHIPPED section there for predicted-vs-measured). All three skill-equivalent
+ * numbers speak the probe's language: "effective skill", where the field's
+ * hard ceiling is 0.85 and the §2 winner-gap table priced 1.2/1.4/1.6.
+ */
+/** stars carried per run — sweep A (k) */
+export const STAR_COUNT = 4
+/** finale ramp-equivalent effective skill — sweep A (R) */
+export const STAR_RAMP_END = 1.4
+/** fraction of the player's trailing sub-par pace the band chases — sweep B (β) */
+export const STAR_BAND_BETA = 0.8
+/** skill-equivalent cap on the band above the ramp — sweep B (CAP) */
+export const STAR_BAND_CAP = 0.3

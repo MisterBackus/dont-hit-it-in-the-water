@@ -128,6 +128,15 @@ export interface GameState {
   readonly cutsMade: number
   readonly cutsMissed: number
   readonly spent: number
+  /**
+   * Final rel (strokes vs par, full event) of the last three MADE cuts,
+   * newest last — the trailing pace the marquee ramp's band reads
+   * (FIELD-CEILING.md §6, sim/resolve/field.ts starTarget). Lagged by
+   * construction: written at settle, read at the NEXT startEvent, so the
+   * stars follow form rather than mirror it. A missed cut writes nothing —
+   * the band relaxes only as made-cut pace actually cools.
+   */
+  readonly recentCutRels: readonly number[]
 }
 
 export function freshHole(index: number): HoleState {
@@ -183,7 +192,17 @@ export function initialState(seed: number): GameState {
     cutsMade: 0,
     cutsMissed: 0,
     spent: 0,
+    recentCutRels: [],
   }
+}
+
+/**
+ * The trailing pace the marquee band chases: mean rel over the last three
+ * made cuts, 0 until one exists. Pure in the state — replay-safe.
+ */
+export function trailingPace(s: Pick<GameState, 'recentCutRels'>): number {
+  const r = s.recentCutRels
+  return r.length === 0 ? 0 : r.reduce((a, b) => a + b, 0) / r.length
 }
 
 /** The sponsor tax active right now: −1 focus per running contract. */

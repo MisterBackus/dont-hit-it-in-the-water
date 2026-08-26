@@ -1,6 +1,9 @@
 import type { RngState } from '../rng'
-import { next } from '../rng'
-import { FIRST, LAST, FIELD_SIZE } from '../../content/players'
+import { hash, makeRng, next } from '../rng'
+import {
+  FIRST, LAST, FIELD_SIZE, STARS,
+  STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
+} from '../../content/players'
 
 export interface FieldPlayer {
   readonly name: string
@@ -11,6 +14,15 @@ export interface FieldPlayer {
   /** holes completed */
   readonly thru: number
   readonly cut: boolean
+  /** one of the run's marquee names (FIELD-CEILING.md §5–6) */
+  readonly star?: boolean
+  /**
+   * THE MARQUEE RAMP's bias term — added in advanceField exactly where
+   * courseShift is subtracted, so a star scores like a better player without
+   * the 0..1 skill contract moving and without any extra roll. 0 (or absent,
+   * on fields from older saves) for the other 67 and for every spring week.
+   */
+  readonly eliteEdge?: number
 }
 
 export interface Standing {
@@ -21,6 +33,8 @@ export interface Standing {
   readonly you: boolean
   /** true when tied with the player above */
   readonly tied: boolean
+  /** a marquee name — the board marks them (FIELD-CEILING.md §5) */
+  readonly star: boolean
 }
 
 export const YOU = 'You'
@@ -51,6 +65,116 @@ export function makeField(rng: RngState, floorLift = 0): readonly [FieldPlayer[]
     out.push({ name, skill: lo + c * (0.85 - lo), total: 0, thru: 0, cut: false })
   }
   return [out, r] as const
+}
+
+/* ------------------------------------------------------------------ *
+ * THE MARQUEE RAMP (FIELD-CEILING.md §5–6). Three or four persistent
+ * names overlay each week's top skill draws; from event 5 they carry an
+ * eliteEdge bias that ramps to the finale plus a bounded, lagged,
+ * upward-only band that chases an outlier player. Determinism: the
+ * roster is a one-shot salted hash (salt 7 — the bank owns 1–4, the
+ * schedule 5, the encounters 6), the edge is a pure function of (event,
+ * trailing pace), and neither adds a draw nor a roll anywhere.
+ * ------------------------------------------------------------------ */
+
+/** The roster hash's salt — one-shot derived stream, like the schedule's 5. */
+const STAR_SALT = 7
+
+/**
+ * Which stars this run carries, in pecking order: index 0 takes the week's
+ * highest skill draw. A one-shot Fisher–Yates on the canon roster, from a
+ * derived stream that no bank stream ever sees — same seed, same names.
+ * NB: the shuffle depends on roster size, so growing the canon reshuffles
+ * every seed's subset — a save-version event like any reducer-visible change.
+ */
+export function starNamesFor(seed: number, k = STAR_COUNT): readonly string[] {
+  let r = makeRng(hash(seed, STAR_SALT))
+  const names = STARS.map(s => s.name)
+  for (let i = names.length - 1; i > 0; i--) {
+    const [v, r2] = next(r)
+    r = r2
+    const j = Math.floor(v * (i + 1))
+    const t = names[i]!; names[i] = names[j]!; names[j] = t
+  }
+  return names.slice(0, Math.min(k, names.length))
+}
+
+/**
+ * The pace model behind the band, in the probe's own currency: the §2
+ * winner-gap table measured a star at effective skill 1.0 expecting −1.74
+ * over eight holes and 1.6 expecting −5.34 — six strokes per skill unit.
+ * Linear is honest here; the sweeps price the endpoints, not the middle.
+ */
+const PACE_AT_1 = 1.74
+const PACE_PER_SKILL = 6.0
+/** effective skill whose expected eight-hole pace is `p` strokes under par */
+const skillForPace = (p: number) => 1 + (p - PACE_AT_1) / PACE_PER_SKILL
+
+/** eliteEdge = 0 through here — spring is names only, by construction */
+const STAR_QUIET_THROUGH = 4
+/** ordinary top-of-field form — the draw ceiling, where the ramp starts */
+const RAMP_BASE = 0.85
+/** the season is 14 events; literal here so resolve/ keeps zero content
+ *  value-imports beyond the name lists (locked by test) */
+const FINALE = 14
+
+export interface StarDials {
+  readonly ramp: number
+  readonly beta: number
+  readonly cap: number
+}
+export const STAR_DIALS: StarDials = {
+  ramp: STAR_RAMP_END, beta: STAR_BAND_BETA, cap: STAR_BAND_CAP,
+}
+
+/**
+ * The week's star form, as an effective-skill TARGET (the probe's "k elites
+ * @e"): a star plays at max(own draw, target), so the floor is ordinary
+ * top-of-field form and nobody is ever pulled DOWN.
+ *
+ *   ramp — 0 through event 4, then RAMP_BASE rising to `ramp` at the finale.
+ *          Identical every run: the honest part, the season's story.
+ *   band — clamp(0, chase − ramp, cap): the stars run at `beta`× the
+ *          player's trailing sub-par pace (mean rel over the last three
+ *          made cuts — lagged, so it follows form rather than mirroring
+ *          it), never more, capped. A collapsing player's band relaxes
+ *          toward zero and the ramp remains — never below the stage
+ *          baseline, never a death spiral.
+ */
+export function starTarget(
+  event: number, trailingRel: number, dials: StarDials = STAR_DIALS,
+): number {
+  if (event <= STAR_QUIET_THROUGH) return 0
+  const ramp = RAMP_BASE
+    + (dials.ramp - RAMP_BASE) * (event - STAR_QUIET_THROUGH) / (FINALE - STAR_QUIET_THROUGH)
+  const pace = Math.max(0, -trailingRel)
+  const chase = skillForPace(dials.beta * pace)
+  const band = Math.min(Math.max(0, chase - ramp), dials.cap)
+  return ramp + band
+}
+
+/**
+ * Paint the run's stars onto the week's field: the k highest skill draws
+ * take the star names (pecking order — the best draw is star number one)
+ * and the week's eliteEdge. IN PLACE, order preserved, draw count
+ * untouched: the field stream cannot tell this ever happened, which is
+ * what keeps events 1–4 digit-identical and every replay honest.
+ */
+export function overlayStars(
+  field: readonly FieldPlayer[], names: readonly string[], target: number,
+): FieldPlayer[] {
+  const top = field.map((p, i) => ({ skill: p.skill, i }))
+    .sort((a, b) => b.skill - a.skill)
+    .slice(0, names.length)
+    .map(t => t.i)
+  const starAt = new Map<number, string>()
+  top.forEach((fi, rank) => starAt.set(fi, names[rank]!))
+  return field.map((p, i) => {
+    const name = starAt.get(i)
+    if (name === undefined) return p
+    // ×0.42 converts effective skill to bias — the same factor the roll uses
+    return { ...p, name, star: true, eliteEdge: Math.max(0, target - p.skill) * 0.42 }
+  })
 }
 
 /**
@@ -86,7 +210,9 @@ export function advanceField(
     // the cut never removed anyone on its own and had to be propped up by
     // fieldEdge, and why you could stand 11th of 72 while shooting level par.
     const roll = (a + b) / 2
-    const bias = 0.20 + p.skill * 0.42 + (par === 5 ? 0.08 : 0) - courseShift
+    // eliteEdge is the marquee ramp (overlayStars): a pure bias term, no
+    // extra draw — the call count is untouched on every course, star or not
+    const bias = 0.20 + p.skill * 0.42 + (par === 5 ? 0.08 : 0) + (p.eliteEdge ?? 0) - courseShift
     const shot = roll < bias - 0.30 ? -1
       : roll < bias + 0.28 ? 0
       : roll < bias + 0.52 ? 1
@@ -138,8 +264,10 @@ export function standings(
   field: readonly FieldPlayer[], yourTotal: number, yourThru: number, youCut: boolean,
 ): Standing[] {
   const rows = [
-    ...field.filter(p => !p.cut).map(p => ({ name: p.name, total: p.total, thru: p.thru, you: false })),
-    ...(youCut ? [] : [{ name: YOU, total: yourTotal, thru: yourThru, you: true }]),
+    ...field.filter(p => !p.cut).map(p => ({
+      name: p.name, total: p.total, thru: p.thru, you: false, star: p.star === true,
+    })),
+    ...(youCut ? [] : [{ name: YOU, total: yourTotal, thru: yourThru, you: true, star: false }]),
   ].sort((a, b) => a.total - b.total || (a.you ? -1 : b.you ? 1 : 0))
 
   // First pass: assign places, ties sharing the lowest number.

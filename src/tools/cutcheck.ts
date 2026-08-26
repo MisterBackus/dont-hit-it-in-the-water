@@ -28,7 +28,13 @@ import { buildCone, focusRegen } from '../sim/effects'
 import { chooseShot, type Policy } from './policy'
 import { resolveShot, dropPoint } from '../sim/resolve/shot'
 import { resolvePutting, sinkCost, baseputts } from '../sim/resolve/putt'
-import { makeField, advanceField, standings, yourPlace } from '../sim/resolve/field'
+import {
+  makeField, advanceField, overlayStars, standings, starNamesFor, starTarget,
+  yourPlace, type StarDials,
+} from '../sim/resolve/field'
+import {
+  STAR_BAND_BETA, STAR_BAND_CAP, STAR_COUNT, STAR_RAMP_END,
+} from '../content/players'
 import { surfaceAt, toPin } from '../sim/geometry'
 import { seedBank, type RngBank } from '../sim/rng'
 import { draw } from '../sim/deck'
@@ -87,11 +93,22 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: Boost[], policy: Policy) {
 const N = Number(process.env.N ?? 400)
 /** Equipment bought over a season, as a cone multiplier. 1.0 = buys nothing. */
 const KIT = Number(process.env.KIT ?? 1)
+/** THE MARQUEE RAMP (FIELD-CEILING.md §6): STARS=0 off; K/RAMP/BETA/CAP sweep. */
+const STARS_ON = process.env.STARS !== '0'
+const K = Number(process.env.K ?? STAR_COUNT)
+const DIALS: StarDials = {
+  ramp: Number(process.env.RAMP ?? STAR_RAMP_END),
+  beta: Number(process.env.BETA ?? STAR_BAND_BETA),
+  cap: Number(process.env.CAP ?? STAR_BAND_CAP),
+}
 
 /** Your place after four holes, for every event of every season. */
 function seasonPlaces(seed: number, policy: Policy): number[] {
   const ctx: Ctx = { bank: seedBank(seed), deck: [...STARTING_DECK], discard: [], focus: 5 }
   const out: number[] = []
+  // trailing pace for the band — mean full-event rel of the last 3 made cuts,
+  // mirroring GameState.recentCutRels (made = inside the advance line here)
+  const recent: number[] = []
   // THE REAL ROTATION: the same pool draw the game makes for this seed
   // (SCHEDULE-PLAN.md §4 — an instrument playing a different schedule than
   // the game is a confidently-wrong harness).
@@ -106,6 +123,10 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
     ctx.focus = 5
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength * Number(process.env.FSCALE ?? 1))
     ctx.bank = { ...ctx.bank, field: fr }
+    if (STARS_ON) {
+      const trailing = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : 0
+      field = overlayStars(field, starNamesFor(seed, K), starTarget(ev.num, trailing, DIALS))
+    }
     let rel = 0
     // FOUR holes — the cut is judged here. No fieldEdge: the field is static.
     course.holes.slice(0, 4).forEach(hole => {
@@ -122,11 +143,17 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
     // by ~9 places. The confidently-wrong-harness lesson, again.
     const placeAtCut = yourPlace(standings(field, rel, 4, false))
     // play the rest so the deck cycles the way a real event would
+    let rel8 = rel
     course.holes.slice(4).forEach(hole => {
-      playHole(hole, ctx, boosts, policy)
+      rel8 += playHole(hole, ctx, boosts, policy) - hole.par
       const [f2, r2] = advanceField(field, hole.par, ctx.bank.field, course.fieldShift)
       field = f2; ctx.bank = { ...ctx.bank, field: r2 }
     })
+    // feed the band's lagged window when this week would have made the cut
+    if (placeAtCut <= ev.advance) {
+      recent.push(rel8)
+      if (recent.length > 3) recent.shift()
+    }
     out.push(placeAtCut)
   })
   return out
@@ -136,7 +163,8 @@ const pct = (v: number[], p: number) => [...v].sort((a, b) => a - b)[Math.floor(
 
 for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
   const seasons = Array.from({ length: N }, (_, i) => seasonPlaces(120_000 + i, policy))
-  console.log(`\nWHERE YOU STAND AFTER FOUR HOLES · ${policy} · ${N} seasons · kit ×${KIT}`)
+  console.log(`\nWHERE YOU STAND AFTER FOUR HOLES · ${policy} · ${N} seasons · kit ×${KIT}` +
+    ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}`)
   console.log('  ev   p25   median   p75      make-cut if the line is top-…')
   console.log('       ' + '-'.repeat(78))
   for (let ev = 0; ev < SEASON.length; ev++) {
@@ -161,7 +189,8 @@ const CURVES: { label: string; n: number[] }[] = [
   { label: 'eased  45→12', n: Array.from({ length: 14 }, (_, i) => Math.round(45 - Math.pow(i / 13, 1.35) * 33)) },
 ]
 
-console.log('\nCANDIDATE CUT CURVES · make-cut per event · kit ×' + KIT)
+console.log('\nCANDIDATE CUT CURVES · make-cut per event · kit ×' + KIT +
+  ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp}` : 'OFF'}`)
 for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
   const seasons = Array.from({ length: N }, (_, i) => seasonPlaces(120_000 + i, policy))
   console.log(`\n  ${policy}`)

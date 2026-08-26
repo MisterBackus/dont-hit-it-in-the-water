@@ -339,3 +339,173 @@ reframe of §4 (consumable SKUs priced on their window), never sticker
 decay of owned goods, and never a fourth threshold raise: three
 re-anchorings in two days is the wall telling us bars were the wrong tool,
 and this file exists so we stop reaching for them.
+
+## SHIPPED — 26 Aug 2026, the marquee ramp built, swept, and measured
+
+Option 4 is in. `content/players.ts` carries the canon roster (Cyrus Vail,
+Angel Maravilla, Harlan Boone, Kaz Ito) and the four dials;
+`sim/resolve/field.ts` carries the mechanism (`starNamesFor` salt 7,
+`starTarget`, `overlayStars`, `eliteEdge` in `advanceField`'s bias exactly
+where courseShift is subtracted); `GameState.recentCutRels` is the band's
+lagged three-cut window. The spring rule is locked by test
+(`sim/stars.test.ts`): events 1–4 replay digit-identical against a field
+snapshot captured from the pre-stars build, stars painted on. SAVE_VERSION
+stays 7 — nothing v7 had shipped when this landed. The §2 probe is now a
+permanent fieldcheck section (WINNER GAP), and cutcheck/shopcheck grew
+STARS/K/RAMP/BETA/CAP knobs beside FSCALE/KIT, per §7 step 1.
+
+`starTarget` is the probe's own language — an effective-skill target, a
+star plays at max(own draw, target): ramp = 0.85 → R linearly over events
+5–14, identical every run; band = clamp(0, skillForPace(β·pace) − ramp,
+CAP), pace = trailing mean rel over the player's last three made cuts,
+converted at the probe's measured six strokes per skill unit. β < 1 means
+the chase can never outrun the player's own trailing pace by construction;
+the CAP bounds it; the ramp is the floor it relaxes to.
+
+### Sweep A — k and R (registered BEFORE running, 26 Aug 2026)
+
+Predictions: the promoted probe reproduces §2's elite rows within noise —
+4 stars @1.4 puts the finale winner mean at **−5.5 ± 0.2** (the −5.5 ± 0.5
+target lands at k=4, R=1.4, with k=3 @1.4 a quarter-stroke shallower and
+R=1.2/1.6 bracketing at roughly −4.6/−6.6); the field median stays within
+0.05 of the no-stars row in every cell. cutcheck at kit ×1: events 1–4
+make-cut DIGIT-IDENTICAL to the stars-off run; the mixed curve keeps its
+declining shape with the finale easing from 56 to **~50** (inside the
+48–52 guard) and mid-season within ~2 points of today.
+
+### Sweep A — measured (fieldcheck WINNERGAP=only GRID=1 · cutcheck N=400 kit ×1)
+
+The promoted probe reproduces §2 EXACTLY — the overlay is the probe's
+semantics, digit for digit (4@1.4 → −5.51/49.6/1.7, 4@1.6 → −6.62/91.5/13.8,
+spring −2.84, finale-no-stars −3.21), and the field median reads −0.01 in
+every star cell, unmoved to the second decimal:
+
+```
+winner of the 71 over 8 holes                 mean   p10   p50  %≤−6  %≤−8   field med
+finale  F=.30   3 stars @1.20                −4.20    −5    −4   9.0   0.0    −0.01
+finale  F=.30   3 stars @1.40                −5.28    −7    −5  40.7   1.2    −0.01
+finale  F=.30   3 stars @1.60                −6.39    −8    −6  83.9  10.5    −0.01
+finale  F=.30   4 stars @1.20                −4.38    −6    −4  11.4   0.0    −0.01
+finale  F=.30   4 stars @1.40                −5.51    −7    −5  49.6   1.7    −0.01
+finale  F=.30   4 stars @1.60                −6.62    −8    −7  91.5  13.8    −0.01
+```
+
+**Chosen: k = 4, R = 1.4** — winner mean −5.51, dead on the −5.5 ± 0.5
+target, with a real −8 tail (p10 −7, 1.7% ≤ −8 before the band wakes).
+cutcheck mixed, live ADVANCE, stars off → on:
+
+```
+off  90 70 66 59 61 82 50 64 71 64 62 63 57 52   overall 65%
+on   90 70 66 59 61 82 50 64 70 63 60 61 54 49   overall 64%
+```
+
+Events 1–4 digit-identical (90 70 66 59, across all three policies and all
+four candidate curves) — the spring rule, measured as well as tested. Declining shape intact; the tail deepens exactly where N is small
+(−2 to −3 points over events 9–13), finale 52 → **49**, at the floor of the
+48–52 guard. Prediction said 56 → ~50 from the stale slice-4 series; the
+current stars-off instrument reads 52, so the DELTA (−3) is the honest
+measurement and it landed as predicted. Safe (39→38%) and aggressive
+(62→61%) keep their shapes.
+
+### Sweep B — β and CAP (registered BEFORE running, 26 Aug 2026)
+
+Instrument: shopcheck WINS=1 — mixed shopper, drops modeled, the closest
+harness to the evidenced 83%-of-weekends player. Predictions: stars OFF
+the late-season (events 10–14) win rate measures **~75–85%** (the parade,
+§1); at k=4 R=1.4 the ramp ALONE (β=0) drops it to **~45–55%**; β=0.8
+CAP=0.3 lands it **≤ 45%**, with β=0.4 within a few points of β=0 (the
+shopper's trailing pace only clears the ramp's own pace by a little, so
+the band is a tail-insurance dial here, not the workhorse — it exists for
+the −9-to−12 outlier the harness's median cannot reproduce). Hot weeks
+(rel8 ≤ −8, events 10–14) stay won at **≥ ~50%** in every configuration;
+the finale's win rate among players who make its cut lands near **1-in-3**
+(0.25–0.45); and in no cell do the stars outrun the player's own trailing
+pace (β < 1 and the CAP guarantee it by construction — the measure is the
+receipt). Chosen dials expected: **β=0.8, CAP=0.3** unless β=0.8 drags
+the hot-week retention under ~half, in which case β=0.4 gets the seat.
+
+### Sweep B — measured (shopcheck WINS=1 · mixed shopper, drops modeled, 250 seasons)
+
+```
+                              all-season   ev 10–14   finale   hot(≤−8) 10–14   late losses to a star
+stars OFF                        60%          86%       96%        100%              0%
+k4 R1.4  β=0    (ramp alone)     47%          62%       70%        100%             98%
+k4 R1.4  β=0.4  cap 0.3          47%          62%       70%        100%             98%
+k4 R1.4  β=0.8  cap 0.2          41%          53%       58%        100%             99%
+k4 R1.4  β=0.8  cap 0.3          40%          51%       57%        100%             99%
+```
+
+**Chosen: β = 0.8, CAP = 0.3.** As registered: β=0.4 is indistinguishable
+from the ramp alone for this harness (its trailing pace barely clears the
+ramp's own), so β is confirmed as the outlier dial and gets the strong
+setting; hot weeks stayed won at 100% — a week the player posts −8 is
+still THEIR week in every cell, which is the anti-rubber-band guarantee
+measured (nothing outran the player's pace anywhere; β < 1 and the CAP
+made it so by construction). Late-season win rate 86% → **51%**: inside
+§8's registered 45–60 band, shy of §7's ≤ 40 stretch target — the stretch
+assumed the band could press a shopper the way it presses a −9-to−12
+outlier, and it cannot, because the shopper's trailing pace is ~−5, not
+−10. The number that answers §1's parade is 86 → 51 with 99% of the
+newly-lost weekends lost TO A NAME, which is the entire point: the wins
+that disappeared did not evaporate, they moved to Vail, Maravilla, Boone
+and Ito. All-season wins land at ~4.8 per season (40% of ~12 played) —
+inside the registered 4–6.
+
+Also observed for the calibration agent (NOT re-derived here, per §7.4):
+at the live $2.3M/$10.0M/$13.3M triple the shopper's kills move
+43/30/2 (stars off) → **43/49/3** — check 1 untouched (spring rule at
+work), check 2 now far over its 29% intent, check 3 at 3% (up from ~1%,
+still short of 14). The distribution thinned exactly where §5(b) said:
+mid-to-late cheques. The MONEY_CHECKS re-sweep has real room to move load
+from check 2's bar down onto check 3's — and the §8-2 prediction (the bar
+moves DOWN if it moves) is now the calibration agent's to score.
+
+### Shipped parameters
+
+```
+STARS       Cyrus Vail · Angel Maravilla · Harlan Boone · Kaz Ito   (content/players.ts)
+STAR_COUNT  4        stars per run (whole canon; the salt-7 hash sets each run's pecking order)
+STAR_RAMP_END 1.4    finale ramp-equivalent effective skill
+STAR_BAND_BETA 0.8   fraction of trailing sub-par pace the band chases
+STAR_BAND_CAP  0.3   skill-equivalent bound on the band above the ramp
+quiet through event 4 · ramp linear 0.85→R over events 5–14 ·
+pace↔skill at 6 strokes per skill unit (probe) · trailing = mean rel, last 3 made cuts
+```
+
+### §8 predictions — scored today where this instrument can score them
+
+| § | registered | measured today | verdict |
+|---|---|---|---|
+| 1 | strong player 83% → 45–60% of weekends, 4–6 wins | closest harness (mixed shopper): late weekends 86% → 51%, ~4.8 wins/season; 99% of newly-lost weeks lost to a star | **in band** (the true −9-to−12 human's number arrives with the next runs/ replay) |
+| 1b | ≥1 loss a season to a star posting −8 or better | not directly instrumented; at target 1.4–1.7 a star's ≤−8 tail is 1.7–13.8% per late event | open — score from live runs |
+| 2 | check 3 ≥10% kill at bar ≤ $13.3M, bar moves DOWN if it moves | at live bars: 2% → 3%, check 2 30% → 49% (overkill = headroom) | **calibration agent's** — the re-sweep is §7.4, not this build |
+| 3 | squeeze keeps declining shape, finale mixed 48–52, events 1–4 digit-identical | shape intact, finale 49, events 1–4 identical to the digit (and locked by test) | **hit** |
+| 4 | finale ~1-in-3 for a median survivor, stars' names on the board | shopper wins 57% of finales (a strong proxy, not median); ramp-alone winner mean −5.51 says an ordinary kit meets "reachable, not comfortable" | **directionally hit** — re-measure post-calibration with a median-kit harness |
+
+### HANDOFF — the calibration agent's list (§7.4, ONE session, in this order)
+
+1. **MONEY_CHECKS sweep** toward 41/29/14 intent, stars on (they are on by
+   default now in shopcheck). Today's reading at the live triple:
+   43/49/3, survival mixed 28% (intent 36%) — check 2 must come down
+   and/or check 3 catch its load. §8-2 says the third bar lands AT OR
+   BELOW $13.3M; if the sweep tops out at 8–9% kill, §8's escape clause
+   governs (re-argue the intent number, do NOT reach for boost decay).
+2. **SHARE=1 re-measure** of season.ts SHARE and the LADDER's 20th-place
+   anchor — star cheques shifted the late medians down (a finished $23.9M
+   season currently ranks 15 on the ladder; the frozen board rows in
+   runs/verified.json are ledger-safe and must NOT be recomputed).
+3. **Boost band check** against 1.4–2.5× (shopcheck top section, stars
+   on). Predict mid-band absorbs the tier; budget ≤ 2 repricings.
+4. **fieldcheck confirm**: ten per-course deltas within ±0.1 (tier is
+   course-blind, median unmoved — predicted untouched, receipt required).
+   While there: **Palmetto's fieldShift is stale** (−0.182 measured
+   against the pre-rebuild hole 2; the course was rebuilt after) — the
+   coupling recheck should re-derive it against the live TARGET ladder.
+5. **weekcheck EVENT_YIELDS** — measured pre-stars; late-event expected
+   yields fell (the stars eat cheques), so the week-option pricing
+   comparisons need a re-run before anyone trusts them.
+
+Instrument knobs, for the record: `STARS=0` turns the tier off in
+cutcheck/shopcheck; `K/RAMP/BETA/CAP` override the shipped dials;
+fieldcheck `WINNERGAP=only [GRID=1] [PACE=…]` runs the promoted probe by
+itself; shopcheck `WINS=1` prints the win-rate section this sweep used.

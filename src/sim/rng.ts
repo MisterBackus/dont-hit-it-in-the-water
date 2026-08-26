@@ -56,9 +56,10 @@ export function seedBank(seed: number): RngBank {
     putt: makeRng(hash(seed, 2)),
     draw: makeRng(hash(seed, 3)),
     field: makeRng(hash(seed, 4)),
-    // salt 5 belongs to the schedule (schedule.ts EVENTS_SALT, a one-shot
-    // derived stream). The encounters own this one — an independent stream,
-    // so an encounter roll can never perturb a shot, a draw, or the field.
+    // salt 5 belongs to the schedule (schedule.ts EVENTS_SALT) and salt 7 to
+    // the star roster (resolve/field.ts STAR_SALT) — both one-shot derived
+    // streams. The encounters own this one — an independent stream, so an
+    // encounter roll can never perturb a shot, a draw, or the field.
     events: makeRng(hash(seed, 6)),
   }
 }

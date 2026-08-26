@@ -22,7 +22,7 @@ export function Leaderboard({
   const Row = ({ r }: { r: Standing }) => (
     <div className={`lbrow ${r.you ? 'you' : ''}`}>
       <span className="lbpos">{r.tied ? 'T' : ''}{r.place}</span>
-      <span className="lbname">{r.name}</span>
+      <span className="lbname">{r.star && <span className="lbstar" title="one of the tour's marquee names">★</span>}{r.name}</span>
       <span className={`lbtot ${r.total < 0 ? 'under' : r.total > 0 ? 'over' : ''}`}>{rel(r.total)}</span>
       <span className="lbthru">{thruTotal && r.thru >= thruTotal ? 'F' : r.thru}</span>
     </div>

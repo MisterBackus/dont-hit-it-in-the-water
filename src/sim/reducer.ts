@@ -3,11 +3,14 @@ import type { AimChoice, Boost, Cone, HoleSpec, Point, ShotCard, Surface, Techni
 import type { GameState } from './state'
 import {
   CUT_AFTER_HOLE, MAX_FOCUS, courseOf, currentEvent, currentHole, focusPenaltyOf,
-  freshHole, holeCount, initialState, parThrough,
+  freshHole, holeCount, initialState, parThrough, trailingPace,
 } from './state'
 import { EVENT_COUNT, SEASON, checkAfter, payout } from '../content/season'
 import { BOOSTS } from '../content/boosts'
-import { advanceField, makeField, rankCut, standings, yourPlace } from './resolve/field'
+import {
+  advanceField, makeField, overlayStars, rankCut, standings, starNamesFor,
+  starTarget, yourPlace,
+} from './resolve/field'
 import { BAG_CAP, CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
 import {
   cardPrice, CUT_PRICE, EARLY_SHOP_UNTIL, PREMIUM_BOOST, REROLL_PRICE,
@@ -248,7 +251,11 @@ function startEvent(state: GameState): GameState {
     d.freeSinks = state.boosts.reduce((n, id) => n + (BOOST[id]!.freeSinks ?? 0), 0)
     d.log = []
     const [field, r] = makeField(d.rng.field, SEASON[d.event - 1]!.fieldStrength)
-    d.field = field
+    // THE MARQUEE RAMP (FIELD-CEILING.md §6): the run's stars take the top
+    // skill draws — names only through event 4, real October form later.
+    // Overlay after the full draw, so the field stream never feels it.
+    d.field = overlayStars(field, starNamesFor(state.seed),
+      starTarget(state.event, trailingPace(state)))
     d.rng = { ...d.rng, field: r }
   })
   return dealHole(withReset, 0)
@@ -629,6 +636,9 @@ function settle(state: GameState, madeCut: boolean): GameState {
       d.lastPaid = 0
     } else {
       const rel = d.scores.reduce((a, b) => a + b, 0) - parThrough(d, d.scores.length)
+      // the trailing window the marquee band reads — last three made cuts,
+      // written here so it is only ever visible to the NEXT event's field
+      d.recentCutRels = [...d.recentCutRels, rel].slice(-3)
       const place = yourPlace(standings(d.field, rel, d.scores.length, false))
       const paid = payout(ev.purse, place)
       d.lastPlace = place
