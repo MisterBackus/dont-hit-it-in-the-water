@@ -15,7 +15,7 @@
  * static page couldn't keep a secret anyway. Deploy walkthrough:
  * SETUP-SHARING.md; SHARE_ENDPOINT stays '' until the Worker exists.
  */
-export const SHARE_ENDPOINT = ''
+export const SHARE_ENDPOINT = 'https://board-inbox.backus13.workers.dev'
 
 export const SHARE_NOTE =
   'Sends this season’s replay (seed + your moves — no personal data) to the clubhouse board.'

@@ -8,7 +8,7 @@ compatibility_date = "2026-08-01"
 # then paste the id it prints over the placeholder below.
 [[kv_namespaces]]
 binding = "RUNS"
-id = "PASTE_KV_NAMESPACE_ID_HERE"
+id = "dca7cae4898047f38dc0cf7898201882"
 
 # READ_TOKEN is a secret, not a var: `npx wrangler secret put READ_TOKEN`
 # (invent any long random string; the same string becomes the
