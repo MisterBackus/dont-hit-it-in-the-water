@@ -22,6 +22,17 @@
       "firedAt": null,
       "rank": 15,
       "finished": true
+    },
+    {
+      "file": "andrew-3.json",
+      "verifiedAtVersion": 7,
+      "name": "andrew",
+      "gross": 26340492,
+      "wins": 10,
+      "played": 13,
+      "firedAt": null,
+      "rank": 3,
+      "finished": true
     }
   ]
 }
