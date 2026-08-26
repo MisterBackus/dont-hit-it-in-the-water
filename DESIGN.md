@@ -363,7 +363,7 @@ So the design target is **30–40 seconds per hole**, and that is a hard constra
 **Clubs stay straight-faced.** A 7-iron is a 7-iron. This is deliberate and structural — the core puzzle must stay legible, so all the voice lives in the techniques, composure cards, and entourage. (Balatro does exactly this: the playing cards are plain, the jokers carry the personality.)
 
 **Where the voice lives:**
-- Technique names that are things people actually say — *Take the Extra Club*, *Just Get It On The Green*, *Aim Left of Everything*
+- Technique names that are things people actually say — *Take the Extra Club*, *Bail Out*, *Aim Left of Everything*
 - Entourage who are specific people — *Marlene, thirty years at this club*, not "Caddie Lv. 2"
 - Sponsors who are regional businesses with a decal on your bag
 - Superstitions treated as real mechanics, because to a golfer they are
@@ -699,7 +699,7 @@ Cost focus, **not strokes** — they modify a club you are already playing. This
 |---|---|---|
 | Smooth It | 1 | −15 yards, dispersion halved |
 | Take the Extra Club | 0 | +12 yards, +4 dispersion |
-| Just Get It On The Green | 2 | Ignores all hazards. You will not be close. |
+| Bail Out | 2 | Water and OB count as rough. A quarter looser. *(shipped as "Just Get It On The Green" until 26 Aug 2026 — playtesters couldn't parse it and never armed it)* |
 | Punch | 1 | Ignores wind, −20 yards, playable from trees |
 | Aim Left of Everything | 1 | Shifts the dispersion window 15 yards right |
 | Flop | 2 | Wedges only. Stops dead. High risk of a duff. |

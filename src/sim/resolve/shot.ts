@@ -89,7 +89,7 @@ export function resolveShot(
     surface = pitchSurface
   }
 
-  // "Just Get It On The Green" — hazards ignored, you land in rough instead.
+  // "Bail Out" — hazards ignored, you land in rough instead.
   if (ctx.ignoreHazards && (surface === 'water' || surface === 'ob')) {
     surface = 'rough'
   }

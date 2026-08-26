@@ -111,8 +111,9 @@ export const TECHNIQUES: readonly TechniqueCard[] = [
     effects: [{ op: 'addCarry', value: 40 }, { op: 'scaleSpread', value: 2.0 }],
   },
   {
-    id: 'green', kind: 'technique', name: 'Just Get It On The Green', focus: 2,
-    blurb: 'Ignores every hazard. You will not be close.',
+    // id stays 'green' (its birth name) — replays and prices key on it.
+    id: 'green', kind: 'technique', name: 'Bail Out', focus: 2,
+    blurb: 'Water and OB count as rough. A quarter looser.',
     effects: [{ op: 'ignoreHazards' }, { op: 'scaleSpread', value: 1.25 }],
   },
   {
