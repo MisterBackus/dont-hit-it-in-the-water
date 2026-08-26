@@ -15,13 +15,13 @@
  * THE CANON LADDER (ruling, slice 4, 25 Aug 2026: the live post-depth
  * coursecheck ladder is canon — the newest honest measurement wins; the
  * plan-era four-course ladder is history). coursecheck, N=400, mixed policy,
- * full round vs par, depth engine (CHANGES-7 §10, re-measured verbatim for
- * the ruling):
+ * full round vs par, depth engine (COURSE-REVIEW-7 re-baseline — Bracken
+ * Ridge v4 and Salt Flats 6 v9 are the only movers since CHANGES-7 §10):
  *   Rockdale −1.94 · Palmetto −1.64 · Meadowlark −0.60 · Driftwood −0.59 ·
- *   Foxglove −0.27 · Bracken Ridge +0.29 · Cottonwood +0.46 ·
- *   Rivermouth +0.67 · Pine Hollow +0.81 · Salt Flats +1.19
+ *   Foxglove −0.27 · Cottonwood +0.46 · Bracken Ridge +0.55 ·
+ *   Rivermouth +0.67 · Pine Hollow +0.81 · Salt Flats +1.26
  * Deltas vs Pine Hollow, the anchor: RD −2.75 · PAL −2.45 · MEA −1.41 ·
- * DRI −1.40 · FOX −1.08 · BR −0.52 · CW −0.35 · RIV −0.14 · SF +0.38.
+ * DRI −1.40 · FOX −1.08 · CW −0.35 · BR −0.26 · RIV −0.14 · SF +0.45.
  */
 import type { HoleSpec } from '../../sim/types'
 import { PINE_HOLLOW } from './pinehollow'
@@ -113,7 +113,26 @@ export const COURSES: Record<CourseId, Course> = {
   meadowlark: course('meadowlark', 'Meadowlark', MEADOWLARK, -0.114, 'gentle', false, false),
   driftwood: course('driftwood', 'Driftwood', DRIFTWOOD, -0.099, 'standard', false, false),
   foxglove: course('foxglove', 'Foxglove', FOXGLOVE, -0.078, 'brutal', false, false),
-  brackenridge: course('brackenridge', 'Bracken Ridge', BRACKEN_RIDGE, -0.034, 'brutal', true, false),
+  /**
+   * REVIEW-7 RULING: ruled UNDER-WEIGHT for this flag; the strip is
+   * blocked by the world. The docket's bar was "clearly harder than
+   * Cottonwood (+0.46)"; after two REVIEW-7 hardening passes (fern
+   * promoted to the aim band on 1/4/8 — the slate's fallback, fully spent
+   * — plus the Stand lengthened) Bracken measures +0.55 at N=400, +0.51
+   * at N=800, a 0.05 separation. Four passes across two designers agree
+   * corridor pricing cannot charge the mean-optimizer. The structure IS
+   * major-grade (4 REAL, the pool's largest timidity tax); the strokes
+   * are not. The review ordered the flag stripped — and schedule.test
+   * pins "majors draw major-capable courses" across every season while
+   * THE PGA (event 11) pins here, so clearing this bit breaks a sim
+   * invariant in files outside course-data fences. The bit therefore
+   * stays SET on the pin's credit, not the course's. Owner decision
+   * named in COURSE-REVIEW-7 §3.3; earn-back pre-registered there:
+   * ≥ +0.75 at N=800 with ≥ 3 REAL and the front-four bar, by a
+   * mechanism that is not more corridor. fieldShift re-measured for the
+   * new mean (fieldcheck sweep, target −0.26): −0.034 → −0.018.
+   */
+  brackenridge: course('brackenridge', 'Bracken Ridge', BRACKEN_RIDGE, -0.018, 'brutal', true, false),
   rivermouth: course('rivermouth', 'Rivermouth', RIVERMOUTH, -0.009, 'standard', false, false),
 }
 

@@ -166,12 +166,41 @@ export const SALT_FLATS: readonly HoleSpec[] = [
     // (240–270), so the Bomb's tail is honestly a quarter shaded — a drawn
     // gamble the appetites can price apart — while the Mid Iron still lays
     // 70 short of it and flies an owned 133 over.
+    // v9 (REVIEW-7, the tee-census diagnosis — one attempt, kill criterion
+    // pre-registered in the review if it misses). Two findings, measured:
+    // (1) v8's "quarter-shaded tail" applied THE WATER CLAUSE TO CRUST.
+    // Crust holds what pitches in it (rollAfterPitch cuts the run 60% and
+    // the ball rests where it stuck), so the honest picture of a crust
+    // carry is the PITCH band against the far edge — and at 240–270 the
+    // Bomb's pitch band (252–278) was two-thirds shaded, not a quarter.
+    // Not a tempter; a sucker punch, and the census shows every appetite
+    // except aggressive's 22% simply declined it (35% of those Bombs
+    // pitched in). (2) The route everyone actually played — a 200-yard
+    // iron aimed left — was FREE: it pitches at ~200 and the pan didn't
+    // start until 228. The "long way round" the note advertises was never
+    // priced. So: slab moved 12 shallower (228–258, far edge a true
+    // quarter into the Bomb's pitch band — the drawn gamble v8 intended,
+    // computed on the right band this time), and the pan grown shallower
+    // (188–312) so the left-iron dodge pays the pan's price at its own
+    // pitch depth. The Mid Iron lay (rest ~170, 58 short of the slab,
+    // owned ~131 over the top) is untouched — the safe road stays open.
+    // Predicted before measurement: gap 0.35–0.55, split 65–75, mixed
+    // −0.15..+0.10, aggressive best via the Bomb.
+    // MEASURED: 0.33/65 (N=400), 0.34/67 (N=800), mixed −0.07/−0.03 — a
+    // knife-edge MISS, and the census says the diagnosis executed: the
+    // left iron died, the naked Bomb returned as aggressive's priced
+    // gamble (24% share, −0.38, 18% pitch-shaded). The routes are finally
+    // priced apart and the gap still stops a hundredth short, because at
+    // 300 yards every route's floor is a birdie look (COURSE-TODO: the
+    // ladder, not the hazards). v9 stays — it is the honest version — and
+    // REVIEW-7 pre-registers the kill criterion: no further geometry on
+    // the 300-yard tempter shape; the next SF6 change must be a new brief.
     num: 6, par: 4, length: 300, name: 'The Mirage',
     corridor: [{ at: 0, half: 23 }, { at: 190, half: 19 }, { at: 300, half: 17 }],
     greenRadius: 13, greenSide: 12,
     hazards: [
-      { surface: 'ob', at: { down: 270, side: -21 }, rDown: 42, rSide: 7 },
-      { surface: 'deep', at: { down: 255, side: 11 }, rDown: 15, rSide: 12 },
+      { surface: 'ob', at: { down: 250, side: -21 }, rDown: 62, rSide: 7 },
+      { surface: 'deep', at: { down: 243, side: 11 }, rDown: 15, rSide: 12 },
     ],
     note: 'Three hundred through the shimmer, and the shimmer is hiding something. Fly it all or go the long way round. The salt does not negotiate.',
   },
