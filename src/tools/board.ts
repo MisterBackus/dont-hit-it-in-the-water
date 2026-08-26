@@ -68,9 +68,18 @@ const rows: Row[] = []
 const notes: string[] = []
 if (existsSync(RUNS)) {
   for (const f of readdirSync(RUNS).filter(f => f.endsWith('.json'))) {
-    const r = replay(basename(f, '.json'), readFileSync(join(RUNS, f), 'utf8'))
-    if (typeof r === 'string') notes.push(r)
-    else rows.push(r)
+    const name = basename(f, '.json')
+    const raw = readFileSync(join(RUNS, f), 'utf8')
+    // a file is either one run or a bundle {runs:[...]} — the archive export
+    let parsed: unknown
+    try { parsed = JSON.parse(raw) } catch { notes.push(`${name}: not JSON`); continue }
+    const bundle = (parsed as { runs?: unknown[] }).runs
+    const each = Array.isArray(bundle) ? bundle : [parsed]
+    each.forEach((run, i) => {
+      const r = replay(i ? `${name}-${i + 1}` : name, JSON.stringify(run))
+      if (typeof r === 'string') notes.push(r)
+      else rows.push(r)
+    })
   }
 }
 

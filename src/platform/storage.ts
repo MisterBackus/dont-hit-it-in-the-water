@@ -47,3 +47,34 @@ export function persistSave(seed: number, actions: readonly Action[]): void {
 export function clearSave(): void {
   try { localStorage.removeItem(KEY) } catch { /* as above */ }
 }
+
+/**
+ * THE ARCHIVE — no season is ever destroyed by starting another.
+ *
+ * Learned the hard way in the first playtest: friends played whole seasons
+ * and restarted, and every restart overwrote the only record. Now RESTART
+ * files the outgoing run here first. Local-only like everything else — the
+ * game never phones home — but one "Copy all my seasons" carries the whole
+ * archive in a single paste. Capped to the newest 40 runs for quota sanity.
+ */
+const ARCHIVE_KEY = 'dont-hit-it-in-the-water/archive'
+const ARCHIVE_CAP = 40
+
+export function archiveRun(seed: number, actions: readonly Action[]): void {
+  if (actions.length < 5) return // an untouched season is not a season
+  try {
+    const arch = loadArchive()
+    arch.push({ version: SAVE_VERSION, seed, actions })
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(arch.slice(-ARCHIVE_CAP)))
+  } catch { /* quota or unavailable — the live save still stands */ }
+}
+
+export function loadArchive(): SaveFile[] {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}

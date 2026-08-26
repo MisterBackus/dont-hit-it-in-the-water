@@ -23,7 +23,7 @@ import { HoleView } from './HoleView'
 import { Leaderboard } from './Leaderboard'
 import { standings } from '../sim/resolve/field'
 import { ShotButton, TechButton, DeckPanel } from './Cards'
-import { SAVE_VERSION, loadSave, persistSave } from '../platform/storage'
+import { SAVE_VERSION, archiveRun, loadArchive, loadSave, persistSave } from '../platform/storage'
 import { useGameAudio } from './sound'
 
 const START_SEED = 20260824
@@ -74,7 +74,11 @@ export function App() {
   const dispatch = (a: Action) => {
     rawDispatch(a)
     const log = logRef.current
-    if (a.type === 'RESTART') { log.seed = a.seed; log.actions = [a] }
+    if (a.type === 'RESTART') {
+      // no season is destroyed by starting the next one (storage.ts ARCHIVE)
+      archiveRun(log.seed, log.actions)
+      log.seed = a.seed; log.actions = [a]
+    }
     else log.actions.push(a)
     persistSave(log.seed, log.actions)
   }
@@ -84,7 +88,13 @@ export function App() {
   const [copied, setCopied] = useState(false)
   const copyRun = () => {
     const log = logRef.current
-    const blob = JSON.stringify({ version: SAVE_VERSION, seed: log.seed, actions: log.actions })
+    const current = { version: SAVE_VERSION, seed: log.seed, actions: log.actions }
+    const arch = loadArchive()
+    // one paste carries EVERYTHING this browser ever played — the current
+    // run plus every archived season. The board and runstats read bundles.
+    const blob = JSON.stringify(
+      arch.length ? { version: SAVE_VERSION, runs: [...arch, current] } : current,
+    )
     navigator.clipboard.writeText(blob).then(
       () => { setCopied(true); setTimeout(() => setCopied(false), 2500) },
       () => {},

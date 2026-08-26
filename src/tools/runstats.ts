@@ -89,8 +89,17 @@ const RUNS = join(import.meta.dirname ?? __dirname, '..', '..', 'runs')
 const skipped: string[] = []
 if (existsSync(RUNS)) {
   for (const f of readdirSync(RUNS).filter(f => f.endsWith('.json'))) {
-    const note = mine(basename(f, '.json'), readFileSync(join(RUNS, f), 'utf8'))
-    if (note) skipped.push(note)
+    const name = basename(f, '.json')
+    const raw = readFileSync(join(RUNS, f), 'utf8')
+    // single run or an archive bundle {runs:[...]} — mine every season in it
+    let parsed: unknown
+    try { parsed = JSON.parse(raw) } catch { skipped.push(`${name}: not JSON`); continue }
+    const bundle = (parsed as { runs?: unknown[] }).runs
+    const each = Array.isArray(bundle) ? bundle : [parsed]
+    each.forEach((run, i) => {
+      const note = mine(i ? `${name}-${i + 1}` : name, JSON.stringify(run))
+      if (note) skipped.push(note)
+    })
   }
 }
 
