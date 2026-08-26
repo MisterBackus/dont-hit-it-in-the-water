@@ -931,6 +931,11 @@ function advance(state: GameState): GameState {
   }
 
   if (state.phase === 'payout') {
+    // After the finale there is nothing left to buy for — the owner hit the
+    // dead shop the first night the epilogue existed. Straight to the review.
+    // (Old v9 logs with trailing shop actions replay as no-ops; gross is
+    // unmoved either way, so verified rows stand.)
+    if (state.event >= EVENT_COUNT) return produce(state, d => { d.phase = 'over' })
     // the shop is open whether or not you made the cut — you may have nothing
     // to spend, which is its own kind of pressure
     return stock(state)

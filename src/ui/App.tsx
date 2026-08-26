@@ -337,7 +337,7 @@ export function App() {
           <div><b>{s.event}/{EVENT_COUNT}</b><span>events played</span></div>
         </div>
         <button className="big" onClick={() => dispatch({ type: 'NEXT' })}>
-          {made ? 'To the bag' : 'On to the next one'}
+          {s.event >= EVENT_COUNT ? 'How the year went' : made ? 'To the bag' : 'On to the next one'}
         </button>
         <Leaderboard rows={board} window={8} thruTotal={holeCount(s)}
           title="Final leaderboard" />
