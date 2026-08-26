@@ -17,10 +17,15 @@ import type { HoleSpec } from '../../sim/types'
  * OB is the resort itself, down one side of the last, because somebody always
  * finds the pool deck.
  *
- * Tier: gentle. Opener-safe at cone ×1.40, check-week-safe.
- * ORDER (the funding law, REVIEW-5/6): funds at 3 and 6, each directly
- * upstream of an ask (4, 7); mercy at 8; no fork chains. The opener is nearly
- * free because event 1 is the one week the whole field is loose.
+ * Tier: gentle. Check-week-safe; the opener is nearly free because event 1 is
+ * the one week the whole field is loose.
+ * ORDER (the funding law, REVIEW-5/6): the loose opener funds the 2nd (the
+ * cape, the course's front-four ask since CHANGES-8); funds at 3 and 6, each
+ * directly upstream of an ask (4, 7); mercy at 8; no fork chains. Safe play
+ * pays here — +0.56 a round at ×1.40 (CHANGES-8), most of it on the 2nd —
+ * which is the identity question priced, not a tier violation: the timid
+ * player is charged for refusing, the loose one is handed the largest
+ * appetite gap in the pool (safe +0.56 vs aggressive −1.29, 1.85 strokes).
  *
  * Subtraction uses the FINISHING ladder: 277/255/208/170/133/105/94/70/58/55/35.
  */
@@ -43,31 +48,51 @@ export const PALMETTO: readonly HoleSpec[] = [
     note: 'They comp the first one. Big drive leaves a flop, easy drive leaves a wedge. Order whichever you like.',
   },
   {
-    // The first string. Bomb leaves 59 (Splash, four short); Stinger leaves 81
-    // (cut-down wedge, wider). The lagoon runs the left of the Bomb zone, near
-    // edge ~14 off the line — the pin line (green offset −8) hangs the Bomb's
-    // left band over it; the bail right finds the bermuda island, which grabs
-    // the leave, not the scorecard. Aim fork, gentle stakes. REAL candidate.
-    // v2 (measured 0.14/65 — split showed up, price didn't: the strip was 17
-    // off the line and 80 long, and nothing that chose the pin line actually
-    // paid). The slate's own registered fix, inverted for direction: the
-    // severity is not the variable, the DISTANCE OFF THE LINE is. Near edge
-    // 17 → 14, strip 80 → 90 long. Nothing else moves.
-    // v3 (0.14/65 again — the strip move bought nothing, because both leaves
-    // are wedges and the eval between a 59 and an 81 is pocket change; the
-    // fork needs the LAGOON in both shots, not just the drive). The strip now
-    // runs all the way to the green's left flank (down 225–345), so the
-    // pin-side line pays on the drive AND hangs the approach's left band over
-    // water, while the bail putts from the fringe forever. Second and last
-    // iteration — if it stays flat it goes to the reviewer as a miss.
-    num: 2, par: 4, length: 336, name: 'Brochure',
-    corridor: [{ at: 0, half: 25 }, { at: 220, half: 23 }, { at: 336, half: 20 }],
-    greenRadius: 14, greenSide: -8,
+    // REBUILT (CHANGES-8, paying REVIEW-7 §5's ordered debt: one front-four
+    // REAL). Brochure died 0.09/65 across three slate passes because at 336
+    // every route left a wedge — finding 1, terminal. The rebuild carries the
+    // yards the class ladder needs (407) and turns the lagoon into the cape
+    // the owner's favorite pattern asks for (Rivermouth's Bite, made DISCRETE
+    // — the Ferry lesson): playing short is a priced POSITION, not a
+    // chicken-out.
+    //
+    // One lagoon, two lobes and a dry seam, cut diagonally across the second
+    // fairway. The pin line (green −10) leans over the deep left lobe.
+    // Routes by SHOT CLASS:
+    //   BUY — naked Bomb at the pin: rest band 264–290 clears the shallow
+    //   lobe (ends 216) and skips C's far edge (267); its LEFT band is over
+    //   the deep lobe (240–284, rest-judged) — a drawn fraction, no
+    //   dice-doubt. Leaves ~130: the owned Short Iron, exact. Bail right
+    //   buys dry and pays rough plus the longer diagonal.
+    //   POSITION — the tight lay (LI+Choke, 183, leave ~224) keeps the
+    //   one-shot argument at its worst proximity; the naked LI must thread
+    //   LEFT of the seam or its rest band (198–218) is caught in lobe A —
+    //   the lazy long road pays.
+    //   CONCEDE — Mid Iron, 170, dry by a mile, leave ~237: past the
+    //   two-shot cliff. A whole class, posted.
+    //   REFUSED — the Stinger: pitch band into A by the pitch rule, rest
+    //   band (244–266) into finger C. The namesake card drowns in the
+    //   photograph.
+    // Drop-shadow audit (the Toll's lesson, done before measuring): A's
+    // side-0 span is 198–214; its own drops (≤191), B's (215–259; B never
+    // reaches side 0) and C's (214–242) all land dry.
+    //
+    // MEASURED (CHANGES-8, pass 1 — no iteration needed): 0.45/78 at N=400
+    // AND at N=800, digit-identical — REAL, the front four's first. Safe
+    // +0.74, mixed +0.29, aggressive +0.41: safe pays the class for laying
+    // (as pre-registered), mixed threads best, aggressive buys the cape and
+    // pays B's drawn fraction (prediction said aggressive best — half-miss,
+    // recorded). Predicted gap 0.40–0.60 ✓, split 65–78 ✓, mixed +0.00..
+    // +0.25 (measured +0.28..+0.29, a hair over).
+    num: 2, par: 4, length: 407, name: 'Two-Page Spread',
+    corridor: [{ at: 0, half: 25 }, { at: 260, half: 22 }, { at: 407, half: 20 }],
+    greenRadius: 14, greenSide: -10,
     hazards: [
-      { surface: 'water', at: { down: 285, side: -21 }, rDown: 60, rSide: 7 },
-      { surface: 'rough', at: { down: 265, side: 19 }, rDown: 42, rSide: 7 },
+      { surface: 'water', at: { down: 212, side: 14 }, rDown: 12, rSide: 22 },
+      { surface: 'water', at: { down: 262, side: -34 }, rDown: 22, rSide: 26 },
+      { surface: 'water', at: { down: 253, side: 16 }, rDown: 14, rSide: 14 },
     ],
-    note: 'The lagoon on the left is on the cover of the brochure. So is the pin. That is not a coincidence.',
+    note: 'The lagoon takes up both pages of the brochure. Carry the deep end at the pin, thread the seam, or lay back and read the caption twice.',
   },
   {
     // Funding round for the 4th, per the sequencing law. Everything reaches —
