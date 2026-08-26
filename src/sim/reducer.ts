@@ -500,13 +500,17 @@ function engage(state: GameState): GameState {
     switch (e.kind) {
       case 'sure':
         applyOutcome(d, e.outcome, 0)
+        // the result gets its moment on the next tee, not a line in a log
+        d.lastEncounter = { text: `${enc.name} — ${e.outcome.line}`, tone: e.outcome.tone, holeIndex: d.scores.length }
         break
       case 'gamble': {
         const [r, r1] = rollEvents(d.rng.events)
         const [which, r2] = rollEvents(r1)
         d.rng = { ...d.rng, events: r2 }
         const pool = r < e.odds ? e.win : e.lose
-        applyOutcome(d, pool[Math.floor(which * pool.length)]!, 0)
+        const o = pool[Math.floor(which * pool.length)]!
+        applyOutcome(d, o, 0)
+        d.lastEncounter = { text: `${enc.name} — ${o.line}`, tone: o.tone, holeIndex: d.scores.length }
         break
       }
       case 'bet':
@@ -547,8 +551,14 @@ function settleBet(draft: Draft<GameState>, rel: number, hole: number): void {
   const outcome = verdict === 'win' ? bet.win : verdict === 'lose' ? bet.lose : bet.push
   if (outcome) {
     applyOutcome(draft, outcome, hole)
-    // the payoff belongs on the holed-out screen, next to the score it rode on
+    // owner playtest: "after i win the bet with the kid, give me a prompt
+    // that he pays up" — the settlement is a headline on the holed screen
+    // (the marker prefix is what the UI looks for), not a whisper in a log
+    const last = draft.log[draft.log.length - 1]
+    if (last) last.text = `The bet settles — ${last.text}`
     draft.lastShot = draft.lastShot ? `${draft.lastShot} ${outcome.line}` : outcome.line
+  } else {
+    draft.log.push({ hole, text: 'The bet settles — a push. Nobody pays, nobody crows.', tone: 'flat' })
   }
   draft.pendingBet = null
 }

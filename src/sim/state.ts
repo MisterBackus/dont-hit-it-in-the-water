@@ -101,6 +101,12 @@ export interface GameState {
   readonly encounterOffer: string | null
   /** a side bet riding on the next holed-out — one at a time, then cleared */
   readonly pendingBet: PendingBet | null
+  /**
+   * The last encounter's immediate outcome, shown as a banner on the tee it
+   * was dealt onto (owner playtest: a gamble's result must get its moment,
+   * not vanish into the log). Keyed by holeIndex so it shows exactly once.
+   */
+  readonly lastEncounter: { readonly text: string; readonly tone: 'good' | 'bad' | 'flat'; readonly holeIndex: number } | null
   /** free putt-holes remaining this round (Lucky Ball Marker) */
   readonly freeSinks: number
   /** the week's field, advancing hole by hole alongside you */
@@ -160,6 +166,7 @@ export function initialState(seed: number): GameState {
     boostOffer: [],
     encounterOffer: null,
     pendingBet: null,
+    lastEncounter: null,
     freeSinks: 0,
     field: [],
     justShuffled: false,

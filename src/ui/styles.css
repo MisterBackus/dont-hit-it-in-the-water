@@ -84,6 +84,12 @@ button:focus-visible{outline:2px solid var(--cone);outline-offset:2px}
 .shotline.big-news{border-left-color:var(--good)}
 .holed{font-family:var(--fd);font-weight:700;font-size:20px;padding:4px 0}
 .momentum{font-size:13px;color:var(--good);padding:0 0 4px}
+.betline{font-family:var(--fd);font-weight:700;font-size:14px;padding:2px 0 6px}
+.betline.good{color:var(--good)} .betline.bad{color:var(--bad)} .betline.flat{color:var(--soft)}
+.encounterline{font-family:var(--fm);font-size:12.5px;letter-spacing:.02em;border:1px dashed var(--line);
+  border-radius:3px;padding:8px 12px;margin-bottom:12px;color:var(--soft)}
+.encounterline.good{color:var(--good);border-color:var(--good)}
+.encounterline.bad{color:var(--bad);border-color:var(--bad)}
 .boostlist{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 @media(max-width:640px){.boostlist{grid-template-columns:1fr}}
 .boostrow{display:flex;gap:9px;align-items:flex-start;background:var(--panel);

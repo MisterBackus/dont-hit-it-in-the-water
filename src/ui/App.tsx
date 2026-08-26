@@ -647,6 +647,12 @@ export function App() {
         <div className="shuffled">Bag reshuffled — everything you have used is back in.</div>
       )}
 
+      {/* what just happened on the walk here — an encounter's result gets its
+          moment on the tee it was dealt onto, then gets out of the way */}
+      {s.lastEncounter && s.lastEncounter.holeIndex === s.hole.index && s.hole.strokes === 0 && (
+        <div className={`encounterline ${s.lastEncounter.tone}`}>{s.lastEncounter.text}</div>
+      )}
+
       <div className="board">
         <div className="figure">
           <HoleView hole={hole} ball={s.hole.ball} cone={pv?.cone ?? null}
@@ -701,6 +707,10 @@ export function App() {
               {s.log.some(l => l.hole === hole.num && l.text.startsWith('Momentum')) && (
                 <div className="momentum">◆◆ Momentum — focus comes back faster after a good hole</div>
               )}
+              {/* the bet pays up in headline type, per the owner's note */}
+              {s.log.filter(l => l.hole === hole.num && l.text.startsWith('The bet settles')).map((l, i) => (
+                <div key={i} className={`betline ${l.tone}`}>{l.text}</div>
+              ))}
               <button className="big flowact" onClick={() => dispatch({ type: 'NEXT' })}>
                 {s.scores.length === holeCount(s) ? 'Sign your card' : 'Next hole'}
               </button>
