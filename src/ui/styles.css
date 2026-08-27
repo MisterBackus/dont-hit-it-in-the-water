@@ -1002,3 +1002,23 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 .tech.off .techcone{opacity:.55}
 /* the cost pip sat top-right; the diagram now lives there, so it moves down */
 .tech-cost{top:auto;bottom:8px}
+
+/* ============================================== the way out of a season
+   RESTART lived only on the epilogue, so a season you had stopped caring
+   about could be ended only by clearing browser storage. It arms first,
+   the same two-step as a withdrawal, because it is the one destructive
+   thing reachable mid-round — and it destroys nothing: the run is
+   archived on the way past (App.tsx) and can still reach the board. */
+.drawerquit{display:block;width:100%;margin-top:var(--s2);color:var(--faint)}
+.drawerquit:hover{color:var(--bad)}
+.drawerquit-arm{margin-top:var(--s3);padding-top:var(--s3);
+  border-top:1px solid var(--hairline)}
+.drawerquit-arm p{font-size:var(--t-fine);color:var(--soft);line-height:1.4;
+  margin:0 0 var(--s3)}
+.drawerquit-row{display:flex;gap:var(--s2);align-items:center}
+.drawerquit-row .ghost{flex:0 0 auto}
+.drawerquit-row .danger{flex:1 1 auto;font-family:var(--fm);
+  font-size:var(--t-fine);letter-spacing:var(--ls-caps);text-transform:uppercase;
+  padding:var(--s2) var(--s3);border-radius:var(--r);
+  background:var(--tint-bad);border:1px solid var(--bad);color:var(--bad)}
+.drawerquit-row .danger:hover{background:var(--bad);color:var(--on-ink)}

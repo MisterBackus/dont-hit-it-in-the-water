@@ -132,7 +132,7 @@ export function Play({ s, dispatch, copyRun, copied }: {
       </header>
 
       {showDeck && <BagDrawer s={s} copyRun={copyRun} copied={copied}
-        close={() => setShowDeck(false)} />}
+        dispatch={dispatch} close={() => setShowDeck(false)} />}
 
       {s.justShuffled && s.hole.strokes === 0 && (
         <div className="banner shuffled">
@@ -396,9 +396,13 @@ function Scorecard({ s, holed }: { s: GameState; holed: boolean }) {
  * with its blurb, and the board copy button — because the submission IS the
  * action log, so mid-round is a legal paste.
  */
-function BagDrawer({ s, copyRun, copied, close }: {
+function BagDrawer({ s, copyRun, copied, close, dispatch }: {
   s: GameState; copyRun(): void; copied: boolean; close(): void
+  dispatch: (a: Action) => void
 }) {
+  // Quitting is the one destructive thing reachable mid-round, so it arms
+  // first — the same two-step the schedule screen uses for a withdrawal.
+  const [armed, setArmed] = useState(false)
   const ids = deckList(s)
   const counts = new Map<string, number>()
   for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
@@ -478,6 +482,30 @@ function BagDrawer({ s, copyRun, copied, close }: {
       <button className="ghost drawershare" onClick={copyRun}>
         {copied ? 'Copied — paste it in the chat' : 'Copy this run for the board'}
       </button>
+
+      {/* THE WAY OUT. There has never been one: RESTART lived only on the
+          epilogue, so a season you had lost interest in could only be ended
+          by clearing browser storage. Nothing is destroyed by it — the
+          dispatcher archives the run before the new one starts (App.tsx),
+          which is the same path that lets you still post it to the board. */}
+      {!armed ? (
+        <button className="ghost drawerquit" onClick={() => setArmed(true)}>
+          Give up the season
+        </button>
+      ) : (
+        <div className="drawerquit-arm">
+          <p>This season goes to the archive — you can still copy it for the
+            board afterwards. A new one starts from the first tee.</p>
+          <div className="drawerquit-row">
+            <button className="ghost" onClick={() => setArmed(false)}>Keep playing</button>
+            <button className="danger" onClick={() => {
+              setArmed(false)
+              close()
+              dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7 })
+            }}>Yes — end the season</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
