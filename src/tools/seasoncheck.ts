@@ -9,6 +9,7 @@
  * This measures the gap. Run: npx tsx src/tools/seasoncheck.ts
  */
 import { COURSES, type Course } from '../content/courses'
+import { SEASON } from '../content/season'
 import { scheduleFor } from '../sim/schedule'
 import { HAND_SIZE, PUNCH_OUT, REDRAW_COST, STARTING_DECK, CARD } from '../content/cards'
 import { buildCone, focusRegen } from '../sim/effects'
@@ -92,8 +93,12 @@ const CUT = [0, 0, 0, 0, 0, 0, 0, -1, -1, -2, -2, -3, -3, -4]
 
 function run(label: string, sharpnessAt: (ev: number) => number, cut: readonly number[] = CUT) {
   console.log(`\n${label}`)
-  console.log('  ev   cone×   cut   median thru4   makes the cut')
-  console.log('  ' + '-'.repeat(46))
+  // MEAN rel is printed beside the median because the median of a four-hole
+  // score is an integer piled on about four values (DESIGN.md §3.4b) — far
+  // too coarse to price a cone change in strokes. SHARPNESS.md's R2 reads
+  // the 8-hole mean column.
+  console.log('  ev   cone×   cut   median thru4   mean thru4   mean 8   makes the cut')
+  console.log('  ' + '-'.repeat(72))
   const rates: number[] = []
   for (let ev = 1; ev <= EVENTS; ev++) {
     const sh = sharpnessAt(ev)
@@ -108,10 +113,14 @@ function run(label: string, sharpnessAt: (ev: number) => number, cut: readonly n
     // THE CUT IS JUDGED ON FOUR HOLES — measure what the game actually does
     const made = rounds.filter(r => r.front4 <= cut[ev - 1]!).length / rounds.length * 100
     rates.push(made)
+    const mean4 = rounds.reduce((a, r) => a + r.front4, 0) / rounds.length
+    const mean8 = rounds.reduce((a, r) => a + r.full, 0) / rounds.length
     console.log(
       `  ${String(ev).padStart(2)}   ${sh.toFixed(2)}   ` +
       `${(cut[ev - 1]! === 0 ? 'E' : String(cut[ev - 1])).padStart(3)}    ` +
-      `${((med >= 0 ? '+' : '') + med).padStart(9)}      ${made.toFixed(0).padStart(3)}%`,
+      `${((med >= 0 ? '+' : '') + med).padStart(9)}   ` +
+      `${mean4.toFixed(2).padStart(10)}   ${mean8.toFixed(2).padStart(6)}      ` +
+      `${made.toFixed(0).padStart(3)}%`,
     )
   }
   const drop = rates[0]! - rates[rates.length - 1]!
@@ -126,7 +135,16 @@ const WIDE   = (ev: number) => 1.60 - (ev - 1) / (EVENTS - 1) * 0.85
 const CURVE_A = [1, 1, 1, 1, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1]
 const CURVE_B = [2, 2, 1, 1, 1, 0, 0, 0, 0, -1, -1, -1, -2, -2]
 
+/**
+ * D — THE SHIPPED CURVE, whatever season.ts currently says (SHARPNESS.md).
+ * A is the old written line (1.40→0.80 to the finale); D reads the live
+ * array, so A vs D prices the free ramp's flattening IN STROKES, which is
+ * the one thing shopcheck's money numbers cannot say out loud.
+ */
+const SHIPPED = (ev: number) => SEASON[ev - 1]!.sharpness
+
 run('A · sharpness 1.40→0.80, cut +1…-1', NARROW, CURVE_A)
 run('B · sharpness 1.60→0.75, cut +1…-1', WIDE, CURVE_A)
 run('C · sharpness 1.60→0.75, cut +2…-2', WIDE, CURVE_B)
+run('D · sharpness LIVE (season.ts), cut +1…-1', SHIPPED, CURVE_A)
 console.log('\n  Target: opens near 65-70%, ends near 25-30%.\n')

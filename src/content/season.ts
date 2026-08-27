@@ -128,14 +128,67 @@ const ADVANCE_CURVE = [44, 41, 39, 36, 34, 31, 28, 26, 23, 21, 18, 15, 13, 10] a
  */
 const FIELD_LIFT = 0.30
 
+/**
+ * SHARPNESS — THE FREE RAMP, MEASURED AT LAST (SHARPNESS.md, 27 Aug 2026,
+ * PLAYTEST-NOTES-1 note 11).
+ *
+ * What this used to be: a straight line ×1.40 → ×0.80 across the fourteen
+ * events — cones narrowing 43% a season, about 4% a week, on every club in
+ * the bag, for free. It was WRITTEN, never measured, and it was the largest
+ * lever in the game: Forged Wedges are ×0.55 but only inside the short band,
+ * the Golden Driver ×0.66 only past 200 yards, while the calendar handed out
+ * ×0.57 on every shot at no cost and with no decision. A large share of
+ * "getting better" was time passing, which is P7's opposite.
+ *
+ * What it is now: **the line falls five hundredths a week for nine weeks and
+ * then stops** — ×1.40 at event 1 down to ×0.95 at event 10, FLAT through the
+ * finale. You still start the season a worse golfer (§3.4a's whole point, and
+ * the spring is untouched to within a hundredth), the free gains all land
+ * early, and the last five events — two majors among them — hand out nothing.
+ * Late-season power is something you BOUGHT.
+ *
+ * Derived by shopcheck sweep against the live world (stars on, offer stream,
+ * budget 6, 36-hole scorecard with the full tie split, live MONEY_CHECKS;
+ * 250-season brackets over 16 cells, then 400/policy on the finalists; the
+ * SHKNEE/SHFLOOR knob shopcheck and cutcheck carry). Two shapes were swept,
+ * as note 11 ordered:
+ *   (a) shallower overall — the same straight line ending at ×0.90…×1.05
+ *   (b) front-loaded then flat — knee at event 6, 8 or 10, then level
+ * and the measurement, not the recommendation, chose:
+ *   - The 45–60% late-season win band is a CEILING ON THE FLOOR, not a free
+ *     parameter: at ×1.00 the strong player reads 44% of weekends won at 400
+ *     seasons, just outside the band. ×0.95 reads 48% — mid-band — so ×0.95
+ *     is the deepest honest cut to the free ramp.
+ *   - A knee EARLIER than 10 wrecks the spring in the other direction: at
+ *     knee 6 the free gains land so fast that check 1's kill collapses to
+ *     30% against its calibrated 44 (the spring got EASIER, which is still
+ *     the spring moving). Knee 10 keeps events 1–9 within a hundredth of the
+ *     old line, so checks 1 and 2 — which read events 5 and 9 — never see it.
+ *   - Shape (a) buys less for the same price: at equal late win rate (45%)
+ *     it removes 7 fewer points of free ramp and takes its bite out of the
+ *     spring rather than the fall.
+ * Measured at the live triple, 400 seasons: kills 43/37/1, survival mixed
+ * 36% · aggressive 27% · safe 1% · mixed hoarder 5% — the calibrated world,
+ * unmoved, because the change lands entirely after check 2. The cut squeeze
+ * deepens exactly where it should (mixed make-cut finale 49% → 42%, events
+ * 1–6 digit-identical; cutcheck N=400).
+ */
+const SHARP_START = 1.40
+const SHARP_FLOOR = 0.95
+const SHARP_KNEE = 10
+export function sharpnessAt(num: number): number {
+  const slope = (SHARP_START - SHARP_FLOOR) / (SHARP_KNEE - 1)
+  return Math.round(Math.max(SHARP_FLOOR, SHARP_START - (num - 1) * slope) * 100) / 100
+}
+
 export const SEASON: readonly EventSpec[] = NAMES.map((name, i) => {
   const num = i + 1
   const major = MAJORS.has(num)
   return {
     num, name, major,
     advance: ADVANCE_CURVE[i]!,
-    // ×1.40 at event 1 → ×0.80 at event 14
-    sharpness: Math.round((1.40 - (num - 1) / (NAMES.length - 1) * 0.60) * 100) / 100,
+    // ×1.40 at event 1 → ×0.95 at event 10, then flat (SHARPNESS.md)
+    sharpness: sharpnessAt(num),
     fieldStrength: Math.round(FIELD_LIFT * (num - 1) / (NAMES.length - 1) * 1000) / 1000,
     purse: major ? 20_000_000 : 9_000_000,
     pin: PINS[num],
@@ -319,6 +372,35 @@ export const EVENT_COUNT = SEASON.length
  * Sensitivity, third time recorded: these bars are honest to ±2 ONLY at
  * the exact live shelf and 400 fresh seasons (CALIBRATION-2 verdict 4);
  * this pass moved no price, so the shelf IS the calibrated one.
+ *
+ * RE-DERIVED A SEVENTH TIME — AND IT MOVED NOTHING (SHARPNESS.md, 27 Aug
+ * 2026, the closing calibration of the flattened sharpness ramp). The free
+ * cone ramp stopped being a straight line to ×0.80 and became ×1.40 ->
+ * ×0.95 by event 10, then FLAT; every prior pass in this comment moved
+ * bars because the world moved under them, and this one is the first where
+ * the sweep ran, the response was measured, and the honest answer was
+ * "these are already the numbers." The reason is structural rather than
+ * lucky: **the checks read events 5, 9 and 12, and the shipped shape holds
+ * events 1-9 within a hundredth of the old line**, so checks 1 and 2 never
+ * see the change and check 3's kill is pinned small by the invariant
+ * either way. Measured at the shipped curve (shopcheck, 400 seasons per
+ * policy, seeds 700000+, same shelf, same supply): kills 43 / 37 / 1
+ * (were 44 / 37 / 2), survival mixed 36%, aggressive 27%, safe 1%, mixed
+ * hoarder 5% — the ordering law whole, mixed over aggressive by nine and
+ * over the hoarder seven-fold, and mixed survival on the 36 target. The
+ * 250-season bracket around the triple reads the same response the last
+ * three passes recorded (check 2 is the wall: $9.5M/$9.8M/$10.1M/$10.4M
+ * buy 27/31/37/38 points of kill and 43/40/37/36 survival), so nothing
+ * inside a $100k grid step is worth chasing. The spring-rule instrument
+ * scores it: check 1's kill 44 -> 43, one point, well inside the ±4 the
+ * rule is quoted at and the ±2 these bars are honest to.
+ *
+ * ONE COUPLING THE NEXT READER MUST KNOW: encounter money is now derived
+ * as a FRACTION of the last check (encounters.ts STAKE_POINT = check 3 /
+ * 100), so every stake in that file follows this triple automatically —
+ * and shopcheck does not model encounters, so this derivation is blind to
+ * them. That was harmless while encounter money was rounding error; it is
+ * a real (small) coupling now, and it belongs to whoever next moves a bar.
  */
 export const MONEY_CHECKS: readonly { readonly after: number; readonly need: number }[] = [
   { after: 5, need: 2_600_000 },
@@ -509,8 +591,21 @@ const LADDER: readonly (readonly [number, number])[] = [
  * whole spring shrinks as a share): the extension pays the equipped back
  * half of the season hardest, exactly as FIELD-SPREAD §9 predicted, so
  * the fall carries a larger share of a bigger season.
+ *
+ * Re-measured at SHARPNESS.md (27 Aug 2026) from the same 400 seasons as
+ * that pass's calibration (seeds 700000+, the flattened ramp shipped):
+ * medians $121k $420k $1.18M $2.38M $3.34M $4.04M $6.51M $7.59M $8.81M
+ * $9.88M $12.64M $13.61M $14.48M $16.77M. The curve tilts back EARLIER by
+ * one to three points from event 5 on (0.73 -> 0.75 at 11, 0.78 -> 0.81 at
+ * 12) for the reason the pass exists: the free ramp now stops at event 10,
+ * so the fall is worth slightly less of a season whose spring is
+ * untouched. The season median moves $16.97M -> $16.77M, a 1.2% drift
+ * INSIDE the $750k tolerance the ladder re-anchors quote — and the LADDER
+ * is not re-scaled here anyway: it was re-anchored (PLAYTEST-NOTES-1 note
+ * 9) to the reachable maximum, a perfect season's $28.9M of purse money,
+ * and no purse moved in this pass.
  */
-const SHARE = [0.01, 0.02, 0.07, 0.14, 0.19, 0.23, 0.38, 0.45, 0.52, 0.58, 0.73, 0.78, 0.85, 1.00]
+const SHARE = [0.01, 0.03, 0.07, 0.14, 0.20, 0.24, 0.39, 0.45, 0.53, 0.59, 0.75, 0.81, 0.86, 1.00]
 
 /**
  * THE LIST IS THE FIELD YOU ALREADY SEE.

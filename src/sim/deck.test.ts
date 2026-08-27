@@ -21,7 +21,9 @@ import {
 import { MAX_FOCUS, courseOf, currentHole } from './state'
 import { toPin, greenCentre } from './geometry'
 import { buildCone, focusRegen, whyNotPlayable } from './effects'
-import { ENCOUNTERS, ENCOUNTER_BOOSTS } from '../content/encounters'
+import {
+  ENCOUNTER, ENCOUNTERS, ENCOUNTER_BOOSTS, STAKE_POINT, stakeMoney,
+} from '../content/encounters'
 import { SAVE_VERSION } from '../platform/storage'
 
 /** The opening hand across many seeds. */
@@ -385,6 +387,22 @@ describe('the season', () => {
     const first = SEASON[0]!, last = SEASON[SEASON.length - 1]!
     expect(first.sharpness).toBeGreaterThan(last.sharpness)   // you get better
     expect(first.advance).toBeGreaterThan(last.advance)       // fewer play on
+  })
+
+  test('the free sharpness ramp stops at event 10', () => {
+    // SHARPNESS.md (PLAYTEST-NOTES-1 note 11): the calendar hands out five
+    // hundredths a week for nine weeks and then NOTHING. The old line ran
+    // ×1.40 → ×0.80 all the way to the finale — 43% of free cone, larger
+    // than anything on the shelf, with no cost and no decision. The flat
+    // tail is the shipped claim ("late-season power is bought, not waited
+    // for") and the swept knee is what keeps checks 1–2 blind to it, so
+    // both ends and the flatness are pinned here rather than left to a
+    // comment.
+    expect(SEASON[0]!.sharpness).toBe(1.40)
+    expect(SEASON[9]!.sharpness).toBe(0.95)
+    for (let i = 9; i < SEASON.length; i++) {
+      expect(SEASON[i]!.sharpness).toBe(SEASON[9]!.sharpness)
+    }
   })
 
   test('the cut tightens by places, and never by a cliff', () => {
@@ -1328,7 +1346,28 @@ describe('the encounters', () => {
     ...teed(seed), phase: 'encounter' as const, encounterOffer: id, earnings: cash,
   })
 
-  test('the save version gate turned for the full scorecard', () => {
+  /* THE STAKES ARE READ, NEVER WRITTEN (ENCOUNTER-STAKES.md). Every money
+     assertion below resolves the content's POINTS through the same
+     stakeMoney the reducer uses, so re-anchoring the Money List moves the
+     game and its tests together — which is the whole point of the fix. */
+  const worth = (o: { readonly points?: number }) => stakeMoney(o.points ?? 0)
+  const sureOf = (id: string) => {
+    const e = ENCOUNTER[id]!.engage
+    if (e.kind !== 'sure') throw new Error(`${id} is not a sure thing`)
+    return e.outcome
+  }
+  const gambleOf = (id: string) => {
+    const e = ENCOUNTER[id]!.engage
+    if (e.kind !== 'gamble') throw new Error(`${id} is not a gamble`)
+    return e
+  }
+  const betOf = (id: string) => {
+    const e = ENCOUNTER[id]!.engage
+    if (e.kind !== 'bet') throw new Error(`${id} is not a bet`)
+    return e
+  }
+
+  test('the save version gate turned for the encounter stakes', () => {
     // v9: the season boost budget makes a seventh BUY illegal on replay,
     // and the tiered stock draws from the new shop rng stream
     // (SHOP-SUPPLY.md). v10: the junk spread floor (JUNK-VERDICT.md) —
@@ -1337,7 +1376,37 @@ describe('the encounters', () => {
     // the 36-hole week (salts 10/11) and pays the full real-tour tie
     // split at every rank, so a v10 log replays with different money
     // from the first settle.
-    expect(SAVE_VERSION).toBe(11)
+    // v12: THE ENCOUNTER STAKES (ENCOUNTER-STAKES.md) — applyOutcome reads
+    // POINTS of the live Money List demand instead of four written dollar
+    // constants, so a v11 log that took a fine, signed an autograph or shook
+    // the sandbagger's hand replays with different money. Draw counts are
+    // untouched everywhere (the same two 'events' rolls decide who shows,
+    // the same two settle a gamble), so the run is the same run — it just
+    // pays differently, exactly the v8 class of bump.
+    expect(SAVE_VERSION).toBe(12)
+  })
+
+  test('no dollar amount is written in the encounter content', () => {
+    // The bug this whole system was rebuilt around: four constants that six
+    // economy re-anchorings walked straight past. A stake is a FRACTION of
+    // the live final check now, so the checks moving moves the stakes, and
+    // the only way that can rot again is for someone to write a number here.
+    for (const e of ENCOUNTERS) {
+      const outcomes = e.engage.kind === 'sure' ? [e.engage.outcome]
+        : e.engage.kind === 'gamble' ? [...e.engage.win, ...e.engage.lose]
+          : [e.engage.win, e.engage.lose, ...(e.engage.push ? [e.engage.push] : [])]
+      for (const o of outcomes) {
+        // points are small integers; a dollar amount that slipped in as a
+        // point value would be absurd, and this is what says so out loud
+        if (o.points !== undefined) expect(Math.abs(o.points)).toBeLessThan(100)
+      }
+      // a bet's stake is points too, and its minWallet is that stake in money
+      if (e.engage.kind === 'bet' && e.minWallet !== undefined) {
+        expect(e.minWallet).toBe(stakeMoney(e.engage.stakePoints))
+      }
+    }
+    // and the point itself tracks the season's demand, not a literal
+    expect(STAKE_POINT).toBe(Math.round(MONEY_CHECKS[MONEY_CHECKS.length - 1]!.need / 100 / 1000) * 1000)
   })
 
   test('who shows up is decided by the seed, at roughly one cut in three', () => {
@@ -1390,7 +1459,7 @@ describe('the encounters', () => {
   test('the autograph is always the same honest trade', () => {
     const s = { ...meeting(7, 'autograph'), focus: 3 }
     const after = reduce(s, { type: 'ENGAGE' })
-    expect(after.earnings).toBe(s.earnings + 150_000)
+    expect(after.earnings).toBe(s.earnings + worth(sureOf('autograph')))
     expect(after.focus).toBe(2)
     expect(after.spent).toBe(s.spent)                 // winnings, not un-spending
   })
@@ -1405,7 +1474,8 @@ describe('the encounters', () => {
     for (const s of lost) expect(s.focus).toBe(1)     // the floor holds
     for (const s of won) {
       // the good outcome is one of exactly two: focus, or money into gross
-      const paid = s.earnings === 2_200_000
+      const find = gambleOf('portapotty').win.find(o => o.points !== undefined)!
+      const paid = s.earnings === 2_000_000 + worth(find)
       const steadied = s.focus === 3
       expect(paid || steadied).toBe(true)
     }
@@ -1423,8 +1493,10 @@ describe('the encounters', () => {
   })
 
   test('the sandbagger: stake now, verdict at the next holed-out', () => {
+    const bet = betOf('sandbagger')
+    const stake = stakeMoney(bet.stakePoints)
     const armed = reduce(meeting(31, 'sandbagger'), { type: 'ENGAGE' })
-    expect(armed.earnings).toBe(1_800_000)            // the stake left already
+    expect(armed.earnings).toBe(2_000_000 - stake)    // the stake left already
     expect(armed.pendingBet?.condition).toBe('birdie-or-better')
     expect(armed.phase).toBe('playing')
 
@@ -1433,7 +1505,8 @@ describe('the encounters', () => {
     const birdie = reduce({ ...armed,
       hole: { ...armed.hole, lie: 'green' as const, puttFeet: 4, strokes: par - 2 } },
       { type: 'PUTT', sink: false })
-    expect(birdie.earnings).toBe(2_300_000)           // $500k, into gross
+    // he pays the win on top of a stake already gone — into gross
+    expect(birdie.earnings).toBe(2_000_000 - stake + worth(bet.win))
     expect(birdie.pendingBet).toBe(null)
     expect(birdie.log.some(l => l.text.includes('He pays like he putts'))).toBe(true)
 
@@ -1441,7 +1514,7 @@ describe('the encounters', () => {
     const parred = reduce({ ...armed,
       hole: { ...armed.hole, lie: 'green' as const, puttFeet: 8, strokes: par - 2 } },
       { type: 'PUTT', sink: false })
-    expect(parred.earnings).toBe(1_800_000)           // the stake is his
+    expect(parred.earnings).toBe(2_000_000 - stake)   // the stake is his
     expect(parred.pendingBet).toBe(null)
     expect(parred.log.some(l => l.text.includes('does not gloat'))).toBe(true)
   })

@@ -173,9 +173,15 @@ This is the Balatro blind requirement, wearing a visor.
 
 | Check | After event | Threshold | Kill intent, of arrivals | Measured |
 |---|---|---|---|---|
-| First | 5 | **$2,600,000** | 44% — the spring rule's number | 44% |
+| First | 5 | **$2,600,000** | 44% — the spring rule's number | 43% |
 | Second | 9 | **$10,100,000** | 33% — the season's real wall | 37% |
-| Last | 12 | **$13,800,000** | ≤ 8% ceiling — a pace check; its teeth are the win the leg demands | 2% |
+| Last | 12 | **$13,800,000** | ≤ 8% ceiling — a pace check; its teeth are the win the leg demands | 1% |
+
+> **Measured column re-read at SHARPNESS.md (27 Aug 2026), bars unmoved.**
+> The seventh re-derivation is the first that moved nothing: the flattened
+> sharpness ramp holds events 1–9 within a hundredth of the old line, and
+> the checks read events 5, 9 and 12. Survival mixed 36% (target), aggressive
+> 27%, safe 1%, mixed hoarder 5%.
 
 **The last check is not after the last event, and that matters.** It used to be,
 and a check after the final tournament is not a checkpoint — it is a verdict on
@@ -251,6 +257,21 @@ rather than a bonus on top of an already-competent player.
 
 **Sharpness** is a single global multiplier on every cone: **×1.40 at event 1,
 falling to ×0.80 by event 14.**
+
+> **MEASURED AND RESHAPED (SHARPNESS.md, 27 Aug 2026 — PLAYTEST-NOTES-1 note
+> 11).** That line was written, never measured, and it was the largest lever
+> in the game: 43% of free cone across a season, on every club, beating
+> anything purchasable (Forged Wedges ×0.55 short only; the Golden Driver
+> ×0.66 past 200 yards). A large share of "getting better" was time passing,
+> which is P7's opposite. Two shapes were swept against the live world;
+> what ships is **×1.40 falling five hundredths a week to ×0.95 at event 10,
+> then FLAT to the finale** — the free gains all land early, the last five
+> events hand out nothing, and late-season power is something you bought.
+> Measured: the strong player's late-season win rate 49% → **48%** (inside
+> FIELD-CEILING's 45–60 band; at ×1.00 it falls out of it, which is what
+> set the floor), mixed make-cut finale 49% → **42%** with events 1–6
+> digit-identical, and the economy unmoved — the closing calibration
+> re-derived MONEY_CHECKS and moved nothing.
 
 ### 3.4b The cut is a PLACE, not a score
 

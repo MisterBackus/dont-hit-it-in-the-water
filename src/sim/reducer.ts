@@ -21,7 +21,8 @@ import {
   LESSON_FEE, PRACTICE_BIAS_UNTIL, PRACTICE_WEEK_IDS, WEEK, WEEKS, WEEKS_END_AT,
 } from '../content/weeks'
 import {
-  ENCOUNTER, ENCOUNTERS, ENCOUNTER_BOOSTS, ENCOUNTER_CHANCE, type Outcome,
+  ENCOUNTER, ENCOUNTERS, ENCOUNTER_BOOSTS, ENCOUNTER_CHANCE, stakeMoney,
+  type Outcome,
 } from '../content/encounters'
 import { next as rollEvents, next as rollShop, type RngState } from './rng'
 import { BOOST } from '../content/boosts'
@@ -84,8 +85,10 @@ export function handTechs(s: GameState): TechniqueCard[] {
 
 /**
  * Equipment PLUS the season's sharpness, which is a global cone multiplier that
- * starts at ×1.40 and tightens to ×0.80. You begin the season a worse golfer
- * than you end it — that is the progression axis (DESIGN.md §3.4a).
+ * starts at ×1.40 and tightens to ×0.95 by event 10 — and then stops, for the
+ * rest of the season (SHARPNESS.md). You begin the season a worse golfer than
+ * you end it — that is the progression axis (DESIGN.md §3.4a) — but the free
+ * half of it is spent by the fall, and everything after that is bought.
  */
 export function boostsOf(s: GameState) {
   const sharp: Boost = {
@@ -608,14 +611,20 @@ function maybeEncounter(state: GameState): GameState {
 /**
  * THE ONE INTERPRETER. Every encounter consequence — and both ends of a
  * settled bet — comes through here. The vocabulary is deliberately exactly
- * four words: focus (clamped to [1, maxFocus] like everywhere else), money
+ * four words: focus (clamped to [1, maxFocus] like everywhere else), points
  * (gains land in earnings, gross-consistent like the sponsor week; losses
  * clamp at an empty wallet), grantBoost (encounter-only superstitions), and
  * the log line that says what happened.
+ *
+ * POINTS, NOT DOLLARS (ENCOUNTER-STAKES.md): an encounter's money is a
+ * fraction of the live Money List demand, and this line is the one place
+ * in the game where that fraction becomes a number of dollars. Content
+ * cannot write a dollar amount, so encounter money can never again go
+ * stale while the economy re-anchors around it.
  */
 function applyOutcome(d: Draft<GameState>, o: Outcome, hole: number): void {
-  if (o.money !== undefined) {
-    d.earnings = Math.max(0, d.earnings + o.money)
+  if (o.points !== undefined) {
+    d.earnings = Math.max(0, d.earnings + stakeMoney(o.points))
   }
   if (o.grantBoost !== undefined && !d.boosts.includes(o.grantBoost)) {
     d.boosts.push(o.grantBoost)
@@ -653,7 +662,7 @@ function engage(state: GameState): GameState {
       }
       case 'bet':
         // the stake leaves now; the verdict waits for the next holed-out
-        d.earnings = Math.max(0, d.earnings - e.stake)
+        d.earnings = Math.max(0, d.earnings - stakeMoney(e.stakePoints))
         d.pendingBet = {
           condition: e.condition, win: e.win, lose: e.lose,
           push: e.push, reminder: e.reminder,

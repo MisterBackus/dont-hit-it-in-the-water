@@ -103,6 +103,25 @@ const KIT = Number(process.env.KIT ?? 1)
  * identity is prediction (b)'s receipt, re-runnable forever.
  */
 const EXT = Number(process.env.EXT ?? FULL_HOLES - 8)
+/**
+ * THE SHARPNESS SHAPE (SHARPNESS.md §2): the same SHKNEE/SHFLOOR family
+ * shopcheck carries — sharp(n) = max(SHFLOOR, 1.40 − (n−1)·(1.40−SHFLOOR)/
+ * (SHKNEE−1)), SHKNEE=14 the shallower straight line, SHKNEE<14 front-loaded
+ * then flat. Unset, this reads the shipped ev.sharpness digit for digit, so
+ * the squeeze curves in this file stay comparable to every earlier reading.
+ */
+const SH_START = Number(process.env.SHSTART ?? SEASON[0]!.sharpness)
+const SH_KNEE = Number(process.env.SHKNEE ?? 0)
+const SH_FLOOR = Number(process.env.SHFLOOR ?? 0)
+const SH_ON = SH_KNEE > 1 && SH_FLOOR > 0
+function sharpOf(ev: { readonly num: number; readonly sharpness: number }): number {
+  if (!SH_ON) return ev.sharpness
+  const slope = (SH_START - SH_FLOOR) / (SH_KNEE - 1)
+  return Math.round(Math.max(SH_FLOOR, SH_START - (ev.num - 1) * slope) * 100) / 100
+}
+const SH_LABEL = SH_ON
+  ? `sharp ${SH_START.toFixed(2)}→${SH_FLOOR.toFixed(2)} @knee ${SH_KNEE}`
+  : 'sharp LIVE'
 /** THE MARQUEE RAMP (FIELD-CEILING.md §6): STARS=0 off; K/RAMP/BETA/CAP sweep. */
 const STARS_ON = process.env.STARS !== '0'
 const K = Number(process.env.K ?? STAR_COUNT)
@@ -128,7 +147,7 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
     // equipment accumulates through the season
     const kit = Math.pow(KIT, ei / (SEASON.length - 1))
     const boosts: Boost[] = [{
-      id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness * kit,
+      id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: sharpOf(ev) * kit,
     }]
     ctx.focus = 5
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength * Number(process.env.FSCALE ?? 1))
@@ -184,7 +203,7 @@ for (const policy of ['safe', 'mixed', 'aggressive'] as Policy[]) {
   const seasons = Array.from({ length: N }, (_, i) => seasonPlaces(120_000 + i, policy))
   console.log(`\nWHERE YOU STAND AFTER FOUR HOLES · ${policy} · ${N} seasons · kit ×${KIT}` +
     ` · stars ${STARS_ON ? `${K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}` +
-    ` · EXT ${EXT}`)
+    ` · EXT ${EXT} · ${SH_LABEL}`)
   console.log('  ev   p25   median   p75      make-cut if the line is top-…')
   console.log('       ' + '-'.repeat(78))
   for (let ev = 0; ev < SEASON.length; ev++) {

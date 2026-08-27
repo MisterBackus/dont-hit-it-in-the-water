@@ -109,6 +109,38 @@ function playHole(hole: HoleSpec, ctx: Ctx, boosts: readonly Boost[], policy: Po
  */
 const EXT = Number(process.env.EXT ?? FULL_HOLES - 8)
 
+/**
+ * THE SHARPNESS RAMP AS A SWEEPABLE SHAPE (SHARPNESS.md §2 — PLAYTEST-NOTES-1
+ * note 11). The live curve is a straight line ×1.40 → ×0.80 across the 14
+ * events; both candidate shapes are the same family with a different knee:
+ *
+ *   sharp(n) = max(SHFLOOR, 1.40 − (n−1)·(1.40 − SHFLOOR)/(SHKNEE − 1))
+ *
+ *   SHKNEE=14   shape (a) — a shallower straight line ending at SHFLOOR
+ *   SHKNEE<14   shape (b) — front-loaded, then FLAT at SHFLOOR from the knee
+ *
+ * SHSTART overrides the ×1.40 opening (it is not swept: "you start the season
+ * a worse golfer" is the design, not the question). With SHKNEE/SHFLOOR unset
+ * this returns the shipped ev.sharpness digit for digit, which is what makes
+ * the lineage row (R1) a real check.
+ */
+const SH_START = Number(process.env.SHSTART ?? SEASON[0]!.sharpness)
+const SH_KNEE = Number(process.env.SHKNEE ?? 0)
+const SH_FLOOR = Number(process.env.SHFLOOR ?? 0)
+const SH_ON = SH_KNEE > 1 && SH_FLOOR > 0
+function sharpOf(ev: { readonly num: number; readonly sharpness: number }): number {
+  if (!SH_ON) return ev.sharpness
+  const slope = (SH_START - SH_FLOOR) / (SH_KNEE - 1)
+  return Math.round(Math.max(SH_FLOOR, SH_START - (ev.num - 1) * slope) * 100) / 100
+}
+const SH_LABEL = SH_ON
+  ? `sharp ${SH_START.toFixed(2)}→${SH_FLOOR.toFixed(2)} @knee ${SH_KNEE}`
+  : `sharp LIVE (${SEASON[0]!.sharpness.toFixed(2)}→${SEASON[13]!.sharpness.toFixed(2)})`
+
+/** BAND=0 skips the boost-band and card-cut sections (26 × N seasons of work)
+ * when the question is only about the Money List section below. */
+const BAND_ON = process.env.BAND !== '0'
+
 /** The cheque and place for a made cut, exactly as reducer.ts settle pays it. */
 function settleWeek(
   field: FieldPlayer[], rel8: number, seed: number, evNum: number,
@@ -168,7 +200,7 @@ function seasonEarningsWithDeck(
   for (const ev of SEASON) {
     const course = COURSES[rota[ev.num - 1]!]
     const boosts: Boost[] = [
-      { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
+      { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: sharpOf(ev) },
       ...kit,
     ]
     ctx.focus = maxFocus(5, boosts)
@@ -208,28 +240,33 @@ const N = Number(process.env.N ?? 250)
 const POLICY = (process.env.POLICY ?? 'mixed') as Policy
 const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length
 
-const base = mean(Array.from({ length: N }, (_, i) => seasonEarnings(600_000 + i, POLICY, [])))
-console.log(`\nWHAT EACH BOOST IS WORTH · ${N} seasons each · ${POLICY} play · EXT ${EXT}`)
-console.log(`  bare season earns ${money(Math.round(base))}\n`)
-console.log('  boost                              price     season +      ×price   verdict')
-console.log('  ' + '-'.repeat(78))
+const base = BAND_ON
+  ? mean(Array.from({ length: N }, (_, i) => seasonEarnings(600_000 + i, POLICY, [])))
+  : 0
+if (BAND_ON) {
+  console.log(`\nWHAT EACH BOOST IS WORTH · ${N} seasons each · ${POLICY} play · EXT ${EXT}` +
+    ` · ${SH_LABEL}`)
+  console.log(`  bare season earns ${money(Math.round(base))}\n`)
+  console.log('  boost                              price     season +      ×price   verdict')
+  console.log('  ' + '-'.repeat(78))
 
-const rows = BOOSTS.map(b => {
-  const withIt = mean(Array.from({ length: N }, (_, i) => seasonEarnings(600_000 + i, POLICY, [b])))
-  const gain = withIt - base
-  return { b, gain, ratio: gain / b.price }
-}).sort((a, b) => b.ratio - a.ratio)
+  const rows = BOOSTS.map(b => {
+    const withIt = mean(Array.from({ length: N }, (_, i) => seasonEarnings(600_000 + i, POLICY, [b])))
+    const gain = withIt - base
+    return { b, gain, ratio: gain / b.price }
+  }).sort((a, b) => b.ratio - a.ratio)
 
-for (const r of rows) {
-  const verdict = r.ratio >= 2.5 ? 'too cheap'
-    : r.ratio >= 1.4 ? 'buy'
-      : r.ratio >= 0.8 ? 'marginal' : 'DECORATION'
-  console.log(
-    `  ${r.b.name.padEnd(32)} ${money(r.b.price).padStart(7)} ` +
-    `${money(Math.round(r.gain)).padStart(11)} ${r.ratio.toFixed(2).padStart(11)}   ${verdict}`,
-  )
+  for (const r of rows) {
+    const verdict = r.ratio >= 2.5 ? 'too cheap'
+      : r.ratio >= 1.4 ? 'buy'
+        : r.ratio >= 0.8 ? 'marginal' : 'DECORATION'
+    console.log(
+      `  ${r.b.name.padEnd(32)} ${money(r.b.price).padStart(7)} ` +
+      `${money(Math.round(r.gain)).padStart(11)} ${r.ratio.toFixed(2).padStart(11)}   ${verdict}`,
+    )
+  }
+  console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
 }
-console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
 
 /* ------------------------------------------------------------------ *
  * WHAT IS A CARD CUT WORTH?
@@ -239,7 +276,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
  * that earns millions, which is not a decision. Measure it the same way the
  * boosts were measured: play the season with that card gone.
  * ------------------------------------------------------------------ */
-{
+if (BAND_ON) {
   const uniq = [...new Set(STARTING_DECK)]
   console.log(`  CUTTING ONE CARD · ${N} seasons each · ${POLICY} play`)
   const rows = uniq.map(id => {
@@ -435,7 +472,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
       }
 
       let boosts: Boost[] = [
-        { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
+        { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: sharpOf(ev) },
         ...kit,
       ]
       ctx.focus = maxFocus(5, boosts)
@@ -476,7 +513,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
             ctx.freeSinks += pick.freeSinks ?? 0
             ctx.focus += pick.maxFocusBonus ?? 0
             boosts = [
-              { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
+              { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: sharpOf(ev) },
               ...kit,
             ]
           }
@@ -542,7 +579,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   console.log(`  THE MONEY LIST vs A PLAYER WHO SHOPS · ${R} seasons per policy` +
     `${DROPS ? '' : ' · DROPS OFF'}` +
     ` · stars ${STARS_ON ? `${STAR_K} @R${DIALS.ramp} β${DIALS.beta} cap${DIALS.cap}` : 'OFF'}` +
-    ` · EXT ${EXT}`)
+    ` · EXT ${EXT} · ${SH_LABEL}`)
   console.log(FULLSHELF
     ? `  supply: FULL SHELF (legacy validation model) · budget ${BUDGET}\n`
     : `  supply: offer stream · budget ${BUDGET} · weights ${TW.rack}/${TW.special}/${TW.tour}` +

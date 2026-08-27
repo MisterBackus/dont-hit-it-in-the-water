@@ -7,9 +7,11 @@
  * have an offer. You can always walk on — walking on is free, forever, and
  * the season does not notice.
  *
- * Spice, not economy: focus swings of one or two, money inside $300k net,
- * against seasons that gross $15–20M. Nothing here saves a season and
- * nothing here ends one. What it does is get remembered.
+ * Spice, not economy — but spice you can taste. Nothing here saves a season
+ * and nothing here ends one; what it does is get REMEMBERED, and a
+ * consequence you cannot feel is not a consequence, it is a receipt. The
+ * money below is sized against the season's own demand, not written down
+ * once and left (ENCOUNTER-STAKES.md, and THE STAKE POINT).
  *
  * Where an offer is a gamble, the odds are SAID (P8 extends to people).
  * All rolls come from the bank's 'events' stream — the schedule, the shots
@@ -18,7 +20,85 @@
  *
  * The interpreter is one switch in sim/reducer.ts. Adding an encounter is
  * a data row here, not code there.
+ *
+ * NO DOLLAR AMOUNT IS WRITTEN IN THIS FILE. That is a rule now, and the
+ * reason it is a rule is directly below.
  */
+import { MONEY_CHECKS, money } from './season'
+
+/**
+ * THE STAKE POINT — one percent of what the season demands of you.
+ *
+ * This file used to hold four written constants: −$150k, +$150k, +$200k,
+ * +$500k. They were the only numbers in the project that were WRITTEN
+ * rather than measured, and six economy re-anchorings moved every bar,
+ * price, ladder rung and printed yield around them without once touching
+ * them. Check 1 travelled $1.4M → $2.1M → $2.6M and check 3 $8.4M →
+ * $13.8M while `-150_000` sat in a data row going quietly stale, until it
+ * was 1.1% of the season's demand — the price of the cheapest boost on the
+ * shelf — and the owner met one live and filed the verdict: "150k is
+ * pennies."
+ *
+ * So encounter money is no longer money. It is POINTS, and a point is one
+ * percent of the FINAL Money List check: the single number that says what
+ * a whole season must produce to keep your card. When the economy
+ * re-anchors, every stake in this file moves with the checks, in the same
+ * direction, by the same ratio, for free. This note can never need writing
+ * a second time — which is the actual bug fix, the sizes below merely the
+ * first values it carries.
+ *
+ * Anchored to the LAST check rather than the first, on purpose: it is the
+ * season's total demand, so it tracks the size of a SEASON rather than the
+ * size of a spring, and a stake sized against it does not put its weight
+ * on the one place difficulty must never go (the spring rule). And it
+ * resolves against the CHECKS, never against the player's wallet — a fine
+ * that scales with your bank account punishes success, which is a
+ * different and worse design.
+ *
+ * Derived in tools/encountercheck.ts; ENCOUNTER-STAKES.md carries the
+ * registered predictions, the sweep and what shipped.
+ */
+const SEASON_DEMAND = MONEY_CHECKS[MONEY_CHECKS.length - 1]!.need
+/** one point of the season's demand — $138k at the live $13.8M check */
+export const STAKE_POINT = Math.round(SEASON_DEMAND / 100 / 1000) * 1000
+
+/**
+ * What a stake in points is worth in this economy, today. Pure, total, and
+ * the only place in the game where a point becomes a number of dollars.
+ */
+export function stakeMoney(points: number): number {
+  return Math.round(points * STAKE_POINT)
+}
+
+/**
+ * THE STAKES TABLE — every consequence in this file, in points.
+ *
+ * Sized by tools/encountercheck.ts against the live calibration (stars on,
+ * the offer-stream shopper, current MONEY_CHECKS, 400 seasons a row, seeds
+ * 700000+). Two things were measured and both mattered:
+ *
+ *  - THE SEASON DOES NOT NOTICE, at any size. The people land 2.7 times a
+ *    season (a third of 8.6 non-major made cuts) across eight of them, so
+ *    the Rules Official shows up 0.40 times a year and his fine actually
+ *    lands 0.17 — once every SIX SEASONS. Swept from ×0.25 to ×3 the whole
+ *    system never moved mixed survival more than ~1 point. So the fine is
+ *    sized for the MOMENT, not for the aggregate, and the currency of a
+ *    moment is what a player can spend: at four points the fine is $552k —
+ *    3.7× the cheapest boost, more than the median rack sticker ($450k),
+ *    0.8 of a spring weekend's yield, 21% of the first Money List check.
+ *    It costs you a purchase. That is the smallest sum that can.
+ *  - THE SANDBAGGER WAS GIVING MONEY AWAY. Birdie-or-better on the hole
+ *    after the cut measures 59.4%; his old $200k-to-win-$500k broke even at
+ *    40%, which made "say yes" free money with the odds printed on the
+ *    button (P8, embarrassingly). At 3 down to win 5 the break-even is
+ *    60.0% against that 59.4% — a golf bet, in which the man with the cash
+ *    on him is very slightly right.
+ */
+const FINE = 4            // the Rules Official, on the 40% branch
+const SPONSOR_PHOTO = 2   // the autograph — always this trade, always honest
+const BEHIND_THE_UNIT = 3 // whatever he had back there
+const SANDBAG_STAKE = 3
+const SANDBAG_WIN = 5     // paid on top of a stake already gone: net +2 / −3
 
 /** One resolved consequence. Everything an encounter can do to you. */
 export interface Outcome {
@@ -27,9 +107,13 @@ export interface Outcome {
   readonly tone: 'good' | 'bad' | 'flat'
   /** focus delta, clamped to [1, maxFocus] in the interpreter */
   readonly focus?: number
-  /** money delta — gains land in earnings (gross-consistent, like the
-   * sponsor week); losses clamp at an empty wallet */
-  readonly money?: number
+  /**
+   * money delta, IN POINTS of the season's demand — never in dollars, so a
+   * stake here cannot go stale when the economy re-anchors. Gains land in
+   * earnings (gross-consistent, like the sponsor week); losses clamp at an
+   * empty wallet. reducer.ts applyOutcome is the only interpreter.
+   */
+  readonly points?: number
   /** an encounter-only superstition (boosts.ts, ENCOUNTER_BOOSTS) */
   readonly grantBoost?: string
 }
@@ -51,7 +135,8 @@ export type Engage =
    * just the line. One bet at a time; finishHole clears it. */
   | {
       readonly kind: 'bet'; readonly condition: BetCondition
-      readonly stake: number
+      /** what leaves the wallet now, in points (STAKE_POINT) */
+      readonly stakePoints: number
       readonly win: Outcome; readonly lose: Outcome; readonly push?: Outcome
       /** the one-line reminder shown on the next hole */
       readonly reminder: string
@@ -113,8 +198,9 @@ export const ENCOUNTERS: readonly Encounter[] = [
           tone: 'good', focus: 2,
         },
         {
-          line: 'You will never tell anyone what he had back there. $200k.',
-          tone: 'good', money: 200_000,
+          line: 'You will never tell anyone what he had back there. '
+            + `${money(stakeMoney(BEHIND_THE_UNIT))}.`,
+          tone: 'good', points: BEHIND_THE_UNIT,
         },
       ],
       lose: [
@@ -146,22 +232,22 @@ export const ENCOUNTERS: readonly Encounter[] = [
     blurb: 'He says he is a twelve. His practice swing says otherwise. He '
       + 'would like to make your next hole interesting, and he has the cash '
       + 'on him, which tells you most of what you need to know.',
-    accept: 'Take the bet — $200k down',
-    stakes: 'Birdie or better on the next hole pays $500k. Anything else and '
-      + 'the stake is his.',
+    accept: `Take the bet — ${money(stakeMoney(SANDBAG_STAKE))} down`,
+    stakes: `Birdie or better on the next hole pays ${money(stakeMoney(SANDBAG_WIN))}. `
+      + 'Anything else and the stake is his.',
     walk: 'You have met this man on every course you have ever played',
-    minWallet: 200_000,
+    minWallet: stakeMoney(SANDBAG_STAKE),
     engage: {
-      kind: 'bet', condition: 'birdie-or-better', stake: 200_000,
+      kind: 'bet', condition: 'birdie-or-better', stakePoints: SANDBAG_STAKE,
       win: {
         line: 'Birdie. He pays like he putts — slowly, and in the end.',
-        tone: 'good', money: 500_000,
+        tone: 'good', points: SANDBAG_WIN,
       },
       lose: {
         line: 'No birdie. He does not gloat. That is the worst part.',
         tone: 'bad',
       },
-      reminder: 'the bet: birdie or better, $500k',
+      reminder: `the bet: birdie or better, ${money(stakeMoney(SANDBAG_WIN))}`,
     },
   },
   {
@@ -186,7 +272,7 @@ export const ENCOUNTERS: readonly Encounter[] = [
       + 'holding the book open to the page.',
     accept: 'State your case',
     stakes: 'He waves it off more often than not — 60/40 your way. Against '
-      + 'you it is a $150k donation to the junior programme.',
+      + `you it is a ${money(stakeMoney(FINE))} donation to the junior programme.`,
     walk: 'Agree with everything and keep moving',
     engage: {
       kind: 'gamble', odds: 0.6,
@@ -198,8 +284,9 @@ export const ENCOUNTERS: readonly Encounter[] = [
       ],
       lose: [
         {
-          line: '$150k to the junior programme. The juniors send a card.',
-          tone: 'bad', money: -150_000,
+          line: `${money(stakeMoney(FINE))} to the junior programme. `
+            + 'The juniors send a card.',
+          tone: 'bad', points: -FINE,
         },
       ],
     },
@@ -214,7 +301,7 @@ export const ENCOUNTERS: readonly Encounter[] = [
       + 'worse, he sees that too.',
     walk: 'Pretend not to see the visor',
     engage: {
-      kind: 'bet', condition: 'par-or-better', stake: 0,
+      kind: 'bet', condition: 'par-or-better', stakePoints: 0,
       win: {
         line: 'The kid saw it. He will describe this hole to somebody in forty years.',
         tone: 'good', focus: 2,
@@ -236,14 +323,14 @@ export const ENCOUNTERS: readonly Encounter[] = [
       + 'playing, and a marker that is nearly dry. The sponsor photographer '
       + 'is, somehow, already here.',
     accept: 'Sign it',
-    stakes: '$150k now — the sponsor loves the photo. The stopping costs you '
-      + 'a focus. Always this trade, always honest.',
+    stakes: `${money(stakeMoney(SPONSOR_PHOTO))} now — the sponsor loves the photo. `
+      + 'The stopping costs you a focus. Always this trade, always honest.',
     walk: 'After the round — and this time, mean it',
     engage: {
       kind: 'sure',
       outcome: {
         line: 'Signed. The marker gave out halfway through your surname. The photo runs everywhere.',
-        tone: 'flat', money: 150_000, focus: -1,
+        tone: 'flat', points: SPONSOR_PHOTO, focus: -1,
       },
     },
   },
