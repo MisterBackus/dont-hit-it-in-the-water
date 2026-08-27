@@ -51,15 +51,23 @@ export function App() {
     (st: GameState, a: Action) => reduce(st, a),
     boot.state,
   )
-  // every dispatch is also a save: append to the log and write it out.
-  // RESTART rebuilds from its own seed, so the history before it is dead
-  // weight and the log starts over at that action.
+  /**
+   * Every dispatch is also a save: append to the log and write it out.
+   * RESTART rebuilds from its own seed, so the history before it is dead
+   * weight and the log starts over at that action.
+   *
+   * A RESTART carries `keep`, and it is the difference between finishing a
+   * season and abandoning one. Finishing archives the run, because that is a
+   * season somebody might post. Quitting does NOT — the owner's ruling, and
+   * it is the right one: "i dont see anyone sharing a shitty run." Keeping
+   * abandoned runs was collection nobody would ever read, and quit should
+   * mean quit.
+   */
   const dispatch = (a: Action) => {
     rawDispatch(a)
     const log = logRef.current
     if (a.type === 'RESTART') {
-      // no season is destroyed by starting the next one (storage.ts ARCHIVE)
-      archiveRun(log.seed, log.actions)
+      if (a.keep !== false) archiveRun(log.seed, log.actions)
       log.seed = a.seed; log.actions = [a]
     }
     else log.actions.push(a)

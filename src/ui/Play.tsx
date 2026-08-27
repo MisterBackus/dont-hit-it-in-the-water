@@ -485,23 +485,26 @@ function BagDrawer({ s, copyRun, copied, close, dispatch }: {
 
       {/* THE WAY OUT. There has never been one: RESTART lived only on the
           epilogue, so a season you had lost interest in could only be ended
-          by clearing browser storage. Nothing is destroyed by it — the
-          dispatcher archives the run before the new one starts (App.tsx),
-          which is the same path that lets you still post it to the board. */}
+          by clearing browser storage. It quits for real — `keep: false`, so
+          the run is NOT archived (App.tsx). It briefly was, and the owner
+          asked the right question of that: "if i want to quit, why do i want
+          anything saved?" Nobody posts an abandoned run, so keeping them was
+          collection nobody would read. The copy button sits directly above
+          for the rare case you do want it. */}
       {!armed ? (
         <button className="ghost drawerquit" onClick={() => setArmed(true)}>
           Give up the season
         </button>
       ) : (
         <div className="drawerquit-arm">
-          <p>This season goes to the archive — you can still copy it for the
-            board afterwards. A new one starts from the first tee.</p>
+          <p>This season ends here and is not kept. If you want it for the
+            board, copy it first. A new one starts from the first tee.</p>
           <div className="drawerquit-row">
             <button className="ghost" onClick={() => setArmed(false)}>Keep playing</button>
             <button className="danger" onClick={() => {
               setArmed(false)
               close()
-              dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7 })
+              dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7, keep: false })
             }}>Yes — end the season</button>
           </div>
         </div>

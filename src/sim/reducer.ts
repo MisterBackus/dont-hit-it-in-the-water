@@ -51,7 +51,12 @@ export type Action =
   | { type: 'TEE_OFF' }
   | { type: 'PICK_WEEK'; id: string | null }
   | { type: 'TAKE_WEEK'; id: string }
-  | { type: 'RESTART'; seed: number }
+  /**
+   * `keep` is read by the UI dispatcher, never by the reducer: a finished
+   * season is archived, an abandoned one is not (ui/App.tsx). Replay ignores
+   * it entirely, so logs written before it existed still replay identically.
+   */
+  | { type: 'RESTART'; seed: number; keep?: boolean }
 
 export function cardOf(id: string) { return CARD[id]! }
 export function shotOf(id: string): ShotCard | null {
