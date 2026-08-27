@@ -50,9 +50,13 @@
  *   N=250          seasons per kit (paired seeds)
  *   POLICY=mixed   safe | mixed | aggressive
  *   SLOTS=6        how deep to build (the live allowance is 6)
- *   SECTION=all    all | build | nofocus | lane
+ *   SECTION=all    all | build | nofocus | lane | mix (any other value: none)
  *   SEED0=600000   first seed
  *   FULL=1,6       which slots print their FULL ranking (default 1 and SLOTS)
+ *   KITS=a+b;c+d   price hand-written bags (section F, runs on any SECTION)
+ *
+ * The full run is ~40 minutes; the sections are independent, so the way this
+ * was actually measured was three of them in parallel and `SECTION=mix` after.
  */
 import { COURSES } from '../content/courses'
 import { scheduleFor } from '../sim/schedule'
@@ -267,12 +271,23 @@ const IDX = MONEY_CHECKS.map(c => c.after - 1)
 const FULL_AT = new Set((process.env.FULL ?? `1,${SLOTS}`).split(',').map(Number))
 
 interface Metrics {
-  /** % of seasons clearing all three Money List checks */
+  /** % of seasons clearing ALL THREE Money List checks — the headline */
   readonly survival: number
-  /** % of arrivals sent home by each check */
-  readonly kills: number[]
+  /**
+   * MEAN CHECKS CLEARED, 0-3, sequential (a season that fails check 1 is
+   * over and scores 0). The same question as survival with three times the
+   * resolution, and the reason it is here is a measured one: a FIXED
+   * one-item kit clears all three checks in 0-4% of seasons, so at slot 1
+   * the survival column cannot tell twenty SKUs apart. This can, it is
+   * monotone in the same thing, and it is what the greedy build ranks on.
+   */
+  readonly checkpoints: number
+  /** % of ALL seasons that reach past each check */
+  readonly cleared: number[]
   /** win% across events 10-14, of weekends actually played */
   readonly lateWin: number
+  /** how many late weekends that rate is computed from */
+  readonly lateN: number
   /** median season gross */
   readonly median: number
 }
@@ -281,18 +296,21 @@ interface Metrics {
 function measure(kit: readonly Boost[]): Metrics {
   const seasons = Array.from({ length: N }, (_, i) => fixedKitSeason(SEED0 + i, POLICY, kit))
   let alive = seasons
-  const kills: number[] = []
+  const cleared: number[] = []
+  let points = 0
   MONEY_CHECKS.forEach((c, k) => {
-    const before = alive.length
     alive = alive.filter(s => s.running[IDX[k]!]! >= c.need)
-    kills.push(before ? 100 - alive.length / before * 100 : NaN)
+    cleared.push(alive.length / N * 100)
+    points += alive.length
   })
   const late = seasons.flatMap(s => s.places.slice(9, 14)).filter(p => p > 0)
   const totals = seasons.map(s => s.running[s.running.length - 1]!).sort((a, b) => a - b)
   return {
     survival: alive.length / N * 100,
-    kills,
+    checkpoints: points / N,
+    cleared,
     lateWin: late.length ? late.filter(p => p === 1).length / late.length * 100 : NaN,
+    lateN: late.length,
     median: totals[Math.floor(totals.length / 2)]!,
   }
 }
@@ -321,27 +339,36 @@ console.log(`  checks ${MONEY_CHECKS.map(c => money(c.need)).join(' / ')}` +
  * That is the strongest possible focus-first argument: if focus items are the
  * correct purchase every time, a greedy survival optimiser takes nothing else.
  */
+function line(m: Metrics, label: string): string {
+  return `${label}  ckpt ${m.checkpoints.toFixed(2)}/3` +
+    `  cleared ${m.cleared.map(c => `${c.toFixed(0)}%`.padStart(4)).join('')}` +
+    `  survive ${pct(m.survival)}%  late win ${pct(m.lateWin)}%  median ${money(m.median)}`
+}
+
 function build(pool: readonly Boost[], label: string, printFull: boolean): Boost[] {
   const bare = measure([])
   console.log(`  ${label}`)
-  console.log(`    bag empty                          survive ${pct(bare.survival)}%` +
-    `   late win ${pct(bare.lateWin)}%   median ${money(bare.median)}`)
+  console.log('    ' + line(bare, 'bag empty                    '))
   const kit: Boost[] = []
   let prev = bare
   for (let slot = 1; slot <= SLOTS; slot++) {
     const rows = pool
       .filter(b => !kit.some(k => k.id === b.id))
       .map(b => ({ b, m: measure([...kit, b]) }))
-      .sort((a, c) => c.m.survival - a.m.survival)
+      // ranked on CHECKPOINTS (see Metrics) — survival alone has no
+      // resolution at the shallow slots. Ties go to the richer season.
+      .sort((a, c) => (c.m.checkpoints - a.m.checkpoints) || (c.m.median - a.m.median))
     const show = printFull && FULL_AT.has(slot) ? rows : rows.slice(0, 5)
     console.log(`\n    SLOT ${slot} — on top of [${kit.map(k => k.id).join(' + ') || 'nothing'}]` +
-      `   base survive ${prev.survival.toFixed(1)}%`)
-    console.log('      item                              price    survive   Δsurv    Δlate   Δmedian')
+      `   base ckpt ${prev.checkpoints.toFixed(2)}  survive ${prev.survival.toFixed(1)}%`)
+    console.log('      item                              price    Δckpt   Δsurv    Δlate   Δmedian')
     console.log('      ' + '-'.repeat(76))
     for (const r of show) {
       console.log(
         `      ${tag(r.b)}${r.b.name.slice(0, 31).padEnd(32)} ${money(r.b.price).padStart(7)} ` +
-        `${pct(r.m.survival)}%  ${dpct(r.m.survival - prev.survival).padStart(6)}  ` +
+        `${(r.m.checkpoints - prev.checkpoints >= 0 ? '+' : '') +
+          (r.m.checkpoints - prev.checkpoints).toFixed(3)}  ` +
+        `${dpct(r.m.survival - prev.survival).padStart(6)}  ` +
         `${dpct(r.m.lateWin - prev.lateWin).padStart(6)}  ` +
         `${dmoney(r.m.median - prev.median).padStart(9)}`,
       )
@@ -352,10 +379,10 @@ function build(pool: readonly Boost[], label: string, printFull: boolean): Boost
     prev = pick.m
     const focusN = kit.filter(touchesFocus).length
     console.log(`      TAKE ${tag(pick.b)}${pick.b.name} → kit is ${focusN}/${kit.length} focus`)
+    console.log('      ' + line(prev, 'kit now                      '))
   }
-  console.log(`\n    FINAL KIT: ${kit.map(k => `${tag(k)}${k.id}`).join(' ')}` +
-    `   survive ${prev.survival.toFixed(1)}%   late win ${prev.lateWin.toFixed(1)}%` +
-    `   median ${money(prev.median)}`)
+  console.log(`\n    FINAL KIT: ${kit.map(k => `${tag(k)}${k.id}`).join(' ')}`)
+  console.log('    ' + line(prev, '                             '))
   console.log(`    focus share of the allowance: ${kit.filter(touchesFocus).length}/${SLOTS}\n`)
   return kit
 }
@@ -381,7 +408,7 @@ if (SECTION === 'all' || SECTION === 'lane') {
   const bare = measure([])
   const rank = (pool: readonly Boost[]) => pool
     .map(b => ({ b, m: measure([b]) }))
-    .sort((a, c) => c.m.survival - a.m.survival)
+    .sort((a, c) => (c.m.checkpoints - a.m.checkpoints) || (c.m.median - a.m.median))
     .map(r => r.b)
   const lanes: [string, Boost[]][] = [
     ['focus only  ◆', rank(FOCUS)],
@@ -390,18 +417,25 @@ if (SECTION === 'all' || SECTION === 'lane') {
   for (const [name, order] of lanes) {
     const kit: Boost[] = []
     let prev = bare
-    const marginal: string[] = []
-    const cum: string[] = []
+    const dck: string[] = []
+    const ckpt: string[] = []
+    const surv: string[] = []
+    const win: string[] = []
     for (let i = 0; i < SLOTS && i < order.length; i++) {
       kit.push(order[i]!)
       const m = measure(kit)
-      marginal.push(dpct(m.survival - prev.survival).padStart(6))
-      cum.push(m.survival.toFixed(1).padStart(6))
+      dck.push(((m.checkpoints - prev.checkpoints >= 0 ? '+' : '') +
+        (m.checkpoints - prev.checkpoints).toFixed(3)).padStart(6))
+      ckpt.push(m.checkpoints.toFixed(2).padStart(6))
+      surv.push(m.survival.toFixed(1).padStart(6))
+      win.push(m.lateWin.toFixed(1).padStart(6))
       prev = m
     }
     console.log(`    ${name}  order: ${order.slice(0, SLOTS).map(b => b.id).join(' → ')}`)
-    console.log(`      survive  ${cum.join(' ')}`)
-    console.log(`      marginal ${marginal.join(' ')}`)
+    console.log(`      ckpt      ${ckpt.join(' ')}`)
+    console.log(`      MARGINAL  ${dck.join(' ')}`)
+    console.log(`      survive   ${surv.join(' ')}`)
+    console.log(`      late win  ${win.join(' ')}`)
   }
   console.log()
 
@@ -417,7 +451,79 @@ if (SECTION === 'all' || SECTION === 'lane') {
     const b = measure([leather, circle])
     console.log('  D. THE INSTRUMENT CHECKS ITSELF')
     console.log(`    Circle of Friendship on top of Inside the Leather:` +
+      ` ${(b.checkpoints - a.checkpoints).toFixed(3)} ckpt,` +
       ` ${dpct(b.survival - a.survival)} survival, ${dmoney(b.median - a.median)} median`)
     console.log('    (gimmeRange takes the MAX — this must read ~0)\n')
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * E. THE COMPOSITION SWEEP — the note's question, asked directly.
+ *
+ * The greedy build answers "what would an optimiser take"; the lane curve
+ * answers "what is the Nth item in a lane worth". Neither of them prices the
+ * thing the owner actually asked about, which is THE SHAPE OF A FULL
+ * ALLOWANCE. So: hold the allowance at its live size (SHOP_BUDGET) and vary
+ * only how many of those slots go to the focus lane, 0 through 6.
+ *
+ * Both lanes are filled in the SAME order — each lane's own slot-1 ranking,
+ * best first — so the only thing changing across the rows is composition.
+ * This is a fixed-order sweep, not a greedy: it is not looking for the best
+ * kit, it is looking for the shape of the curve. A curve that rises to 6/6
+ * says the allowance is a formality. A curve with an interior peak says it
+ * is a decision, and says where the decision is.
+ * ------------------------------------------------------------------ */
+if (SECTION === 'all' || SECTION === 'mix') {
+  console.log('  E. THE COMPOSITION SWEEP — six purchases, f of them in the focus lane')
+  const rank = (pool: readonly Boost[]) => pool
+    .map(b => ({ b, m: measure([b]) }))
+    .sort((a, c) => (c.m.checkpoints - a.m.checkpoints) || (c.m.median - a.m.median))
+    .map(r => r.b)
+  const f = rank(FOCUS)
+  const o = rank(OTHER)
+  console.log(`    focus order   ${f.map(b => b.id).join(' → ')}`)
+  console.log(`    other order   ${o.map(b => b.id).join(' → ')}\n`)
+  console.log('      focus/6   kit                                    ckpt  survive  late win   of n   median')
+  console.log('      ' + '-'.repeat(92))
+  for (let k = 0; k <= SLOTS; k++) {
+    const kit = [...f.slice(0, k), ...o.slice(0, SLOTS - k)]
+    const m = measure(kit)
+    console.log(
+      `        ${k}/${SLOTS}     ${kit.map(b => b.id).join(' ').slice(0, 38).padEnd(39)}` +
+      `${m.checkpoints.toFixed(2)}  ${pct(m.survival)}%   ${pct(m.lateWin)}%  ${String(m.lateN).padStart(5)}` +
+      `  ${money(m.median)}`,
+    )
+  }
+  console.log('\n    ("of n" is the late weekends the win rate is computed from — the' +
+    ' denominator, so a thin difference can be seen for what it is)\n')
+}
+
+/* ------------------------------------------------------------------ *
+ * F. NAMED KITS — price a hand-written bag.
+ *
+ * The sweep above fills each lane in its own slot-1 order, which is a fair
+ * rule but not always a flattering one: it reaches for the fourth-best focus
+ * SKU before it reaches for the sixth, even where the greedy build says the
+ * sixth is stronger in company. This section exists so that objection can be
+ * answered with a measurement instead of an argument.
+ *
+ *   KITS="marlene+leather+goldenputter+grips+superball+tees;superball+tees"
+ * ------------------------------------------------------------------ */
+if (process.env.KITS) {
+  console.log('  F. NAMED KITS')
+  console.log('      focus/n  kit                                          ckpt  survive  late win   median')
+  console.log('      ' + '-'.repeat(92))
+  for (const spec of process.env.KITS.split(';').filter(Boolean)) {
+    const ids = spec.split('+').filter(Boolean)
+    const kit = ids.map(id => SHELF.find(b => b.id === id))
+    const missing = ids.filter((_, i) => !kit[i])
+    if (missing.length) { console.log(`      ! unknown SKU: ${missing.join(' ')}`); continue }
+    const k = kit as Boost[]
+    const m = measure(k)
+    console.log(
+      `        ${k.filter(touchesFocus).length}/${k.length}    ${spec.slice(0, 44).padEnd(45)}` +
+      `${m.checkpoints.toFixed(2)}  ${pct(m.survival)}%   ${pct(m.lateWin)}%  ${money(m.median)}`,
+    )
+  }
+  console.log()
 }
