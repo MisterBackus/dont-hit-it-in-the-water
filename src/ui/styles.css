@@ -952,3 +952,35 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 .ws-line.is-total span{color:var(--soft)}
 .ws-line.is-total b{font-size:var(--n-m)}
 .ws-note{font-size:var(--t-small);color:var(--soft);margin:var(--s3) 0 var(--s1)}
+
+/* ============================================== the item marks and rarity
+   Twenty-five things you can own, drawn (ui/ItemMark.tsx). The MARK is the
+   object and never changes; the FRAME is rarity and nothing else. It spends
+   colour the interface already owns — silver for a keyline, and the gold
+   that already means "a major, or a piece of equipment" — because six new
+   hues for six invented effect-families was the version the owner killed:
+   "i dont even know what the groups are, and ive played alot." */
+.itemmark{display:block;flex:0 0 auto}
+.itemmark-fallback{font-family:var(--fm);opacity:.7}
+
+.itemframe{--pad:5px;display:inline-grid;place-items:center;flex:0 0 auto;
+  width:calc(var(--mk) + var(--pad) * 2);height:calc(var(--mk) + var(--pad) * 2);
+  border-radius:calc(var(--r) * .8);position:relative;box-sizing:border-box}
+/* Off the Rack wears nothing. Most of what you own is ordinary. */
+.itemframe.tier-rack{}
+.itemframe.tier-special{border:1px solid var(--silver)}
+.itemframe.tier-tour{border:1.5px solid var(--gold);
+  background:color-mix(in srgb,var(--gold) 8%,transparent)}
+/* the foil stamp — only the truck's best week gets one */
+.itemframe.tier-tour::after{content:"";position:absolute;top:-1px;right:-1px;
+  width:8px;height:8px;background:var(--gold);
+  border-radius:0 calc(var(--r) * .7) 0 7px}
+/* FOUND: no shop sold it, so it wears no shop's frame — a sketched square,
+   deliberately off-true against the clean rules of the other three. */
+.itemframe.tier-found{border:1.5px dashed var(--soft);
+  transform:rotate(-2.5deg)}
+.itemframe.tier-found .itemmark{transform:rotate(2.5deg)}
+
+/* the topbar's "carrying" row: marks in a line instead of a string of glyphs */
+.bagmarks{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.chip.boost .itemmark,.chip.boost .itemframe{vertical-align:-2px;margin-right:2px}

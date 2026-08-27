@@ -7,7 +7,7 @@ import { PUNCH_OUT, freeShot } from '../content/cards'
 import { SEASON, MONEY_CHECKS, EVENT_COUNT, payout, tiePayout } from '../content/season'
 import {
   CARD_PRICES, CUT_PRICE, PREMIUM_BOOST, SHOP_BUDGET, TOUR_ISSUE, cardPrice,
-  tierOf,
+  tierOfPrice, type ShopTier,
 } from '../content/shop'
 import { BOOST, BOOSTS } from '../content/boosts'
 import { baseputts, resolvePutting, sinkCost } from './resolve/putt'
@@ -268,12 +268,12 @@ describe('the tiered truck', () => {
   }
 
   test('the tier bands are the measured price bands', () => {
-    expect(tierOf(200_000)).toBe('rack')
-    expect(tierOf(PREMIUM_BOOST - 50_000)).toBe('rack')
-    expect(tierOf(PREMIUM_BOOST)).toBe('special')
-    expect(tierOf(TOUR_ISSUE - 50_000)).toBe('special')
-    expect(tierOf(TOUR_ISSUE)).toBe('tour')
-    expect(tierOf(2_450_000)).toBe('tour')
+    expect(tierOfPrice(200_000)).toBe('rack')
+    expect(tierOfPrice(PREMIUM_BOOST - 50_000)).toBe('rack')
+    expect(tierOfPrice(PREMIUM_BOOST)).toBe('special')
+    expect(tierOfPrice(TOUR_ISSUE - 50_000)).toBe('special')
+    expect(tierOfPrice(TOUR_ISSUE)).toBe('tour')
+    expect(tierOfPrice(2_450_000)).toBe('tour')
   })
 
   test('same seed, same truck — the stock is deterministic', () => {
@@ -288,7 +288,7 @@ describe('the tiered truck', () => {
     const boosts = s.offer.filter(i => i.kind === 'boost')
     expect(s.shopTiers.length).toBe(boosts.length)
     boosts.forEach((item, i) => {
-      expect(tierOf(item.price)).toBe(s.shopTiers[i])
+      expect(BOOST[item.id]!.tier).toBe(s.shopTiers[i])
     })
   })
 
@@ -312,16 +312,38 @@ describe('the tiered truck', () => {
       expect(re.shopTiers).toEqual(s.shopTiers)
       const boosts = re.offer.filter(x => x.kind === 'boost')
       boosts.forEach((item, k) => {
-        expect(tierOf(item.price)).toBe(s.shopTiers[k])
+        expect(BOOST[item.id]!.tier).toBe(s.shopTiers[k])
       })
       cur = re
+    }
+  })
+
+  /**
+   * THE SEEDING RECEIPT. Rarity became stored data (Boost.tier) instead of
+   * something inferred from the sticker, so that the shop's badge cannot
+   * start lying the day a price band moves. This pins the one-time seeding:
+   * every item that a shop can sell still wears exactly the tier its price
+   * implied, which is what makes the change provably free — the shelf
+   * SHOP-SUPPLY swept is the shelf that still ships. Only `found` is allowed
+   * to disagree, because no price can describe a thing nobody sells.
+   */
+  test('stored rarity still matches the bands it was seeded from', () => {
+    for (const b of BOOSTS) {
+      if (b.tier === 'found') continue
+      expect(b.tier).toBe(tierOfPrice(b.price))
+    }
+    const found = BOOSTS.filter(b => b.tier === 'found')
+    expect(found.map(b => b.id)).toEqual(['foundtiger'])
+    // and a found item is never on a shelf, at any event, at any seed
+    for (let seed = 200; seed < 240; seed++) {
+      for (const item of shop(seed).offer) expect(item.id).not.toBe('foundtiger')
     }
   })
 
   test('across many seeds the truck is mostly the rack, and the pool splits 9/8/7', () => {
     // the draw weights are 6/3/1 — sanity-check the shape, not the digits:
     // rack must be the modal tier by a wide margin over 40 fresh shops
-    const tally = { rack: 0, special: 0, tour: 0 }
+    const tally: Record<ShopTier, number> = { rack: 0, special: 0, tour: 0 }
     for (let seed = 100; seed < 140; seed++) {
       for (const t of shop(seed).shopTiers) tally[t] += 1
     }
@@ -329,7 +351,7 @@ describe('the tiered truck', () => {
     expect(tally.special).toBeGreaterThan(tally.tour)
     // and the deepened pool the weights were swept against (SHOP-SUPPLY §7)
     const forSale = BOOSTS.filter(b => b.price > 0)
-    const count = (t: string) => forSale.filter(b => tierOf(b.price) === t).length
+    const count = (t: string) => forSale.filter(b => b.tier === t).length
     expect(count('rack')).toBe(9)
     expect(count('special')).toBe(8)
     expect(count('tour')).toBe(7)
@@ -1031,12 +1053,12 @@ describe('momentum — focus comes back faster after a good hole', () => {
     expect(focusRegen([], -1)).toBe(2)
     expect(focusRegen([], 1)).toBe(1)
     expect(focusRegen([], 3)).toBe(1)
-    const caddy = { id: 'x', name: '', icon: '', blurb: '', price: 0, focusRegenBonus: 1 }
+    const caddy = { id: 'x', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, focusRegenBonus: 1 }
     expect(focusRegen([caddy], 1)).toBe(2)
   })
 
   test('Short Memory — momentum survives a bogey, and only a bogey', () => {
-    const memory = { id: 'x', name: '', icon: '', blurb: '', price: 0, momentumSlack: 1 }
+    const memory = { id: 'x', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, momentumSlack: 1 }
     expect(focusRegen([memory], 0)).toBe(2)   // par is still par
     expect(focusRegen([memory], 1)).toBe(2)   // a bogey is not a story
     expect(focusRegen([memory], 2)).toBe(1)   // a double still is
@@ -1109,7 +1131,7 @@ describe('lie relief — ignoreLie shots and sand relief', () => {
   const cone = (id: string, lie: 'fairway' | 'deep' | 'bunker', boosts: never[] | { sandRelief: boolean }[] = []) =>
     buildCone(
       { shot: CARD[id] as never, techniques: [], aim: 'pin' }, lie, 999,
-      boosts.map(b => ({ id: 'x', name: '', icon: '', blurb: '', price: 0, ...b })),
+      boosts.map(b => ({ id: 'x', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, ...b })),
     ).cone
 
   test('Rescue plays its fairway numbers from the deep stuff', () => {

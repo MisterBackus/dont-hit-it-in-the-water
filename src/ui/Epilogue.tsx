@@ -21,6 +21,7 @@ import type { Action } from '../sim/reducer'
 import { grossEarnings, type GameState } from '../sim/state'
 import { EVENT_COUNT, MONEY_CHECKS, money, moneyListRank } from '../content/season'
 import { BOOST } from '../content/boosts'
+import { ItemMark } from './ItemMark'
 import { STARS } from '../content/players'
 import { starNamesFor } from '../sim/resolve/field'
 import { SAVE_VERSION } from '../platform/storage'
@@ -168,7 +169,7 @@ export function Epilogue({ s, dispatch, copyRun, copied, log }: {
           <div className="deckpanel">
             {s.boosts.map(id => (
               <span key={id} className="chip boost" title={BOOST[id]!.blurb}>
-                {BOOST[id]!.icon} {BOOST[id]!.name}
+                <ItemMark id={id} size={15} framed /> {BOOST[id]!.name}
               </span>
             ))}
           </div>

@@ -128,7 +128,7 @@ function seasonPlaces(seed: number, policy: Policy): number[] {
     // equipment accumulates through the season
     const kit = Math.pow(KIT, ei / (SEASON.length - 1))
     const boosts: Boost[] = [{
-      id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness * kit,
+      id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness * kit,
     }]
     ctx.focus = 5
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength * Number(process.env.FSCALE ?? 1))

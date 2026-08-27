@@ -1,7 +1,7 @@
 import type { AimChoice, HoleSpec, Point, Surface } from './types'
 import type { RngBank } from './rng'
 import type { FieldPlayer } from './resolve/field'
-import type { BoostTier, ShopItem } from '../content/shop'
+import type { ShopTier, ShopItem } from '../content/shop'
 import { SHOP_BUDGET } from '../content/shop'
 import type { Course } from '../content/courses'
 import type { PendingBet } from '../content/encounters'
@@ -81,7 +81,7 @@ export interface GameState {
    * truck brought. REROLL redraws items WITHIN these tiers rather than
    * re-rolling the tiers themselves; restocked at every shop open.
    */
-  readonly shopTiers: readonly BoostTier[]
+  readonly shopTiers: readonly ShopTier[]
   /** true when a purchase sent you to the cut-a-card screen */
   readonly cutIsPaid: boolean
   /**

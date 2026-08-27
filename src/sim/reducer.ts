@@ -14,8 +14,8 @@ import {
 import { BAG_CAP, CARD, HAND_SIZE, freeShot, REDRAW_COST, REWARD_POOL } from '../content/cards'
 import {
   BOOST_TIERS, cardPrice, CUT_PRICE, EARLY_SHOP_UNTIL, PREMIUM_BOOST,
-  REROLL_PRICE, SPRING_RACK_UNTIL, TIER_WEIGHTS, tierOf,
-  type BoostTier, type ShopItem,
+  REROLL_PRICE, SPRING_RACK_UNTIL, TIER_WEIGHTS,
+  type ShopTier, type ShopItem,
 } from '../content/shop'
 import {
   LESSON_FEE, PRACTICE_BIAS_UNTIL, PRACTICE_WEEK_IDS, WEEK, WEEKS, WEEKS_END_AT,
@@ -84,7 +84,8 @@ export function handTechs(s: GameState): TechniqueCard[] {
  */
 export function boostsOf(s: GameState) {
   const sharp: Boost = {
-    id: '_sharp', name: 'Sharpness', icon: '', blurb: '', price: 0,
+    // not an item and never rendered: a carrier for the season curve
+    id: '_sharp', name: 'Sharpness', icon: '', blurb: '', price: 0, tier: 'found',
     // the season's curve, tightened by every range week and lesson you took
     spreadScale: currentEvent(s).sharpness * s.practice,
   }
@@ -149,20 +150,21 @@ export function reduce(state: GameState, action: Action): GameState {
  */
 function tierShelves(
   owned: ReadonlySet<string>, taken: ReadonlySet<string>, gate: boolean,
-): Record<BoostTier, string[]> {
-  const shelves: Record<BoostTier, string[]> = { rack: [], special: [], tour: [] }
+): Record<ShopTier, string[]> {
+  const shelves: Record<ShopTier, string[]> = { rack: [], special: [], tour: [] }
   for (const b of BOOSTS) {
     if (owned.has(b.id) || taken.has(b.id) || ENCOUNTER_BOOSTS.has(b.id)) continue
     if (gate && b.price >= PREMIUM_BOOST) continue
-    shelves[tierOf(b.price)].push(b.id)
+    if (b.tier === 'found') continue // not for sale at any price
+    shelves[b.tier].push(b.id)
   }
   return shelves
 }
 
 /** One weighted tier draw among tiers with stock; null when the shelf is bare. */
 function drawTier(
-  shelves: Record<BoostTier, string[]>, rng: RngState,
-): readonly [BoostTier | null, RngState] {
+  shelves: Record<ShopTier, string[]>, rng: RngState,
+): readonly [ShopTier | null, RngState] {
   const avail = BOOST_TIERS.filter(t => shelves[t].length > 0)
   if (avail.length === 0) return [null, rng]
   const total = avail.reduce((n, t) => n + TIER_WEIGHTS[t], 0)
@@ -197,7 +199,7 @@ function stock(state: GameState): GameState {
   const owned = new Set(state.boosts)
   const gate = state.event <= EARLY_SHOP_UNTIL
   let rng = state.rng.shop
-  const tiers: BoostTier[] = []
+  const tiers: ShopTier[] = []
   const ids: string[] = []
   for (let slot = 0; slot < 2; slot++) {
     const shelves = tierShelves(owned, new Set(ids), gate)
@@ -206,7 +208,7 @@ function stock(state: GameState): GameState {
     // rarity must not tax the spring. Weighted draw everywhere else.
     const spring = slot === 0 && state.event <= SPRING_RACK_UNTIL
       && shelves.rack.length > 0
-    const [tier, r1] = spring ? [('rack' as BoostTier), rng] as const : drawTier(shelves, rng)
+    const [tier, r1] = spring ? [('rack' as ShopTier), rng] as const : drawTier(shelves, rng)
     rng = r1
     if (tier === null) break
     const [id, r2] = pickFrom(shelves[tier], rng)
@@ -238,7 +240,7 @@ function stock(state: GameState): GameState {
 function restockShelf(state: GameState): GameState {
   const owned = new Set(state.boosts)
   let rng = state.rng.shop
-  const tiers: BoostTier[] = []
+  const tiers: ShopTier[] = []
   const ids: string[] = []
   for (const tier of state.shopTiers) {
     const shelves = tierShelves(owned, new Set(ids), false)

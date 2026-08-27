@@ -21,7 +21,8 @@ import { deckList, currentEvent, grossEarnings, type GameState } from '../sim/st
 import { money, MONEY_CHECKS } from '../content/season'
 import { CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
-import { CUT_PRICE, REROLL_PRICE, SHOP_BUDGET, TIER_LABEL, tierOf } from '../content/shop'
+import { ItemMark } from './ItemMark'
+import { CUT_PRICE, REROLL_PRICE, SHOP_BUDGET, TIER_LABEL } from '../content/shop'
 import { DeckPanel } from './Cards'
 import { Badge, Eyebrow, Label } from './parts'
 
@@ -70,7 +71,7 @@ export function Shop({ s, dispatch }: { s: GameState; dispatch: (a: Action) => v
           const afford = item.price <= s.earnings
           if (item.kind === 'boost') {
             const b = BOOST[item.id]!
-            const tier = tierOf(item.price)
+            const tier = b.tier
             // past the allowance, a boost is as unbuyable as an unaffordable one
             const canBuy = afford && s.buysLeft > 0
             const why = !afford ? `${money(item.price - s.earnings)} short`
@@ -82,7 +83,7 @@ export function Shop({ s, dispatch }: { s: GameState; dispatch: (a: Action) => v
                   <Badge tone={`tier-${tier}`}>{TIER_LABEL[tier]}</Badge>
                   <em>always on</em>
                 </span>
-                <span className="boost-icon">{b.icon}</span>
+                <span className="boost-icon"><ItemMark id={b.id} size={40} /></span>
                 <span className="offer-name">{b.name}</span>
                 <span className="offer-blurb">{b.blurb}</span>
                 <span className="offer-price">
@@ -142,7 +143,7 @@ export function Shop({ s, dispatch }: { s: GameState; dispatch: (a: Action) => v
             <div className="deckpanel">
               {s.boosts.map(id => (
                 <span key={id} className="chip boost" title={BOOST[id]!.blurb}>
-                  {BOOST[id]!.icon} {BOOST[id]!.name}
+                  <ItemMark id={id} size={15} /> {BOOST[id]!.name}
                 </span>
               ))}
             </div>
@@ -225,7 +226,7 @@ export function PrizeScreen({ s, dispatch }: { s: GameState; dispatch: (a: Actio
               <span className="offer-kind tier-tour">
                 <Badge tone="tier-tour">free</Badge><em>always on</em>
               </span>
-              <span className="boost-icon">{b.icon}</span>
+              <span className="boost-icon"><ItemMark id={b.id} size={40} /></span>
               <span className="offer-name">{b.name}</span>
               <span className="offer-blurb">{b.blurb}</span>
             </button>

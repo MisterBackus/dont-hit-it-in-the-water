@@ -60,51 +60,51 @@ import type { Boost } from '../sim/types'
  */
 export const BOOSTS: readonly Boost[] = [
   {
-    id: 'superball', name: 'Super Ball', icon: '◉',
+    id: 'superball', name: 'Super Ball', icon: '◉', tier: 'tour',
     blurb: 'Everything goes 10% further. Everything.',
     carryScale: 1.10, price: 2_400_000,
   },
   {
-    id: 'deadball', name: 'Dead Ball', icon: '◍',
+    id: 'deadball', name: 'Dead Ball', icon: '◍', tier: 'special',
     blurb: 'No run-out at all — but a third less scatter.',
     killRoll: true, spreadScale: 0.68, price: 1_100_000,
   },
   {
-    id: 'goldenputter', name: 'Golden Putter', icon: '⌖',
+    id: 'goldenputter', name: 'Golden Putter', icon: '⌖', tier: 'tour',
     blurb: 'Every putt costs one less focus to hole.',
     sinkDiscount: 1, price: 2_100_000,
   },
   {
-    id: 'goldendriver', name: 'Golden Driver', icon: '⌁',
+    id: 'goldendriver', name: 'Golden Driver', icon: '⌁', tier: 'tour',
     blurb: 'Shots over 200 yards fly a third straighter.',
     spreadScale: 0.66, appliesTo: 'long', price: 1_650_000,
   },
   {
-    id: 'forged', name: 'Forged Wedges', icon: '◢',
+    id: 'forged', name: 'Forged Wedges', icon: '◢', tier: 'special',
     blurb: 'Short shots land where you meant them to.',
     // Slice 4: $850k measured 2.85x under the finished world ($2.42M a
     // season) — repriced to value over two. Now premium: a major can drop it.
     spreadScale: 0.55, appliesTo: 'short', price: 1_200_000,
   },
   {
-    id: 'grips', name: 'Fresh Grips', icon: '❖',
+    id: 'grips', name: 'Fresh Grips', icon: '❖', tier: 'special',
     blurb: 'Two more focus to spend.',
     maxFocusBonus: 2, price: 1_450_000,
   },
   {
-    id: 'marlene', name: 'Marlene, Thirty Years Here', icon: '☂',
+    id: 'marlene', name: 'Marlene, Thirty Years Here', icon: '☂', tier: 'tour',
     blurb: 'Your caddie. One extra focus back every hole.',
     focusRegenBonus: 1, price: 2_400_000,
   },
   {
-    id: 'marker', name: 'Lucky Ball Marker', icon: '✦',
+    id: 'marker', name: 'Lucky Ball Marker', icon: '✦', tier: 'tour',
     blurb: 'The first putt you hole each round is free.',
     // Slice 4: $1.25M measured 2.53x under the finished world ($3.17M a
     // season) — repriced to value over two.
     freeSinks: 1, price: 1_600_000,
   },
   {
-    id: 'tees', name: 'Long Tees', icon: '⌃',
+    id: 'tees', name: 'Long Tees', icon: '⌃', tier: 'tour',
     blurb: 'Twenty more yards off the tee.',
     // Slice 4: the biggest drift in the shop — $1.0M measured 3.60x under
     // the finished world ($3.60M a season; the rotation's scoring courses
@@ -112,7 +112,7 @@ export const BOOSTS: readonly Boost[] = [
     carryAdd: 20, appliesTo: 'tee', price: 1_800_000,
   },
   {
-    id: 'spikes', name: 'Soft Spikes', icon: '⌇',
+    id: 'spikes', name: 'Soft Spikes', icon: '⌇', tier: 'rack',
     blurb: 'The rough stops being a problem.',
     // CALIBRATION-2 (stars in the field): $300k measured 1.37x ($412k a
     // season) — the tier trims every return and the cheapest items had the
@@ -120,12 +120,12 @@ export const BOOSTS: readonly Boost[] = [
     roughRelief: true, price: 200_000,
   },
   {
-    id: 'headcover', name: 'Sponsor: Deiter’s Heating & Cooling', icon: '▣',
+    id: 'headcover', name: 'Sponsor: Deiter’s Heating & Cooling', icon: '▣', tier: 'special',
     blurb: 'A decal on your bag, and a steadier swing. 15% less scatter.',
     spreadScale: 0.85, price: 1_050_000,
   },
   {
-    id: 'yardagebook', name: 'A Good Yardage Book', icon: '▤',
+    id: 'yardagebook', name: 'A Good Yardage Book', icon: '▤', tier: 'rack',
     // Was "aim further off line", which measured at MINUS $128k a season: the
     // safe-aim option is not what is scarce here, so widening it bought
     // nothing and cost a shot. Same object, useful effect.
@@ -137,7 +137,7 @@ export const BOOSTS: readonly Boost[] = [
   // (tools/rewardcheck.ts SECTION=boosts, 250 seasons each, mixed play,
   //  seeds 600000+; every price is that run's measured value over two)
   {
-    id: 'stiffshafts', name: 'Stiff Shafts', icon: '∥',
+    id: 'stiffshafts', name: 'Stiff Shafts', icon: '∥', tier: 'special',
     // No boost added carry anywhere but the tee. Reach measured as the
     // deck's one scarce axis, so this is reach for the long irons, any lie.
     // Measured $1.92M a season.
@@ -145,7 +145,7 @@ export const BOOSTS: readonly Boost[] = [
     carryAdd: 15, appliesTo: 'long', price: 1_000_000,
   },
   {
-    id: 'leather', name: 'Inside the Leather', icon: '◌',
+    id: 'leather', name: 'Inside the Leather', icon: '◌', tier: 'tour',
     // The first boost to touch putting DISTANCE: the deterministic bands
     // were untouched by every piece of equipment until this one.
     // Measured $3.84M a season — every ≤8ft birdie stops costing two focus.
@@ -155,7 +155,7 @@ export const BOOSTS: readonly Boost[] = [
     gimmeFeet: 8, price: 2_450_000,
   },
   {
-    id: 'shortmemory', name: 'Short Memory', icon: '≈',
+    id: 'shortmemory', name: 'Short Memory', icon: '≈', tier: 'rack',
     // The first boost to touch momentum — and the first counterplay purchase
     // against the focus-shadow holes the course designers price with.
     // The swingiest measurement in the shop, on purpose: $980k / $502k /
@@ -174,7 +174,7 @@ export const BOOSTS: readonly Boost[] = [
     momentumSlack: 1, price: 200_000,
   },
   {
-    id: 'pontoon', name: 'Sponsor: Lakeview Pontoon Rentals', icon: '▥',
+    id: 'pontoon', name: 'Sponsor: Lakeview Pontoon Rentals', icon: '▥', tier: 'rack',
     // The sponsor that PAYS — per made cut, into the same gross number the
     // Money List reads. A pontoon-rental decal, in this game, on purpose.
     // Measured $1.17M a season, which is ~7.8 made cuts: the analytic and
@@ -183,7 +183,7 @@ export const BOOSTS: readonly Boost[] = [
     cutBonus: 150_000, price: 600_000,
   },
   {
-    id: 'organized', name: 'An Organized Bag', icon: '▦',
+    id: 'organized', name: 'An Organized Bag', icon: '▦', tier: 'rack',
     // The only boost that touches the redraw economy. Predicted small and
     // measured $1.11M — a cheaper redraw fires far more often than the
     // dead-hand model suggested. Priced accordingly.
@@ -214,7 +214,7 @@ export const BOOSTS: readonly Boost[] = [
   // TOUR ISSUE shelf, and premiums need no deepening (SHOP-SUPPLY §7):
   // culled for landing in the one tier whose whole job is being rare.
   {
-    id: 'glove', name: 'New Glove', icon: '◇',
+    id: 'glove', name: 'New Glove', icon: '◇', tier: 'rack',
     // Measured $977k / $1.68M a season on independent seed sets — a
     // Short-Memory-grade spread (one focus point pays most in seasons
     // that need it least), first priced on the two-run mean over two.
@@ -228,7 +228,7 @@ export const BOOSTS: readonly Boost[] = [
     maxFocusBonus: 1, price: 350_000,
   },
   {
-    id: 'bait', name: 'Sponsor: Shorty’s Bait & Tackle', icon: '▧',
+    id: 'bait', name: 'Sponsor: Shorty’s Bait & Tackle', icon: '▧', tier: 'rack',
     // The second sponsor that PAYS — Pontoon's shape at a lower price
     // point, exactly the axis §7 named. Measured $921k / $927k a season
     // on independent seed sets (~9.2 made cuts; the analytic agrees to
@@ -237,7 +237,7 @@ export const BOOSTS: readonly Boost[] = [
     cutBonus: 100_000, price: 450_000,
   },
   {
-    id: 'circle', name: 'The Circle of Friendship', icon: '◎',
+    id: 'circle', name: 'The Circle of Friendship', icon: '◎', tier: 'special',
     // The putting band below the Leather's: six feet against its eight.
     // gimmeRange takes the MAX, so this never stacks with the Leather —
     // buying up is an upgrade, not an addition, and the shop says so in
@@ -247,7 +247,7 @@ export const BOOSTS: readonly Boost[] = [
     gimmeFeet: 6, price: 1_300_000,
   },
   {
-    id: 'threewood', name: 'A Three Wood You Trust', icon: '⌐',
+    id: 'threewood', name: 'A Three Wood You Trust', icon: '⌐', tier: 'rack',
     // Tee-only accuracy — the first boost on the appliesTo:'tee' spread
     // axis (Long Tees is carry). Measured $1.48M / $2.09M a season on
     // independent seed sets — swingy like the other cheap SKUs, priced
@@ -256,7 +256,7 @@ export const BOOSTS: readonly Boost[] = [
     spreadScale: 0.75, appliesTo: 'tee', price: 900_000,
   },
   {
-    id: 'concrete', name: 'Sponsor: Tri-County Concrete', icon: '▩',
+    id: 'concrete', name: 'Sponsor: Tri-County Concrete', icon: '▩', tier: 'special',
     // The paying sponsor at special-order money: triple Shorty's rate,
     // triple the sticker. Measured $2.76M / $2.78M a season on
     // independent seed sets — the steadiest measurement in the batch,
@@ -265,7 +265,7 @@ export const BOOSTS: readonly Boost[] = [
     cutBonus: 300_000, price: 1_400_000,
   },
   {
-    id: 'slate', name: 'Clean Slate', icon: '□',
+    id: 'slate', name: 'Clean Slate', icon: '□', tier: 'rack',
     // Momentum insurance above Short Memory's: two strokes of slack, so a
     // double keeps the well refilling. Stacks with Short Memory by sum
     // (effects.ts) — three slack between them, priced separately on their
@@ -280,7 +280,7 @@ export const BOOSTS: readonly Boost[] = [
     momentumSlack: 2, price: 150_000,
   },
   {
-    id: 'fade', name: 'A Baby Fade', icon: '◠',
+    id: 'fade', name: 'A Baby Fade', icon: '◠', tier: 'special',
     // Long-iron accuracy shy of the Golden Driver's (0.80 vs 0.66), at a
     // special-order sticker. Measured $2.19M / $2.38M a season on
     // independent seed sets; two-run mean over two.
@@ -290,7 +290,7 @@ export const BOOSTS: readonly Boost[] = [
 
   // ---- encounter-only, 25 Aug 2026 ----
   {
-    id: 'foundtiger', name: 'Somebody’s Tiger', icon: '◐',
+    id: 'foundtiger', name: 'Somebody’s Tiger', icon: '◐', tier: 'found',
     // ENCOUNTER-ONLY (content/encounters.ts, The Lost Headcover). Price 0 and
     // never for sale: reducer.ts excludes ENCOUNTER_BOOSTS from the shop's
     // stock() and from a major's offerBoosts(). A superstition, not equipment

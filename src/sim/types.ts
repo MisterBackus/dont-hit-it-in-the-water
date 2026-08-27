@@ -125,10 +125,28 @@ export interface Cone {
  * A BOOST is equipment or superstition: always active, never in the deck.
  * See content/boosts.ts for why this is a separate axis from cards.
  */
+/** the three shelves a shop can draw from, in order of how often it does */
+export type ShopTier = 'rack' | 'special' | 'tour'
+/**
+ * Every tier an item can wear. `found` is the fourth and it never reaches a
+ * shelf: some things are not for sale (content/encounters.ts).
+ */
+export type BoostTier = ShopTier | 'found'
+
 export interface Boost {
   readonly id: string
   readonly name: string
+  /** the old single glyph — the fallback when a mark is missing (ui/ItemMark) */
   readonly icon: string
+  /**
+   * How hard it is to come by. STORED, never inferred from the price: rarity
+   * and price agreeing was a coincidence, and deriving one from the other
+   * meant the shop's badge would begin lying the day a price band moved —
+   * with three SKUs already sitting over the band's ceiling awaiting a
+   * repricing (CALIBRATION-3). Storing it also lets rarity and price
+   * disagree on purpose, which the game could not express before.
+   */
+  readonly tier: BoostTier
   readonly blurb: string
   /** which shots it touches; undefined = all */
   readonly appliesTo?: 'all' | 'long' | 'short' | 'tee'

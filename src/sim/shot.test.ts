@@ -118,7 +118,7 @@ describe('the junk spread floor (JUNK-VERDICT.md SHIPPED)', () => {
     // Relief makes the lie fairway, and a relieved lie skips the floor
     // exactly as it skips the multiplier table (Soft Spikes here; New
     // Grooves and ignoreLie cards resolve through the same `relieved` gate).
-    const spikes = [{ id: 'sp', name: '', icon: '', blurb: '', price: 0, roughRelief: true }]
+    const spikes = [{ id: 'sp', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, roughRelief: true }]
     const relieved = buildCone({ shot: flop, techniques: [], aim: 'pin' }, 'rough', 35, spikes).cone
     expect(relieved.spread).toBe(4)
   })
@@ -171,7 +171,7 @@ describe('depth in the picture (DEPTH-DECISION.md)', () => {
     ).cone
     expect(chased.restFar - chased.pitchFar).toBe(55)
     const dead = buildCone({ ...stinger, techniques: [] }, 'tee', 999,
-      [{ id: 'db', name: '', icon: '', blurb: '', price: 0, killRoll: true }]).cone
+      [{ id: 'db', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, killRoll: true }]).cone
     expect(dead.roll).toBe(0)
     expect(dead.restFar).toBe(dead.pitchFar)
   })

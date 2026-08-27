@@ -21,7 +21,7 @@ import { SEASON, MONEY_CHECKS, payout, tiePayout, money } from '../content/seaso
 import { BOOSTS } from '../content/boosts'
 import {
   EARLY_SHOP_UNTIL, PREMIUM_BOOST, SHOP_BUDGET, SPRING_RACK_UNTIL,
-  TIER_WEIGHTS, BOOST_TIERS, tierOf, type BoostTier,
+  TIER_WEIGHTS, BOOST_TIERS, type ShopTier,
 } from '../content/shop'
 import { ENCOUNTER_BOOSTS } from '../content/encounters'
 import { buildCone, gimmeRange, maxFocus, focusRegen } from '../sim/effects'
@@ -168,7 +168,7 @@ function seasonEarningsWithDeck(
   for (const ev of SEASON) {
     const course = COURSES[rota[ev.num - 1]!]
     const boosts: Boost[] = [
-      { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
+      { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
       ...kit,
     ]
     ctx.focus = maxFocus(5, boosts)
@@ -314,7 +314,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
   const MINBUY = Number(process.env.MINBUY ?? 0)
   // SPRING=0 turns the spring slot off (content/shop.ts SPRING_RACK_UNTIL)
   const SPRING = Number(process.env.SPRING ?? SPRING_RACK_UNTIL)
-  const TW: Record<BoostTier, number> = (() => {
+  const TW: Record<ShopTier, number> = (() => {
     const w = (process.env.W ?? '').split(',').map(Number)
     return w.length === 3 && w.every(n => Number.isFinite(n) && n > 0)
       ? { rack: w[0]!, special: w[1]!, tour: w[2]! }
@@ -330,16 +330,17 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
     const owned = new Set(kit.map(k => k.id))
     const offers: Boost[] = []
     for (let slot = 0; slot < 2; slot++) {
-      const shelves: Record<BoostTier, Boost[]> = { rack: [], special: [], tour: [] }
+      const shelves: Record<ShopTier, Boost[]> = { rack: [], special: [], tour: [] }
       for (const b of SHELF) {
         if (owned.has(b.id) || ENCOUNTER_BOOSTS.has(b.id)) continue
         if (offers.some(o => o.id === b.id)) continue
         if (gate && b.price >= PREMIUM_BOOST) continue
-        shelves[tierOf(b.price)].push(b)
+        if (b.tier === 'found') continue
+        shelves[b.tier].push(b)
       }
       const avail = BOOST_TIERS.filter(t => shelves[t].length > 0)
       if (avail.length === 0) break
-      let tier: BoostTier
+      let tier: ShopTier
       if (slot === 0 && spring && shelves.rack.length > 0) {
         tier = 'rack'   // the spring slot — reducer.ts stock()
       } else {
@@ -434,7 +435,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
       }
 
       let boosts: Boost[] = [
-        { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
+        { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
         ...kit,
       ]
       ctx.focus = maxFocus(5, boosts)
@@ -475,7 +476,7 @@ console.log('\n  Target: every boost between 1.4× and 2.5× its price.\n')
             ctx.freeSinks += pick.freeSinks ?? 0
             ctx.focus += pick.maxFocusBonus ?? 0
             boosts = [
-              { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
+              { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
               ...kit,
             ]
           }

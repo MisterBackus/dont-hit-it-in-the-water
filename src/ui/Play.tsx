@@ -32,6 +32,7 @@ import {
 import { EVENT_COUNT } from '../content/season'
 import { PUNCH_OUT, CHIP_OUT, CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
+import { ItemMark } from './ItemMark'
 import { buildCone, focusCost, gimmeRange, maxFocus, whyNotPlayable } from '../sim/effects'
 import { SURFACE_LABEL, toPin } from '../sim/geometry'
 import { baseputts } from '../sim/resolve/putt'
@@ -113,7 +114,9 @@ export function Play({ s, dispatch, copyRun, copied }: {
           <div className="stat strokes"><b>{s.hole.strokes}</b><span>on this hole</span></div>
           {s.boosts.length > 0 && (
             <div className="stat bag">
-              <b>{s.boosts.map(id => BOOST[id]!.icon).join(' ')}</b>
+              <b className="bagmarks">{s.boosts.map(id => (
+                <ItemMark key={id} id={id} size={17} />
+              ))}</b>
               <span>carrying</span>
             </div>
           )}
@@ -450,7 +453,7 @@ function BagDrawer({ s, copyRun, copied, close }: {
               const b = BOOST[id]!
               return (
                 <div key={id} className="boostrow">
-                  <span className="boost-ic">{b.icon}</span>
+                  <span className="boost-ic"><ItemMark id={id} size={24} framed /></span>
                   <div>
                     <b>{b.name}</b>
                     <span>{b.blurb}</span>

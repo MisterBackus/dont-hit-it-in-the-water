@@ -142,13 +142,16 @@ export const SHOP_BUDGET = 6
  * the truck brought, not summon a different truck (at ~13% premium odds per
  * slot, $70k tier-fishing would be a solved slot machine).
  */
-export type BoostTier = 'rack' | 'special' | 'tour'
-export const BOOST_TIERS: readonly BoostTier[] = ['rack', 'special', 'tour']
+import type { BoostTier, ShopTier } from '../sim/types'
+export type { BoostTier, ShopTier }
+/** the three that reach a shelf — `found` never does, so it is not here */
+export const BOOST_TIERS: readonly ShopTier[] = ['rack', 'special', 'tour']
 export const TIER_LABEL: Readonly<Record<BoostTier, string>> = {
   rack: 'Off the Rack', special: 'Special Order', tour: 'Tour Issue',
+  found: 'Found',
 }
 /** draw weights 6/3/1 — swept against 8/3/1 and 6/2/1 (SHOP-SUPPLY SHIPPED) */
-export const TIER_WEIGHTS: Readonly<Record<BoostTier, number>> = {
+export const TIER_WEIGHTS: Readonly<Record<ShopTier, number>> = {
   rack: 6, special: 3, tour: 1,
 }
 /**
@@ -168,10 +171,20 @@ export const TIER_WEIGHTS: Readonly<Record<BoostTier, number>> = {
  */
 export const SPRING_RACK_UNTIL = 5
 
-/** the tour-issue line — the top price band of the measured shelf */
+/**
+ * The tour-issue line. This band ONCE decided rarity; now it only records
+ * where the bands sat when every item's stored tier was seeded from them
+ * (boosts.ts `tier`), which a test still pins. Rarity is data — see the
+ * Boost type — so an item may deliberately cost less than its shelf implies.
+ */
 export const TOUR_ISSUE = 1_600_000
-export function tierOf(price: number): BoostTier {
+/** What the price bands imply. Kept for the seeding test, not for gameplay. */
+export function tierOfPrice(price: number): ShopTier {
   if (price >= TOUR_ISSUE) return 'tour'
   if (price >= PREMIUM_BOOST) return 'special'
   return 'rack'
+}
+/** An item's rarity, as stored. */
+export function tierOf(b: { readonly tier: BoostTier }): BoostTier {
+  return b.tier
 }

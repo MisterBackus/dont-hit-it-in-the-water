@@ -97,7 +97,7 @@ const BANDS: readonly Band[] = [
 const ALL_HOLES: readonly HoleSpec[] = COURSE_POOL.flatMap(id => COURSES[id].holes)
 
 const BOOSTS: readonly Boost[] = [
-  { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: SHARP },
+  { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: SHARP },
 ]
 
 /** The measured spot: d yards from the pin, on the tee-to-green line. */

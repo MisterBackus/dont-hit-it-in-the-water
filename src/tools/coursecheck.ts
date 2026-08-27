@@ -168,7 +168,7 @@ function report(course: readonly HoleSpec[], label: string) {
       const bank0 = seedBank(800_000 + i)
       const [deck0, drawRng0] = shuffle(STARTING_DECK, bank0.draw)
       const ctx: Ctx = { bank: { ...bank0, draw: drawRng0 }, deck: deck0, discard: [], focus: 5 }
-      const boosts: Boost[] = [{ id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: SHARP }]
+      const boosts: Boost[] = [{ id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: SHARP }]
       const holes = course.map((h, k) => {
         MEASURE_HOLE = k
         MEASURE_DECISIONS = policy === 'mixed'

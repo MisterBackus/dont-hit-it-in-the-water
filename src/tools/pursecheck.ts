@@ -101,7 +101,7 @@ function playSeason(seed: number, policy: Policy, pay: Payout, purses: Purses): 
   for (const ev of SEASON) {
     const course = COURSES[rota[ev.num - 1]!]
     const boosts: Boost[] = [{
-      id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness,
+      id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness,
     }]
     ctx.focus = 5
     let [field, fr] = makeField(ctx.bank.field, ev.fieldStrength)

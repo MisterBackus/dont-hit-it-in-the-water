@@ -114,7 +114,7 @@ function seasonEarnings(
   for (const ev of SEASON) {
     const course = COURSES[rota[ev.num - 1]!]
     const boosts: Boost[] = [
-      { id: '_s', name: '', icon: '', blurb: '', price: 0, spreadScale: ev.sharpness },
+      { id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: ev.sharpness },
       ...kit,
     ]
     ctx.focus = maxFocus(5, boosts)

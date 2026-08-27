@@ -104,7 +104,7 @@ function playSeason(seed: number, policy: Policy, spend = false): number[] {
       if (bought < Number(process.env.MAXBUY ?? 4) && earned - kit >= onPace) { earned -= kit; bought++ }
     }
     const boosts: Boost[] = [{
-      id: '_s', name: '', icon: '', blurb: '', price: 0,
+      id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const,
       spreadScale: ev.sharpness * Math.pow(Number(process.env.KITPOW ?? 0.88), bought),
     }]
     ctx.focus = 5
@@ -146,7 +146,7 @@ function playSeasonFreeKit(seed: number, policy: Policy): number[] {
     // pieces arrive on the same rough schedule a shopper would manage
     const bought = Math.min(4, Math.floor((ev.num - 1) / 3))
     const boosts: Boost[] = [{
-      id: '_s', name: '', icon: '', blurb: '', price: 0,
+      id: '_s', name: '', icon: '', blurb: '', price: 0, tier: 'rack' as const,
       spreadScale: ev.sharpness * Math.pow(Number(process.env.KITPOW ?? 0.88), bought),
     }]
     ctx.focus = 5

@@ -24,7 +24,7 @@ interface Ctx { bank: RngBank; deck: string[]; discard: string[]; focus: number 
 
 /** Sharpness is modelled as a single global spread multiplier. */
 function sharpnessBoost(mult: number): Boost {
-  return { id: 'sharp', name: 'sharpness', icon: '', blurb: '', price: 0, spreadScale: mult }
+  return { id: 'sharp', name: 'sharpness', icon: '', blurb: '', price: 0, tier: 'rack' as const, spreadScale: mult }
 }
 
 function playHole(hole: HoleSpec, ctx: Ctx, boosts: Boost[]) {
