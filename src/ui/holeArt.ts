@@ -269,6 +269,47 @@ export interface TreeSprite {
 const TREE_ROWS = [29.5, 35.5, 45.5]
 const TREE_SPACING = 13
 
+/** Is this point inside any hazard the hole DECLARES (as opposed to the
+ * outfield OB that geometry derives)? The treeline's gate needs the
+ * distinction; a declared region is a place, and places are drawn as
+ * themselves. */
+function inAnyHazard(hole: HoleSpec, p: Point): boolean {
+  return hole.hazards.some(h => {
+    const dd = (p.down - h.at.down) / h.rDown
+    const ds = (p.side - h.at.side) / h.rSide
+    return dd * dd + ds * ds <= 1
+  })
+}
+
+/**
+ * OB STAKES — what actually marks out of bounds on a golf course.
+ *
+ * A declared OB region used to fall through HoleView's hazard switch onto a
+ * generic branch and get painted `var(--rough)`: the picture coloured a
+ * TWO-STROKE penalty the same green as safe grass, which is the one thing
+ * the picture is never allowed to do. It has its own vocabulary now, and the
+ * vocabulary is the sport's: a line of white stakes around the edge, spaced
+ * along the true ellipse so they sit exactly where the penalty starts.
+ */
+export function obStakes(
+  hole: HoleSpec, at: Point, rDown: number, rSide: number, feat: number,
+): Point[] {
+  const seed = holeSeed(hole)
+  // perimeter of an ellipse, near enough for spacing purposes
+  const per = Math.PI * (3 * (rDown + rSide)
+    - Math.sqrt((3 * rDown + rSide) * (rDown + 3 * rSide)))
+  const n = Math.max(6, Math.min(28, Math.round(per / 13)))
+  const out: Point[] = []
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2
+    out.push({
+      down: at.down + Math.cos(t) * rDown + wob(seed, feat, i, 0.8),
+      side: at.side + Math.sin(t) * rSide + wob(seed, feat + 1, i, 0.5),
+    })
+  }
+  return out
+}
+
 /**
  * THE TREELINE — the stand of trees that frames the hole.
  *
@@ -298,6 +339,16 @@ export function treeline(hole: HoleSpec): TreeSprite[] {
         // THE HONESTY GATE — ask the sim, not the picture
         const s = surfaceAt(hole, at)
         if (s !== 'trees' && s !== 'ob') continue
+        // ...and a NARROWER gate than the one first written here. 'ob' was
+        // allowed because OB is normally the outfield BEYOND the treeline,
+        // where a row of trees is exactly right. But a hole may declare OB as
+        // an interior hazard — Rockdale 1's range fence is a 7-yard sliver
+        // between the fairway and the cart path — and the old rule dutifully
+        // planted a wood inside it. That is the picture naming the wrong
+        // surface: trees cost 70% carry and 2.4x scatter, OB costs TWO
+        // STROKES, and the owner correctly read the result as a green blob
+        // that did not belong. Trees never grow inside a declared hazard.
+        if (s === 'ob' && inAnyHazard(hole, at)) continue
         out.push({ at, r: 2.5 + hash01(seed, feat + 4, k) * 2.7, seed: seed ^ (k * 2654435761) })
       }
     }

@@ -6,7 +6,7 @@ import { aimFrame } from '../sim/resolve/shot'
 import { HALF_WIDTH, RUNOUT, project, totalDepth, viewBox, windowFrom } from './scale'
 import {
   DEEP_BAND, DEEP_BEYOND, ROUGH_BAND, TREES_BAND, SUN,
-  cartPathD, holeEdgeBand, holeEdgeCorridor, holeEdgeEllipse, obEdge,
+  cartPathD, holeEdgeBand, holeEdgeCorridor, holeEdgeEllipse, obEdge, obStakes,
   teeMarkerD, treeArt, treeline, treesInEllipse, trueEllipse, trueGreen,
 } from './holeArt'
 import './holeart.css'
@@ -441,6 +441,32 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
                 <path d={wood.canopy} fill="var(--ha-canopy)" />
                 <path d={wood.light} fill="var(--ha-lit)" opacity=".5" />
               </g>
+            </g>
+          )
+        }
+        /**
+         * OUT OF BOUNDS, AS A PLACE. A declared OB region used to fall
+         * through to the generic branch below and get painted var(--rough) —
+         * the picture colouring a TWO-STROKE penalty the same green as safe
+         * grass, while the treeline planted a wood inside it. The owner read
+         * exactly what was drawn: "what is that slug down the right side of
+         * the fairway?" It is the range fence on Rockdale 1, and it now looks
+         * like one — the dark OB ground, the Signal Red boundary the corridor
+         * edge already owns, and a line of white stakes, which is how a golf
+         * course says this out loud.
+         */
+        if (h.surface === 'ob') {
+          return (
+            <g key={i}>
+              <path d={blob} fill="var(--ob-field)" />
+              <path d={blob} fill="none" stroke="var(--signal)" strokeWidth="1.1"
+                strokeDasharray="5 4" vectorEffect="non-scaling-stroke" opacity=".9" />
+              {obStakes(hole, h.at, h.rDown, h.rSide, 300 + i).map((p, k) => {
+                const q = project(p, hole)
+                return <circle key={k} cx={q.x} cy={q.y} r="1.5"
+                  fill="var(--ha-stake)" stroke="var(--tube)" strokeWidth=".5"
+                  vectorEffect="non-scaling-stroke" />
+              })}
             </g>
           )
         }

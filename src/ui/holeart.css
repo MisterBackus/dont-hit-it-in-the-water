@@ -34,6 +34,8 @@
   /* the cart path — worn concrete under a tape camera, desaturated
      so it never competes with sand for "this is a hazard" */
   --ha-path:      #4B564B;
+  /* the stakes that mark out of bounds - bone, weathered timber */
+  --ha-stake:     #D8D2C4;
 
   /* water, given depth: dark in the middle, a pale line at the shore */
   --ha-deepwater: #0E3552;

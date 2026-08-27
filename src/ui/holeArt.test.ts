@@ -233,6 +233,42 @@ describe('decoration never stands where the sim disagrees (§2b)', () => {
     expect(planted).toBeGreaterThan(1000)
   })
 
+  /**
+   * THE RULE I MEANT, NOT THE RULE I TYPED.
+   *
+   * The test above passed a real bug for a full day. 'ob' is legal ground for
+   * a tree because OB is normally the outfield BEYOND the treeline — but a
+   * hole may DECLARE OB as an interior hazard, and Rockdale 1's range fence is
+   * a seven-yard sliver between the fairway and the cart path. The treeline
+   * planted a wood inside it, and the owner read exactly what was drawn:
+   * "what is that slug down the right side of the fairway?"
+   *
+   * That is the picture naming the wrong surface, which is the one thing it is
+   * never allowed to do — trees cost 70% of carry and 2.4x scatter, OB costs
+   * TWO STROKES. A tree may stand in derived outfield OB. It may never stand
+   * inside a region the hole declared.
+   */
+  test('no tree grows inside a declared hazard that is not trees', () => {
+    let checked = 0
+    for (const { course, hole } of HOLES) {
+      for (const t of treeline(hole)) {
+        for (const [i, h] of hole.hazards.entries()) {
+          // a wood drawn inside a declared TREES region is the honest case —
+          // that is the region drawn as what it plays as. Every other surface
+          // is the picture claiming the wrong penalty.
+          if (h.surface === 'trees') continue
+          const dd = (t.at.down - h.at.down) / h.rDown
+          const ds = (t.at.side - h.at.side) / h.rSide
+          checked++
+          expect(dd * dd + ds * ds > 1,
+            `${course} ${hole.num}: a tree stands inside declared ${h.surface} hazard ${i}`)
+            .toBe(true)
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(1000)
+  })
+
   test('every canopy inside a trees hazard stands on trees ground', () => {
     let planted = 0
     for (const { course, hole } of HOLES) {
