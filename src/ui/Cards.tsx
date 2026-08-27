@@ -84,6 +84,58 @@ export function ShotButton({
  * it costs — but the cost is focus, so the cost is drawn in focus's colour and
  * armed is a filled state rather than an outline.
  */
+/**
+ * WHAT A TECHNIQUE DOES TO THE PICTURE.
+ *
+ * Techniques had no art at all — a name, a line of prose, and focus pips —
+ * so Take the Extra Club and Grip It and Rip It were structurally identical
+ * on screen and the only way to learn that one adds fifteen yards while the
+ * other adds forty and DOUBLES your scatter was to read. That is the game's
+ * teaching order backwards (P6: the picture first, the number second, the
+ * word last and as a reward), and it is the expensive way round, because you
+ * arm a technique on every hole you play.
+ *
+ * So each one draws what it is: a cone. The faint one is a fixed reference
+ * shot; the solid one is that same shot with this technique on it, computed
+ * from the card's own effects. The reference never changes, which is the
+ * same honesty rule CardCone follows — two techniques are comparable because
+ * they are shown doing their work to the identical shot. Nothing here is
+ * decorative and nothing is hand-tuned: change a card's numbers and its
+ * drawing moves.
+ */
+const REF = { carry: 165, spread: 17, roll: 0 }
+
+export function TechDiagram({ tech }: { tech: TechniqueCard }) {
+  const W = 62, H = 34, MAXY = 240, MAXSIDE = 46
+  let carry = REF.carry, spread = REF.spread, roll = REF.roll
+  let hazardProof = false
+  for (const e of tech.effects) {
+    if (e.op === 'addCarry') carry += e.value
+    else if (e.op === 'scaleCarry') carry *= e.value
+    else if (e.op === 'scaleSpread') spread *= e.value
+    else if (e.op === 'addRoll') roll += e.value
+    else if (e.op === 'ignoreHazards') hazardProof = true
+  }
+  const wedge = (cy: number, sp: number) => {
+    const len = Math.min(H - 5, (cy / MAXY) * (H - 6))
+    const half = Math.min(W / 2 - 1.5, (sp / MAXSIDE) * (W / 2))
+    return `${W / 2},${H - 3} ${W / 2 - half},${H - 3 - len} ${W / 2 + half},${H - 3 - len}`
+  }
+  const tipY = H - 3 - Math.min(H - 5, (carry / MAXY) * (H - 6))
+  const rollLen = Math.min(9, (roll / MAXY) * (H - 6))
+  return (
+    <svg className="techcone" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      {/* the shot as it stands, for scale — the same one on every card */}
+      <polygon points={wedge(REF.carry, REF.spread)} className="tc-ref" />
+      {hazardProof && <rect x="1" y={H - 12} width="12" height="9" rx="2" className="tc-safe" />}
+      <polygon points={wedge(carry, spread)} className="tc-now" />
+      {rollLen > 0.7 && (
+        <line x1={W / 2} y1={tipY} x2={W / 2} y2={tipY - rollLen} className="tc-roll" />
+      )}
+    </svg>
+  )
+}
+
 export function TechButton({ tech, selected, disabled, onClick }: {
   tech: TechniqueCard; selected: boolean; disabled: boolean; onClick(): void
 }) {
@@ -91,7 +143,10 @@ export function TechButton({ tech, selected, disabled, onClick }: {
     <button className={`tech ${selected ? 'sel' : ''} ${disabled ? 'off' : ''}`}
       onClick={onClick} disabled={disabled} aria-pressed={selected}
       title={tech.blurb}>
-      <span className="tech-name">{tech.name}</span>
+      <span className="tech-head">
+        <span className="tech-name">{tech.name}</span>
+        <TechDiagram tech={tech} />
+      </span>
       <span className="tech-blurb">{tech.blurb}</span>
       <span className="tech-cost">{tech.focus === 0 ? 'free' : '◆'.repeat(tech.focus)}</span>
     </button>

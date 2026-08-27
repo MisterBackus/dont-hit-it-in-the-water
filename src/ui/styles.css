@@ -984,3 +984,21 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 /* the topbar's "carrying" row: marks in a line instead of a string of glyphs */
 .bagmarks{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .chip.boost .itemmark,.chip.boost .itemframe{vertical-align:-2px;margin-right:2px}
+
+/* ===================================== what a technique does to the picture
+   Techniques were name + prose + pips, so the only way to learn that Grip It
+   and Rip It doubles your scatter was to read it. Each now draws a cone: the
+   faint one is a fixed reference shot, the solid one is that shot with the
+   technique on it, computed from the card's own effects (ui/Cards.tsx). */
+.tech-head{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:var(--s2);width:100%}
+.techcone{flex:0 0 auto;width:62px;height:34px;margin-top:1px}
+.tc-ref{fill:var(--faint);fill-opacity:.16;stroke:var(--faint);stroke-opacity:.4;
+  stroke-width:.8;stroke-dasharray:2 2}
+.tc-now{fill:var(--cone);fill-opacity:.22;stroke:var(--cone);stroke-width:1.2}
+.tc-roll{stroke:var(--cone);stroke-width:1.4;stroke-dasharray:2 1.6;opacity:.85}
+.tc-safe{fill:var(--rough);fill-opacity:.75}
+.tech.sel .tc-now{fill-opacity:.34}
+.tech.off .techcone{opacity:.55}
+/* the cost pip sat top-right; the diagram now lives there, so it moves down */
+.tech-cost{top:auto;bottom:8px}
