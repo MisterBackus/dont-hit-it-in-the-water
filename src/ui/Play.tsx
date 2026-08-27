@@ -143,7 +143,8 @@ export function Play({ s, dispatch, copyRun, copied, log }: {
 
       {/* what just happened on the walk here — an encounter's result gets its
           moment on the tee it was dealt onto, then gets out of the way */}
-      {s.lastEncounter && s.lastEncounter.holeIndex === s.hole.index && s.hole.strokes === 0 && (
+      {s.lastEncounter && s.lastEncounter.event === s.event
+        && s.lastEncounter.holeIndex === s.hole.index && s.hole.strokes === 0 && (
         <div className={`banner encounterline ${s.lastEncounter.tone}`}>{s.lastEncounter.text}</div>
       )}
 
@@ -312,7 +313,7 @@ export function Play({ s, dispatch, copyRun, copied, log }: {
                   it, and the button has to say so or the discount is a lie */}
               <button className="redraw" disabled={s.focus < redrawPrice(s)}
                 onClick={() => dispatch({ type: 'REDRAW' })}>
-                <span>Check the bag<em>six new cards</em></span>
+                <span>New hand<em>six new cards</em></span>
                 <b>{redrawPrice(s) === 0 ? 'free' : '◆'.repeat(redrawPrice(s))}</b>
               </button>
 

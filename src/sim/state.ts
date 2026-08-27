@@ -90,6 +90,12 @@ export interface GameState {
    * This is the swap-not-add rule that fixed dilution; see ITEMS-PROPOSAL.md.
    */
   readonly mustSwap: boolean
+  /**
+   * What the card that forced the swap cost, so backing out can refund it.
+   * A paid cut was always refundable and a bought card was not, which was
+   * the same change of mind charged for (PLAYTEST-NOTES-1 note 3).
+   */
+  readonly swapRefund: number
   /** the two alternatives to playing, offered this week */
   readonly weekOptions: readonly string[]
   /**
@@ -128,7 +134,16 @@ export interface GameState {
    * was dealt onto (owner playtest: a gamble's result must get its moment,
    * not vanish into the log). Keyed by holeIndex so it shows exactly once.
    */
-  readonly lastEncounter: { readonly text: string; readonly tone: 'good' | 'bad' | 'flat'; readonly holeIndex: number } | null
+  /**
+   * The moment an encounter resolved, shown once on the tee it was dealt
+   * onto. It carries its EVENT as well as its hole because it used to carry
+   * only the hole and was never cleared, so an encounter from event 2 hole 5
+   * replayed on hole 5 of every event afterwards, all season.
+   */
+  readonly lastEncounter: {
+    readonly text: string; readonly tone: 'good' | 'bad' | 'flat'
+    readonly holeIndex: number; readonly event: number
+  } | null
   /** free putt-holes remaining this round (Lucky Ball Marker) */
   readonly freeSinks: number
   /** the week's field, advancing hole by hole alongside you */
@@ -230,6 +245,7 @@ export function initialState(seed: number): GameState {
     shopTiers: [],
     cutIsPaid: false,
     mustSwap: false,
+    swapRefund: 0,
     weekOptions: [],
     pendingWeek: null,
     practice: 1,

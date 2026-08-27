@@ -218,6 +218,34 @@ export function ShareRow({ copyRun, copied, label = 'Copy this run for the board
   )
 }
 
+/* --------------------------------------------------------------- explain */
+
+/**
+ * WHAT THIS THING DOES, ON HOVER AND ON TAP.
+ *
+ * The game explained a card nowhere that you had to decide about one. The
+ * SWAP screen was the worst of it — a name and a number, on a permanent
+ * choice the screen itself labels "this cannot be undone" — and the shop and
+ * the bag had only native `title` tooltips, which wait a second, vanish if
+ * you move, and do nothing whatsoever on a phone. That is why they read as
+ * absent: they may as well have been.
+ *
+ * This is the one surface, and it answers BOTH a pointer and a thumb. No
+ * portal, no library: a positioned child that the parent reveals, so it works
+ * inside any list without any of them knowing about each other.
+ */
+export function Explain({ children, label }: { children: ReactNode; label?: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <span className={`explain ${open ? 'is-open' : ''}`}>
+      <button className="explain-tap" type="button"
+        aria-label={label ?? 'What does this do?'} aria-expanded={open}
+        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}>?</button>
+      <span className="explain-body" role="note">{children}</span>
+    </span>
+  )
+}
+
 /* ------------------------------------------------------------------- quit */
 
 /**

@@ -982,7 +982,11 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 .itemframe.tier-found .itemmark{transform:rotate(2.5deg)}
 
 /* the topbar's "carrying" row: marks in a line instead of a string of glyphs */
-.bagmarks{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+/* nowrap, and the column may not be squeezed: the marks replaced a string
+   of glyphs that flowed inline, and wrap put one mark per line. */
+.bagmarks{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
+.bagmarks .itemmark{flex:0 0 auto}
+.stat.bag{flex:0 0 auto}
 .chip.boost .itemmark,.chip.boost .itemframe{vertical-align:-2px;margin-right:2px}
 
 /* ===================================== what a technique does to the picture
@@ -1027,3 +1031,38 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 .datanote{font-size:var(--t-fine);color:var(--faint);line-height:1.45;
   margin:var(--s4) 0 0;text-align:center;max-width:46ch;
   margin-left:auto;margin-right:auto}
+
+/* ================================= what this does, on hover AND on tap
+   The game explained a card nowhere you had to decide about one, and the
+   native `title` tooltips it did have wait a second, vanish on movement,
+   and do nothing on a phone — which is why they read as absent. One
+   surface, both input methods (parts.tsx Explain). */
+.explain{position:relative;display:inline-flex;align-items:center;margin-left:5px}
+.explain-tap{width:15px;height:15px;min-height:0;padding:0;flex:0 0 auto;
+  border:1px solid var(--hairline);background:none;border-radius:50%;
+  font-family:var(--fm);font-size:9px;line-height:1;color:var(--faint);
+  cursor:pointer;display:grid;place-items:center}
+.explain-tap:hover{color:var(--accent);border-color:var(--accent)}
+.explain-body{position:absolute;bottom:calc(100% + 7px);left:50%;
+  transform:translateX(-50%);width:max-content;max-width:230px;
+  background:var(--ink);color:var(--on-ink);border-radius:var(--r);
+  padding:var(--s2) var(--s3);font-family:var(--fs);font-size:var(--t-fine);
+  line-height:1.4;text-align:left;z-index:40;pointer-events:none;
+  opacity:0;visibility:hidden;transition:opacity .09s}
+.explain:hover .explain-body,.explain.is-open .explain-body{opacity:1;visibility:visible}
+/* near a screen edge the balloon must not push the page sideways */
+@media(max-width:520px){
+  .explain-body{left:auto;right:0;transform:none;max-width:min(260px,74vw)}
+}
+
+/* the one number a technique is about, in place of the cone diagram */
+.tech-delta{font-family:var(--fm);font-size:var(--n-s);font-weight:600;
+  color:var(--accent);flex:0 0 auto;line-height:1.1;letter-spacing:-.01em}
+.tech.off .tech-delta{color:var(--faint)}
+
+/* the swap screen stops asking for a permanent decision in the dark */
+.removeone{position:relative;display:flex;flex-direction:column;
+  align-items:flex-start;gap:2px}
+.removeone .cardcone{width:100%;height:38px;margin:var(--s1) 0 0}
+.removewhy{display:block;font-family:var(--fs);font-style:normal;
+  font-size:var(--t-fine);color:var(--soft);line-height:1.35;margin-top:var(--s1)}

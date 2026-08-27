@@ -24,8 +24,10 @@ import { deckList, courseOf, currentEvent, grossEarnings, holeCount, type GameSt
 import { EVENT_COUNT, money, moneyListRank } from '../content/season'
 import { WEEK, LESSON_FEE, EVENT_YIELDS, STAGE_YIELD, eventStage } from '../content/weeks'
 import { DeckPanel } from './Cards'
+import { ItemMark } from './ItemMark'
+import { BOOST } from '../content/boosts'
 import {
-  Badge, Eyebrow, Facts, Label, MoneyList, QuitSeason, SeasonLadder, ShareRow,
+  Badge, Explain, Eyebrow, Facts, Label, MoneyList, QuitSeason, SeasonLadder, ShareRow,
 } from './parts'
 import { countWord, ordinal, plural } from './format'
 
@@ -185,6 +187,22 @@ export function Schedule({ s, dispatch, copyRun, copied, log }: {
       <footer className="screenfoot">
         <Label note={`· ${deckList(s).length} cards`}>In the bag</Label>
         <DeckPanel ids={deckList(s)} />
+        {/* Equipment was absent from this screen entirely, which is where you
+            stand when an encounter has just handed you something and you want
+            to know what it does (PLAYTEST-NOTES-1 note 7). */}
+        {s.boosts.length > 0 && (
+          <>
+            <Label note="always on">Carrying</Label>
+            <div className="deckpanel">
+              {s.boosts.map(id => (
+                <span key={id} className="chip boost">
+                  <ItemMark id={id} size={15} framed /> {BOOST[id]!.name}
+                  <Explain label={`What ${BOOST[id]!.name} does`}>{BOOST[id]!.blurb}</Explain>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
         <ShareRow copyRun={copyRun} copied={copied} />
         <QuitSeason dispatch={dispatch} log={log} />
       </footer>

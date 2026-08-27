@@ -23,7 +23,7 @@ import { CARD } from '../content/cards'
 import { BOOST } from '../content/boosts'
 import { ItemMark } from './ItemMark'
 import { CUT_PRICE, REROLL_PRICE, SHOP_BUDGET, TIER_LABEL } from '../content/shop'
-import { DeckPanel } from './Cards'
+import { CardCone, DeckPanel } from './Cards'
 import { Badge, Eyebrow, Label } from './parts'
 
 /* ------------------------------------------------------------------- shop */
@@ -170,25 +170,33 @@ export function RemoveScreen({ s, dispatch }: { s: GameState; dispatch: (a: Acti
           : 'Fewer cards means you draw the good ones more often. Pick one to go.'}
       </p>
       <Label note="this cannot be undone">Tap the card that leaves</Label>
+      {/* THE WORST GAP IN THE GAME, until now: a permanent choice between
+          twenty cards, presented as twenty names and twenty numbers. Every
+          card now says what it does, and a shot card brings the same cone
+          picture it wears on the play screen — the one that cannot lie. */}
       <div className="removelist">
         {deckList(s).map((id, i) => {
           const c = CARD[id]!
+          const tech = c.kind === 'technique'
           return (
             <button key={id + i} className="removeone"
               onClick={() => dispatch({ type: 'REMOVE_CARD', id })}>
               <b>{c.name}</b>
-              <span>{c.kind === 'shot'
-                ? `${c.carry} yds`
-                : c.focus === 0 ? 'free' : '◆'.repeat(c.focus)}</span>
+              <span>{tech
+                ? (c.focus === 0 ? 'free' : '◆'.repeat(c.focus))
+                : `${c.carry} yds`}</span>
+              {!tech && <CardCone carry={c.carry} spread={c.spread} roll={c.rules.roll} dim />}
+              <em className="removewhy">{c.blurb}</em>
             </button>
           )
         })}
       </div>
-      {!s.mustSwap && (
-        <button className="ghost" onClick={() => dispatch({ type: 'REMOVE_CARD', id: null })}>
-          Changed my mind — refund it
-        </button>
-      )}
+      {/* Backing out of a PAID CUT was always refunded; backing out of a
+          BOUGHT CARD was refused, and the only escape was to remove the card
+          you had just bought — the same change of mind, charged for. */}
+      <button className="ghost" onClick={() => dispatch({ type: 'REMOVE_CARD', id: null })}>
+        {s.mustSwap ? '← Never mind — put it back and refund me' : 'Changed my mind — refund it'}
+      </button>
     </div>
   )
 }

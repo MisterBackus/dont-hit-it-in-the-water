@@ -174,7 +174,7 @@ export const ENCOUNTERS: readonly Encounter[] = [
     engage: {
       kind: 'sure',
       outcome: {
-        line: 'It rides in your bag now. You check over your shoulder for four holes.',
+        line: 'It rides in your bag now. It is going to ride there all season.',
         tone: 'good', grantBoost: 'foundtiger',
       },
     },

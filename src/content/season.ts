@@ -451,10 +451,32 @@ export function money(n: number): string {
  * The rest of the tour got richer the same way you did: the board spreads
  * for everyone.
  */
+/**
+ * TOPPED OUT, 26 Aug 2026 (PLAYTEST-NOTES-1 note 9).
+ *
+ * The owner won TWELVE OF THIRTEEN and the list called him sixth, and asked
+ * the right question of that. The answer was worse than the number: RANK 1
+ * WAS UNREACHABLE. Winning all fourteen events outright pays $28.90M — every
+ * dollar of prize money the game can hand one player — and the old top rung
+ * wanted $49.2M, so places 1, 2 and 3 could not be occupied by anybody, ever.
+ * The rungs had been re-scaled by RATIO through six anchorings and the top
+ * was never once checked against what the purses can actually pay.
+ *
+ * The ladder now hangs off the reachable maximum instead of a ratio: rank 1
+ * sits just under a perfect season, so winning everything makes you number
+ * one — the only thing it could honestly mean — and the rungs below keep
+ * their old SHAPE, rescaled onto the new top. Places 2–5 are now the band a
+ * great season lands in rather than a band nothing lands in.
+ *
+ * DISPLAY ONLY. MONEY_CHECKS are untouched, no survival number moves, and no
+ * re-derivation follows: this changes what the game CALLS your season, not
+ * what the season is worth. Frozen board rows keep the rank they were
+ * verified with (runs/verified.json stores it), which is the point of freezing.
+ */
 const LADDER: readonly (readonly [number, number])[] = [
-  [1, 49_200_000], [3, 32_400_000], [5, 27_200_000], [10, 24_200_000],
-  [20, 17_000_000], [30, 12_700_000], [40, 9_200_000], [50, 6_400_000],
-  [60, 3_700_000], [72, 900_000],
+  [1, 28_400_000], [3, 24_800_000], [5, 22_100_000], [10, 18_600_000],
+  [20, 13_800_000], [30, 10_300_000], [40, 7_500_000], [50, 5_200_000],
+  [60, 3_000_000], [72, 700_000],
 ]
 
 /**

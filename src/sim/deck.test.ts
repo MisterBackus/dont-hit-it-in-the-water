@@ -104,14 +104,36 @@ describe('the pro shop — money finally does something', () => {
     const size = (s: ReturnType<typeof shop>) =>
       s.deck.length + s.hand.length + s.discard.length
 
-    test('buying at the cap opens the remove screen and will not close empty', () => {
+    test('buying at the cap opens the remove screen', () => {
       const s = shop(11, 5_000_000)
       expect(size(s)).toBe(20)
       const { after } = buyCard(s)
       expect(after.phase).toBe('remove')
       expect(after.mustSwap).toBe(true)
-      // refusing is not an option
-      expect(reduce(after, { type: 'REMOVE_CARD', id: null })).toBe(after)
+    })
+
+    /**
+     * SUPERSEDES "will not close empty" (26 Aug 2026, PLAYTEST-NOTES-1 note 3).
+     * Backing out used to be refused, so the only escape was removing the card
+     * you had just bought — the same change of mind, charged for — while a
+     * paid cut was refunded in full. The owner found it the obvious way and
+     * asked for the back arrow. Nothing has happened at this point: the card
+     * is still on top of the deck where buy() put it, so putting it back is
+     * exact rather than an approximation.
+     */
+    test('backing out of a swap refunds the card and returns to the shop', () => {
+      const s = shop(11, 5_000_000)
+      const { after, bought } = buyCard(s)
+      const spentOn = s.earnings - after.earnings
+      expect(spentOn).toBeGreaterThan(0)
+      const back = reduce(after, { type: 'REMOVE_CARD', id: null })
+      expect(back.phase).toBe('shop')
+      expect(back.mustSwap).toBe(false)
+      expect(back.earnings).toBe(s.earnings)          // every penny back
+      expect(back.spent).toBe(s.spent)                // and off the gross too
+      expect(size(back)).toBe(20)                     // the bag is as it was
+      expect(back.deck.filter(id => id === bought).length)
+        .toBe(s.deck.filter(id => id === bought).length)
     })
 
     test('the swap completes back to the shop at twenty cards', () => {

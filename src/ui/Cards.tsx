@@ -103,37 +103,34 @@ export function ShotButton({
  * decorative and nothing is hand-tuned: change a card's numbers and its
  * drawing moves.
  */
-const REF = { carry: 165, spread: 17, roll: 0 }
-
-export function TechDiagram({ tech }: { tech: TechniqueCard }) {
-  const W = 62, H = 34, MAXY = 240, MAXSIDE = 46
-  let carry = REF.carry, spread = REF.spread, roll = REF.roll
-  let hazardProof = false
+/**
+ * THE HEADLINE — the one number a technique is about.
+ *
+ * This replaced a cone diagram that showed the transformation properly and
+ * was, the owner reported, noise: "idk if we need anything, maybe just +40 or
+ * -15." He is right, and the reason is that the BLURB already states the
+ * magnitude — "+40 yards. Twice the scatter." — so the picture was
+ * duplicating the sentence. The fix is not to add a second explanation, it is
+ * to pull the number OUT of the sentence and set it as a number, which is
+ * what the type system wants anyway (Mono, tabular, never prose).
+ *
+ * Derived from the card's own effects in priority order — carry first,
+ * because at a distance that is the thing you are choosing between — so it
+ * cannot drift from what the technique actually does.
+ */
+export function techHeadline(tech: TechniqueCard): string | null {
+  let carryAdd = 0, carryScale = 1, spreadScale = 1, roll = 0
   for (const e of tech.effects) {
-    if (e.op === 'addCarry') carry += e.value
-    else if (e.op === 'scaleCarry') carry *= e.value
-    else if (e.op === 'scaleSpread') spread *= e.value
+    if (e.op === 'addCarry') carryAdd += e.value
+    else if (e.op === 'scaleCarry') carryScale *= e.value
+    else if (e.op === 'scaleSpread') spreadScale *= e.value
     else if (e.op === 'addRoll') roll += e.value
-    else if (e.op === 'ignoreHazards') hazardProof = true
   }
-  const wedge = (cy: number, sp: number) => {
-    const len = Math.min(H - 5, (cy / MAXY) * (H - 6))
-    const half = Math.min(W / 2 - 1.5, (sp / MAXSIDE) * (W / 2))
-    return `${W / 2},${H - 3} ${W / 2 - half},${H - 3 - len} ${W / 2 + half},${H - 3 - len}`
-  }
-  const tipY = H - 3 - Math.min(H - 5, (carry / MAXY) * (H - 6))
-  const rollLen = Math.min(9, (roll / MAXY) * (H - 6))
-  return (
-    <svg className="techcone" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-      {/* the shot as it stands, for scale — the same one on every card */}
-      <polygon points={wedge(REF.carry, REF.spread)} className="tc-ref" />
-      {hazardProof && <rect x="1" y={H - 12} width="12" height="9" rx="2" className="tc-safe" />}
-      <polygon points={wedge(carry, spread)} className="tc-now" />
-      {rollLen > 0.7 && (
-        <line x1={W / 2} y1={tipY} x2={W / 2} y2={tipY - rollLen} className="tc-roll" />
-      )}
-    </svg>
-  )
+  if (carryAdd) return `${carryAdd > 0 ? '+' : '−'}${Math.abs(carryAdd)}`
+  if (carryScale !== 1) return `×${carryScale.toFixed(2).replace(/0$/, '')}`
+  if (roll) return `+${roll} run`
+  if (spreadScale !== 1) return `×${spreadScale.toFixed(2).replace(/0$/, '')} cone`
+  return null
 }
 
 export function TechButton({ tech, selected, disabled, onClick }: {
@@ -145,7 +142,7 @@ export function TechButton({ tech, selected, disabled, onClick }: {
       title={tech.blurb}>
       <span className="tech-head">
         <span className="tech-name">{tech.name}</span>
-        <TechDiagram tech={tech} />
+        {techHeadline(tech) && <b className="tech-delta">{techHeadline(tech)}</b>}
       </span>
       <span className="tech-blurb">{tech.blurb}</span>
       <span className="tech-cost">{tech.focus === 0 ? 'free' : '◆'.repeat(tech.focus)}</span>

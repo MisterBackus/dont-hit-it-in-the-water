@@ -293,6 +293,7 @@ function buy(state: GameState, index: number): GameState {
       // remove screen opens and refuses to close empty-handed (BAG_CAP).
       if (d.deck.length + d.hand.length + d.discard.length > BAG_CAP) {
         d.mustSwap = true
+        d.swapRefund = item.price
         d.phase = 'remove'
       }
     }
@@ -320,10 +321,29 @@ function reroll(state: GameState): GameState {
 function removeCard(state: GameState, id: string | null): GameState {
   const paidCut = state.cutIsPaid
   const swap = state.mustSwap
-  // The bag is full and a card was just bought: refusing is not an option.
-  // (Removing the card you just bought IS — that is changing your mind, at
-  // the price of having paid for it.)
-  if (swap && !id) return state
+  /**
+   * BACKING OUT OF A SWAP. This used to be refused outright, and the only
+   * escape was to remove the card you had just bought — the same change of
+   * mind, charged for — while backing out of a PAID CUT was refunded in full
+   * three lines below. The owner found it the obvious way: "picked a card to
+   * buy, have to remove a card, want to go back, can we add a back arrow?"
+   * Nothing has happened at this point. No hole has been played and the card
+   * is still sitting on top of the deck where buy() put it, so putting it
+   * back is exact, not an approximation.
+   */
+  if (swap && !id) {
+    return produce(state, d => {
+      const bought = d.deck.shift()
+      d.earnings += d.swapRefund
+      d.spent -= d.swapRefund
+      d.swapRefund = 0
+      d.mustSwap = false
+      d.phase = 'shop'
+      if (bought) {
+        d.log.push({ hole: 0, text: `Put ${CARD[bought]!.name} back.`, tone: 'flat' })
+      }
+    })
+  }
   const next = produce(state, d => {
     if (id) {
       for (const pile of ['deck', 'hand', 'discard'] as const) {
@@ -337,6 +357,7 @@ function removeCard(state: GameState, id: string | null): GameState {
     }
     d.cutIsPaid = false
     d.mustSwap = false
+    d.swapRefund = 0
   })
   // A paid cut or a forced swap came from the shop — go back to it. A free
   // cut came from a fitting week, and that week is spent: the season moves
@@ -352,6 +373,7 @@ function startEvent(state: GameState): GameState {
     d.scores = []
     d.madeCut = null
     d.finalRel = null
+    d.lastEncounter = null // it belonged to a week that is over
     d.focus = Math.max(1,
       MAX_FOCUS + boostsOf(state).reduce((n, b) => n + (b.maxFocusBonus ?? 0), 0)
       - focusPenaltyOf(state))
@@ -617,7 +639,7 @@ function engage(state: GameState): GameState {
       case 'sure':
         applyOutcome(d, e.outcome, 0)
         // the result gets its moment on the next tee, not a line in a log
-        d.lastEncounter = { text: `${enc.name} — ${e.outcome.line}`, tone: e.outcome.tone, holeIndex: d.scores.length }
+        d.lastEncounter = { text: `${enc.name} — ${e.outcome.line}`, tone: e.outcome.tone, holeIndex: d.scores.length, event: d.event }
         break
       case 'gamble': {
         const [r, r1] = rollEvents(d.rng.events)
@@ -626,7 +648,7 @@ function engage(state: GameState): GameState {
         const pool = r < e.odds ? e.win : e.lose
         const o = pool[Math.floor(which * pool.length)]!
         applyOutcome(d, o, 0)
-        d.lastEncounter = { text: `${enc.name} — ${o.line}`, tone: o.tone, holeIndex: d.scores.length }
+        d.lastEncounter = { text: `${enc.name} — ${o.line}`, tone: o.tone, holeIndex: d.scores.length, event: d.event }
         break
       }
       case 'bet':
