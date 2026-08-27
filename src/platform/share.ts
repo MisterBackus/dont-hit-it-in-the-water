@@ -38,6 +38,7 @@ function cleanName(raw: string): string {
 export async function postRun(
   save: { version: number; seed: number; actions: unknown[] },
   name: string,
+  opts: { abandoned?: boolean } = {},
 ): Promise<ShareResult> {
   if (!SHARE_ENDPOINT) return 'off'
   const body = JSON.stringify({
@@ -45,6 +46,8 @@ export async function postRun(
     version: save.version,
     seed: save.seed,
     actions: save.actions,
+    // an abandoned run feeds the instruments and never the board
+    ...(opts.abandoned ? { abandoned: true } : {}),
   })
   if (body.length > MAX_BYTES) return 'fail'
   try {

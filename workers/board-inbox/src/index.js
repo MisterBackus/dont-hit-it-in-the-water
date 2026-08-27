@@ -95,6 +95,11 @@ export default {
       version: run.version,
       seed: run.seed,
       actions: run.actions,
+      // A season somebody walked away from. It feeds the instruments — where
+      // does the game lose people? is the one question the harness has never
+      // been able to ask — and board.ts filters it out, because the clubhouse
+      // board ranks finished golf.
+      ...(run.abandoned === true ? { abandoned: true } : {}),
     }
     // Timestamped key: sorts chronologically, never collides thanks to the suffix.
     const key = `run:${Date.now()}-${crypto.randomUUID().slice(0, 8)}`

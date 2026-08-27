@@ -40,14 +40,15 @@ import { standings } from '../sim/resolve/field'
 import { HoleView } from './HoleView'
 import { Leaderboard } from './Leaderboard'
 import { ShotButton, TechButton } from './Cards'
-import { FocusMeter, Label } from './parts'
+import { FocusMeter, Label, QuitSeason } from './parts'
 import { relStr } from './format'
 
-export function Play({ s, dispatch, copyRun, copied }: {
+export function Play({ s, dispatch, copyRun, copied, log }: {
   s: GameState
   dispatch: (a: Action) => void
   copyRun(): void
   copied: boolean
+  log: { seed: number; actions: readonly Action[] }
 }) {
   const [showDeck, setShowDeck] = useState(false)
   const hole = currentHole(s)
@@ -132,7 +133,7 @@ export function Play({ s, dispatch, copyRun, copied }: {
       </header>
 
       {showDeck && <BagDrawer s={s} copyRun={copyRun} copied={copied}
-        dispatch={dispatch} close={() => setShowDeck(false)} />}
+        dispatch={dispatch} log={log} close={() => setShowDeck(false)} />}
 
       {s.justShuffled && s.hole.strokes === 0 && (
         <div className="banner shuffled">
@@ -396,13 +397,11 @@ function Scorecard({ s, holed }: { s: GameState; holed: boolean }) {
  * with its blurb, and the board copy button — because the submission IS the
  * action log, so mid-round is a legal paste.
  */
-function BagDrawer({ s, copyRun, copied, close, dispatch }: {
+function BagDrawer({ s, copyRun, copied, close, dispatch, log }: {
   s: GameState; copyRun(): void; copied: boolean; close(): void
   dispatch: (a: Action) => void
+  log: { seed: number; actions: readonly Action[] }
 }) {
-  // Quitting is the one destructive thing reachable mid-round, so it arms
-  // first — the same two-step the schedule screen uses for a withdrawal.
-  const [armed, setArmed] = useState(false)
   const ids = deckList(s)
   const counts = new Map<string, number>()
   for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
@@ -483,32 +482,9 @@ function BagDrawer({ s, copyRun, copied, close, dispatch }: {
         {copied ? 'Copied — paste it in the chat' : 'Copy this run for the board'}
       </button>
 
-      {/* THE WAY OUT. There has never been one: RESTART lived only on the
-          epilogue, so a season you had lost interest in could only be ended
-          by clearing browser storage. It quits for real — `keep: false`, so
-          the run is NOT archived (App.tsx). It briefly was, and the owner
-          asked the right question of that: "if i want to quit, why do i want
-          anything saved?" Nobody posts an abandoned run, so keeping them was
-          collection nobody would read. The copy button sits directly above
-          for the rare case you do want it. */}
-      {!armed ? (
-        <button className="ghost drawerquit" onClick={() => setArmed(true)}>
-          Give up the season
-        </button>
-      ) : (
-        <div className="drawerquit-arm">
-          <p>This season ends here and is not kept. If you want it for the
-            board, copy it first. A new one starts from the first tee.</p>
-          <div className="drawerquit-row">
-            <button className="ghost" onClick={() => setArmed(false)}>Keep playing</button>
-            <button className="danger" onClick={() => {
-              setArmed(false)
-              close()
-              dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7, keep: false })
-            }}>Yes — end the season</button>
-          </div>
-        </div>
-      )}
+      {/* the same control the schedule screen carries, so the way out reads
+          identically wherever you go looking for it (parts.tsx) */}
+      <QuitSeason dispatch={dispatch} log={log} />
     </div>
   )
 }

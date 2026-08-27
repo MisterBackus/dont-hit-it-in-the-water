@@ -97,7 +97,8 @@ export function App() {
     case 'intro':
       return <Intro dispatch={dispatch} />
     case 'schedule':
-      return <Schedule s={s} dispatch={dispatch} copyRun={copyRun} copied={copied} />
+      return <Schedule s={s} dispatch={dispatch} copyRun={copyRun} copied={copied}
+        log={logRef.current} />
     case 'payout':
       return <PayoutScreen s={s} dispatch={dispatch} />
     case 'moneylist':
@@ -118,6 +119,7 @@ export function App() {
         log={logRef.current} />
     default:
       // 'playing', 'shot', 'holed' — the hole itself
-      return <Play s={s} dispatch={dispatch} copyRun={copyRun} copied={copied} />
+      return <Play s={s} dispatch={dispatch} copyRun={copyRun} copied={copied}
+        log={logRef.current} />
   }
 }

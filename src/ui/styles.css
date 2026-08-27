@@ -1009,16 +1009,21 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
    the same two-step as a withdrawal, because it is the one destructive
    thing reachable mid-round — and it destroys nothing: the run is
    archived on the way past (App.tsx) and can still reach the board. */
-.drawerquit{display:block;width:100%;margin-top:var(--s2);color:var(--faint)}
-.drawerquit:hover{color:var(--bad)}
-.drawerquit-arm{margin-top:var(--s3);padding-top:var(--s3);
+.quitseason{display:block;width:100%;margin-top:var(--s2);color:var(--faint)}
+.quitseason:hover{color:var(--bad)}
+.quitseason-arm{margin-top:var(--s3);padding-top:var(--s3);
   border-top:1px solid var(--hairline)}
-.drawerquit-arm p{font-size:var(--t-fine);color:var(--soft);line-height:1.4;
+.quitseason-arm p{font-size:var(--t-fine);color:var(--soft);line-height:1.4;
   margin:0 0 var(--s3)}
-.drawerquit-row{display:flex;gap:var(--s2);align-items:center}
-.drawerquit-row .ghost{flex:0 0 auto}
-.drawerquit-row .danger{flex:1 1 auto;font-family:var(--fm);
+.quitseason-row{display:flex;gap:var(--s2);align-items:center}
+.quitseason-row .ghost{flex:0 0 auto}
+.quitseason-row .danger{flex:1 1 auto;font-family:var(--fm);
   font-size:var(--t-fine);letter-spacing:var(--ls-caps);text-transform:uppercase;
   padding:var(--s2) var(--s3);border-radius:var(--r);
   background:var(--tint-bad);border:1px solid var(--bad);color:var(--bad)}
-.drawerquit-row .danger:hover{background:var(--bad);color:var(--on-ink)}
+.quitseason-row .danger:hover{background:var(--bad);color:var(--on-ink)}
+
+/* the one line of disclosure, on the only screen read cold */
+.datanote{font-size:var(--t-fine);color:var(--faint);line-height:1.45;
+  margin:var(--s4) 0 0;text-align:center;max-width:46ch;
+  margin-left:auto;margin-right:auto}

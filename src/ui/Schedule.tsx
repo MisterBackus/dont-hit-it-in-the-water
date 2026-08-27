@@ -24,14 +24,17 @@ import { deckList, courseOf, currentEvent, grossEarnings, holeCount, type GameSt
 import { EVENT_COUNT, money, moneyListRank } from '../content/season'
 import { WEEK, LESSON_FEE, EVENT_YIELDS, STAGE_YIELD, eventStage } from '../content/weeks'
 import { DeckPanel } from './Cards'
-import { Badge, Eyebrow, Facts, Label, MoneyList, SeasonLadder, ShareRow } from './parts'
+import {
+  Badge, Eyebrow, Facts, Label, MoneyList, QuitSeason, SeasonLadder, ShareRow,
+} from './parts'
 import { countWord, ordinal, plural } from './format'
 
-export function Schedule({ s, dispatch, copyRun, copied }: {
+export function Schedule({ s, dispatch, copyRun, copied, log }: {
   s: GameState
   dispatch: (a: Action) => void
   copyRun(): void
   copied: boolean
+  log: { seed: number; actions: readonly Action[] }
 }) {
   const ev = currentEvent(s)
   const gross = grossEarnings(s)
@@ -183,6 +186,7 @@ export function Schedule({ s, dispatch, copyRun, copied }: {
         <Label note={`· ${deckList(s).length} cards`}>In the bag</Label>
         <DeckPanel ids={deckList(s)} />
         <ShareRow copyRun={copyRun} copied={copied} />
+        <QuitSeason dispatch={dispatch} log={log} />
       </footer>
     </div>
   )

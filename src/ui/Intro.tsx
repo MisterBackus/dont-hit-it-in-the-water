@@ -68,6 +68,15 @@ export function Intro({ dispatch }: { dispatch: (a: Action) => void }) {
       <button className="big" onClick={() => dispatch({ type: 'START' })}>
         Start the season
       </button>
+      {/* The whole of the disclosure, and all it needs to be: a run is a seed
+          and a list of moves, there is no personal data in it, and the only
+          reason to collect the ones people abandon is that where the game
+          loses somebody is the one question the instruments cannot ask. */}
+      <p className="datanote">
+        Seasons you finish or give up on are sent anonymously — the seed and
+        your moves, nothing else — so the game can be balanced against how it
+        is actually played.
+      </p>
     </div>
   )
 }

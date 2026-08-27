@@ -7,11 +7,15 @@
  * with its own spacing. Screens that share parts read as one object; screens
  * that re-implement them read as four people's work.
  *
- * Presentation only. Nothing here dispatches or derives game rules.
+ * Presentation only, with one exception: QuitSeason, which ends a run and is
+ * shared precisely BECAUSE it must read identically wherever it appears.
  */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { SEASON, MONEY_CHECKS, money, TOUR_SIZE } from '../content/season'
 import { courseFor } from '../sim/state'
+import type { Action } from '../sim/reducer'
+import { postRun } from '../platform/share'
+import { SAVE_VERSION } from '../platform/storage'
 import { ordinal } from './format'
 
 /* ------------------------------------------------------------------ labels */
@@ -210,6 +214,63 @@ export function ShareRow({ copyRun, copied, label = 'Copy this run for the board
         {copied ? 'Copied — paste it in the chat' : label}
       </button>
       <a className="boardlink" href="board.html">the clubhouse board →</a>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------- quit */
+
+/**
+ * THE WAY OUT OF A SEASON.
+ *
+ * There was none: RESTART lived only on the epilogue, so a season you had
+ * stopped caring about could be ended only by clearing browser storage. It
+ * lives wherever you might decide to stop — the bag drawer mid-round, and the
+ * schedule screen between events, which is where the decision actually gets
+ * made and where the owner went looking for it first.
+ *
+ * It arms before it fires, the same two-step as a withdrawal, because it is
+ * the one destructive thing you can reach while playing. Quitting does not
+ * archive the run (App.tsx `keep`) — nobody posts a season they walked away
+ * from — but it DOES send it to the inbox, marked abandoned, where it feeds
+ * runstats and never reaches the clubhouse board. That is the only data the
+ * instruments have never had: where the game loses people. The intro says so
+ * in a line, which is the whole of the disclosure and all it needs to be.
+ */
+export function QuitSeason({ dispatch, log, className = '' }: {
+  dispatch: (a: Action) => void
+  log: { seed: number; actions: readonly Action[] }
+  className?: string
+}) {
+  const [armed, setArmed] = useState(false)
+  if (!armed) {
+    return (
+      <button className={`ghost quitseason ${className}`} onClick={() => setArmed(true)}>
+        Give up the season
+      </button>
+    )
+  }
+  return (
+    <div className={`quitseason-arm ${className}`}>
+      <p>This season ends here and is not kept. If you want it for the board,
+        copy it first. A new one starts from the first tee.</p>
+      <div className="quitseason-row">
+        <button className="ghost" onClick={() => setArmed(false)}>Keep playing</button>
+        <button className="danger" onClick={() => {
+          // Fire and forget: the season is ending either way, and a dead inbox
+          // must never be able to trap somebody in a run. The floor is the
+          // archive's own (storage.ts) — somebody who starts a season and
+          // quits on the first tee is not a data point, they are a misclick.
+          if (log.actions.length >= 5) {
+            void postRun(
+              { version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] },
+              'abandoned', { abandoned: true },
+            )
+          }
+          setArmed(false)
+          dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7, keep: false })
+        }}>Yes — end the season</button>
+      </div>
     </div>
   )
 }

@@ -23,6 +23,8 @@ interface InboxRun {
   readonly version: number
   readonly seed: number
   readonly actions: unknown[]
+  /** a season somebody walked away from — instruments yes, board no */
+  readonly abandoned?: boolean
 }
 
 const ROOT = join(import.meta.dirname ?? __dirname, '..', '..')
@@ -91,7 +93,12 @@ async function main(): Promise<void> {
     // postedAt: the day the mail was collected — the board's date column.
     // Replay ignores the extra field; only display reads it.
     writeFileSync(join(RUNS, file), JSON.stringify(
-      { version: run.version, seed: run.seed, postedAt: new Date().toISOString().slice(0, 10), actions: run.actions },
+      {
+        version: run.version, seed: run.seed,
+        postedAt: new Date().toISOString().slice(0, 10),
+        ...(run.abandoned ? { abandoned: true } : {}),
+        actions: run.actions,
+      },
     ))
     console.log(`fetchruns: ${file} (seed ${run.seed}, ${run.actions.length} actions)`)
     fetched++

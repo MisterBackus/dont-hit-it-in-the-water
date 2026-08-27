@@ -32,12 +32,18 @@ interface Row {
 }
 
 function replay(name: string, raw: string): Row | string {
-  let parsed: { version?: number; seed?: number; actions?: Action[]; postedAt?: string }
+  let parsed: {
+    version?: number; seed?: number; actions?: Action[]; postedAt?: string
+    abandoned?: boolean
+  }
   try { parsed = JSON.parse(raw) } catch { return `${name}: not JSON` }
   if (parsed.version !== SAVE_VERSION) {
     return `${name}: save version ${parsed.version} (board is v${SAVE_VERSION}) — from an older build, skipped`
   }
   if (typeof parsed.seed !== 'number' || !Array.isArray(parsed.actions)) return `${name}: malformed`
+  // The board ranks finished golf. A season somebody gave up on is data for
+  // runstats, not a line on a leaderboard.
+  if (parsed.abandoned) return `${name}: abandoned — kept for runstats, not ranked`
   let s = initialState(parsed.seed)
   let wins = 0
   let played = 0
