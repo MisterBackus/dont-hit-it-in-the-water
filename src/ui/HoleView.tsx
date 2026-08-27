@@ -10,6 +10,7 @@ import {
   teeMarkerD, treeArt, treeline, treesInEllipse, trueEllipse, trueGreen,
 } from './holeArt'
 import './holeart.css'
+import './coursepalette.css'
 
 function corridorPath(hole: HoleSpec): string {
   const step = 20
@@ -309,6 +310,29 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
           <path d="M 1 2.5 h 4 M 6.5 6 h 3" stroke="var(--ha-shallow)" strokeWidth="0.7"
             strokeLinecap="round" opacity=".55" fill="none" />
         </pattern>
+        {/*
+          OUT OF BOUNDS, HATCHED. Every other surface in this picture carries
+          a texture that says what it is — the fairway is mown, water ripples
+          and has a shore, sand has a lip and a rake, a wood has canopies. OB
+          alone was a flat fill of the darkest colour in the palette, so it
+          read as an absence of ground rather than as ground you may not play
+          from. The owner, looking at Rockdale's driving range: "is it a black
+          hole?" Diagonal hatching is the drafting convention for an excluded
+          area, it is visibly ON TOP of ground rather than a gap where ground
+          should be, and it means OB can look the same on all ten courses
+          without depending on being the blackest thing in the frame.
+        */}
+        <pattern id={`${id}-obhatch`} patternUnits="userSpaceOnUse"
+          width="9" height="9" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="9" stroke="var(--tube)"
+            strokeWidth="2.4" opacity=".38" />
+        </pattern>
+        <clipPath id={`${id}-ob`}>
+          <path d={art.obL} />
+          <path d={art.obR} />
+          <rect x={-HALF_WIDTH} y={teeY} width={HALF_WIDTH * 2}
+            height={Math.max(depth - teeY, 0)} />
+        </clipPath>
         <clipPath id={`${id}-fw`}><path d={art.fairway} /></clipPath>
         <clipPath id={`${id}-gr`}>
           <ellipse cx={g.cx} cy={g.cy} rx={g.rx} ry={g.ry} />
@@ -348,6 +372,10 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
       {/* behind the tee is out of bounds, full width */}
       <rect x={-HALF_WIDTH} y={teeY} width={HALF_WIDTH * 2} height={Math.max(depth - teeY, 0)}
         fill="var(--ob-field)" />
+
+      {/* ...and all of it hatched, in one pass, clipped to the OB ground */}
+      <rect x={-HALF_WIDTH} y="0" width={HALF_WIDTH * 2} height={depth}
+        fill={`url(#${id}-obhatch)`} clipPath={`url(#${id}-ob)`} />
 
       {/* THE TREELINE — the stand that frames the hole. Three paths for the
           whole wood, clipped to the trees and OB ground it is allowed to
@@ -459,6 +487,15 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
           return (
             <g key={i}>
               <path d={blob} fill="var(--ob-field)" />
+              <path d={blob} fill={`url(#${id}-obhatch)`} />
+              {/* Signal Red is the OB line's whole job, and on Salt Flats it
+                  has to say it over a near-white salt pan (coursepalette.css).
+                  Bare red on that ground measures 2.00 against 3.17 on the
+                  parkland grounds; the same dashes over a tube-ink backing
+                  measure 8.80 and cost one path. Every course gets it —
+                  it is invisible on the dark grounds and load-bearing here. */}
+              <path d={blob} fill="none" stroke="var(--tube)" strokeWidth="2.6"
+                strokeDasharray="5 4" vectorEffect="non-scaling-stroke" opacity=".55" />
               <path d={blob} fill="none" stroke="var(--signal)" strokeWidth="1.1"
                 strokeDasharray="5 4" vectorEffect="non-scaling-stroke" opacity=".9" />
               {obStakes(hole, h.at, h.rDown, h.rSide, 300 + i).map((p, k) => {
@@ -485,8 +522,13 @@ function TapeCourse({ hole }: { hole: HoleSpec }) {
         stroke="var(--tube)" strokeWidth="1" opacity=".18" vectorEffect="non-scaling-stroke" />
 
       {/* OB — two strokes. Signal red is spent here and nowhere decorative. */}
+      <path d={`${art.obLineL} ${art.obLineR}`} fill="none" stroke="var(--tube)"
+        strokeWidth="3.2" strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".5" />
       <path d={`${art.obLineL} ${art.obLineR}`} fill="none" stroke="var(--signal)"
         strokeWidth="1.4" strokeDasharray="7 5" vectorEffect="non-scaling-stroke" opacity=".85" />
+      <line x1={-obTeeHalf} y1={teeY} x2={obTeeHalf} y2={teeY}
+        stroke="var(--tube)" strokeWidth="3.2" strokeDasharray="7 5"
+        vectorEffect="non-scaling-stroke" opacity=".35" />
       <line x1={-obTeeHalf} y1={teeY} x2={obTeeHalf} y2={teeY}
         stroke="var(--signal)" strokeWidth="1.4" strokeDasharray="7 5"
         vectorEffect="non-scaling-stroke" opacity=".6" />
@@ -561,11 +603,17 @@ function writeArtFlag(on: boolean): void {
 }
 
 export function HoleView({
-  hole, ball, cone, showCone, ignoreHazards = false,
+  hole, ball, cone, showCone, ignoreHazards = false, course,
 }: {
   hole: HoleSpec; ball: Point; cone: Cone | null; showCone: boolean
   /** the armed plan carries Bail Out — water and OB inside the cone are rough */
   ignoreHazards?: boolean
+  /**
+   * Which course this hole belongs to, so the picture can wear that course's
+   * biome (coursepalette.css). Colour only — a palette never moves a boundary,
+   * and a course without one falls through to the house Sunday Tape look.
+   */
+  course?: string
 }) {
   // Art toggle lives HERE, not in App: flip old/new live, default = classic.
   const [tape, setTape] = useState(readArtFlag)
@@ -609,7 +657,7 @@ export function HoleView({
   const gridFs = Math.max(9, 10 / k)
 
   return (
-    <div className={tape ? 'holewrap tape' : 'holewrap'}
+    <div className={`${tape ? 'holewrap tape' : 'holewrap'}${tape && course ? ` c-${course}` : ''}`}
       style={{ '--gridfs': `${gridFs.toFixed(1)}px` } as CSSProperties}>
       <svg ref={svgRef} className="holeview" viewBox={viewBox(hole, from)}
         preserveAspectRatio="xMidYMin meet">

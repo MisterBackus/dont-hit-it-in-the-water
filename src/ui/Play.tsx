@@ -160,7 +160,7 @@ export function Play({ s, dispatch, copyRun, copied, log }: {
         <div className="figure">
           <HoleView hole={hole} ball={s.hole.ball} cone={pv?.cone ?? null}
             showCone={!!pv && !pv.blocked && s.phase === 'playing'}
-            ignoreHazards={bailOut} />
+            ignoreHazards={bailOut} course={courseOf(s).id} />
           <div className="note">{hole.note}</div>
         </div>
 

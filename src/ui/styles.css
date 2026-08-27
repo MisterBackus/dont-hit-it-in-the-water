@@ -793,8 +793,14 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
   --signal:#C4523E;       /* Signal Red — the OB line only */
   /* derived course shades (bands the sim believes in, finally drawn) */
   --deep:#101F15;
-  --band-trees:#0C1911;
-  --ob-field:#080D09;
+  --band-trees:#09130D;
+  /* OB used to be the blackest thing in the frame, and a declared OB region
+     drew as a hole punched in the paper — the owner asked whether Rockdale's
+     range was "a black hole". It is not: it is the driving range, and the
+     ramp never had room for four steps of darkness anyway. The trees band is
+     now the dark one (a wood IS dark) and OB is open ground beyond it,
+     carrying the hatch HoleView draws over it. */
+  --ob-field:#1A2B1E;
 }
 .holewrap.tape .holeview{background:#070B08;border-color:#2A4230}
 .holewrap.tape .gridlabel{fill:var(--grid);opacity:.6}
