@@ -48,6 +48,18 @@
       "rank": 8,
       "finished": true,
       "date": "2026-08-26"
+    },
+    {
+      "file": "andrew-5.json",
+      "verifiedAtVersion": 11,
+      "name": "andrew",
+      "gross": 26546571,
+      "wins": 12,
+      "played": 13,
+      "firedAt": null,
+      "rank": 6,
+      "finished": true,
+      "date": "2026-08-26"
     }
   ]
 }
