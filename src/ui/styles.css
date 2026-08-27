@@ -984,8 +984,9 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 /* the topbar's "carrying" row: marks in a line instead of a string of glyphs */
 /* nowrap, and the column may not be squeezed: the marks replaced a string
    of glyphs that flowed inline, and wrap put one mark per line. */
-.bagmarks{display:flex;align-items:center;gap:5px;flex-wrap:nowrap}
-.bagmarks .itemmark{flex:0 0 auto}
+.stat b.bagmarks{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;
+  line-height:1}
+.stat b.bagmarks .itemmark{flex:0 0 auto}
 .stat.bag{flex:0 0 auto}
 .chip.boost .itemmark,.chip.boost .itemframe{vertical-align:-2px;margin-right:2px}
 
