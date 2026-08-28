@@ -10,8 +10,16 @@
  * and a 60-day shelf life on everything it holds.
  *
  * Routes:
- *   POST /   body: {name, version, seed, actions[]} ≤ 200KB   → 202 stored
+ *   POST /   body: {version, seed, actions[], …} ≤ 200KB      → 202 stored
  *   GET  /   Authorization: Bearer <READ_TOKEN>               → {runs:[...]}
+ *
+ * A POST is one of two different things, and the flag that separates them is
+ * `board`. With it, the player pressed Share on the finale screen under a name
+ * they chose, and the run is a candidate for the public board. Without it, the
+ * post is an anonymous instrument report — a season that ended, or a tab that
+ * closed — which exists to answer "where does the game lose somebody" and is
+ * never ranked. The courier writes everything unflagged as `abandoned`, which
+ * is the flag board.ts has always used to mean "instruments yes, board no".
  *
  * Bindings (see wrangler.toml + SETUP-SHARING.md):
  *   RUNS        KV namespace holding pending runs
@@ -20,7 +28,11 @@
 
 const MAX_BYTES = 200 * 1024 // a full season's action log is far under this
 const RUN_TTL_SECONDS = 60 * 60 * 24 * 60 // runs expire after 60 days
-const RATE_PER_MINUTE = 6 // posts per IP per minute — a human finishes seasons slower than this
+// Reports now fire when a tab is hidden, so one player mid-season is chattier
+// than one who only ever pressed Share. Still far under anything abusive, and
+// the client refuses to re-send a season that has not moved.
+const RATE_PER_MINUTE = 20
+const MAX_NOTE = 1000 // a bug report, not an essay
 
 const CORS = {
   'access-control-allow-origin': '*', // the game page lives on github.io
@@ -66,7 +78,7 @@ export default {
 
     if (request.method !== 'POST') return reply(405, { error: 'POST a run, or GET with the read token' })
 
-    // ---- POST: a finished season, sent by an explicit click in the game ----
+    // ---- POST: a run — board submission or anonymous instrument report ----
     const ip = request.headers.get('cf-connecting-ip') ?? 'unknown'
     const minute = Math.floor(Date.now() / 60_000)
     const rlKey = `rl:${ip}:${minute}`
@@ -90,16 +102,27 @@ export default {
       return reply(400, { error: 'expected {name, version, seed, actions[]}' })
     }
 
+    const board = run.board === true
+    const reason = ['finished', 'abandoned', 'left'].includes(run.reason) ? run.reason : 'finished'
+    const note = typeof run.note === 'string' ? run.note.trim().slice(0, MAX_NOTE) : ''
     const stored = {
-      name: cleanName(run.name),
+      // an anonymous report carries no name at all; only a board submission does
+      name: board ? cleanName(run.name) : 'anon',
       version: run.version,
       seed: run.seed,
       actions: run.actions,
-      // A season somebody walked away from. It feeds the instruments — where
-      // does the game lose people? is the one question the harness has never
-      // been able to ask — and board.ts filters it out, because the clubhouse
-      // board ranks finished golf.
-      ...(run.abandoned === true ? { abandoned: true } : {}),
+      reason,
+      // which build produced it, so balance cohorts can be told apart later
+      ...(typeof run.build === 'string' ? { build: run.build.slice(0, 40) } : {}),
+      // the run's own token — the seed is NOT unique (every first season in a
+      // fresh browser shares START_SEED), so this is what lets the courier keep
+      // the longest report of a run and drop the prefixes it already has
+      ...(typeof run.runId === 'string' ? { runId: run.runId.slice(0, 40) } : {}),
+      ...(note ? { note } : {}),
+      // Anything the player did not deliberately put on the board is marked
+      // abandoned, which is exactly what board.ts already filters on. A season
+      // that merely ENDED is still not one somebody chose to publish.
+      ...(board ? { board: true } : { abandoned: true }),
     }
     // Timestamped key: sorts chronologically, never collides thanks to the suffix.
     const key = `run:${Date.now()}-${crypto.randomUUID().slice(0, 8)}`

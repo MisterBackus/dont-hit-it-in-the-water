@@ -25,7 +25,7 @@ import { ItemMark } from './ItemMark'
 import { STARS } from '../content/players'
 import { starNamesFor } from '../sim/resolve/field'
 import { SAVE_VERSION } from '../platform/storage'
-import { SHARE_ENDPOINT, SHARE_NOTE, postRun } from '../platform/share'
+import { MAX_NOTE, SHARE_ENDPOINT, SHARE_NOTE, postRun, reportRun } from '../platform/share'
 import { Eyebrow, Facts, Label, SeasonLadder, ShareRow } from './parts'
 import { ordinal, plural } from './format'
 
@@ -37,7 +37,7 @@ export function Epilogue({ s, dispatch, copyRun, copied, log }: {
   dispatch: (a: Action) => void
   copyRun: () => void
   copied: boolean
-  log: { seed: number; actions: Action[] }
+  log: { seed: number; actions: Action[]; runId: string }
 }) {
   const [name, setName] = useState<string>(() => {
     try { return localStorage.getItem(NAME_KEY) ?? '' } catch { return '' }
@@ -52,6 +52,30 @@ export function Epilogue({ s, dispatch, copyRun, copied, log }: {
     postRun({ version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] }, name.trim())
       .then(r => setShare(r === 'ok' ? 'ok' : r))
   }
+  /**
+   * THE BOX. A season is a replay, and a replay says everything about WHAT
+   * happened and nothing about what the player thought was wrong with it —
+   * "this popped back up many tournaments later", "I had the headcover for
+   * eight holes and never knew what it did". Those are the notes that moved
+   * this game, and until now the only person who could leave one was somebody
+   * standing next to the machine.
+   *
+   * It sends the note WITH the run it is about, anonymously, on the instrument
+   * channel — so a bug report always arrives carrying the exact replay that
+   * produced it, and never touches the board.
+   */
+  const [note, setNote] = useState('')
+  const [noteSent, setNoteSent] = useState(false)
+  const sendNote = () => {
+    const text = note.trim()
+    if (!text || noteSent) return
+    reportRun(
+      { version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] },
+      'finished', `${log.runId}-note`, text,
+    )
+    setNoteSent(true)
+  }
+
   const typeName = (v: string) => {
     setName(v)
     try { localStorage.setItem(NAME_KEY, v) } catch { /* private mode — fine */ }
@@ -202,6 +226,33 @@ export function Epilogue({ s, dispatch, copyRun, copied, log }: {
           {share === 'off' && ' The board inbox isn’t connected in this build — copy the run below instead.'}
         </p>
         <ShareRow copyRun={copyRun} copied={copied} label="Copy this season for the board" />
+      </section>
+
+      {/* TELL ME WHAT BROKE — separate section, separate channel, no name. */}
+      <section className="noteblock">
+        <Label note="anonymous, and it travels with this season’s replay">
+          Anything to report?
+        </Label>
+        {noteSent ? (
+          <p className="quietnote notethanks">
+            Got it — that arrived with the replay of the season you just played,
+            so whatever you saw can be watched back. Thank you.
+          </p>
+        ) : (
+          <>
+            <textarea className="notefield" rows={3} maxLength={MAX_NOTE}
+              placeholder="A bug, something confusing, something that felt wrong…"
+              aria-label="Report a bug or leave a comment"
+              value={note} onChange={e => setNote(e.target.value)} />
+            <div className="sharerow">
+              <button className="ghost postbtn" disabled={note.trim() === ''}
+                onClick={sendNote}>Send it</button>
+              <span className="quietnote notecount">
+                {note.length > MAX_NOTE - 120 ? `${MAX_NOTE - note.length} left` : ''}
+              </span>
+            </div>
+          </>
+        )}
       </section>
 
       <button className="big" onClick={() => dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7 })}>

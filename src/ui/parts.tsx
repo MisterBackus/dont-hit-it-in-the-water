@@ -14,7 +14,7 @@ import { useState, type ReactNode } from 'react'
 import { SEASON, MONEY_CHECKS, money, TOUR_SIZE } from '../content/season'
 import { courseFor } from '../sim/state'
 import type { Action } from '../sim/reducer'
-import { postRun } from '../platform/share'
+import { reportRun } from '../platform/share'
 import { SAVE_VERSION } from '../platform/storage'
 import { ordinal } from './format'
 
@@ -267,7 +267,7 @@ export function Explain({ children, label }: { children: ReactNode; label?: stri
  */
 export function QuitSeason({ dispatch, log, className = '' }: {
   dispatch: (a: Action) => void
-  log: { seed: number; actions: readonly Action[] }
+  log: { seed: number; actions: readonly Action[]; runId: string }
   className?: string
 }) {
   const [armed, setArmed] = useState(false)
@@ -286,15 +286,13 @@ export function QuitSeason({ dispatch, log, className = '' }: {
         <button className="ghost" onClick={() => setArmed(false)}>Keep playing</button>
         <button className="danger" onClick={() => {
           // Fire and forget: the season is ending either way, and a dead inbox
-          // must never be able to trap somebody in a run. The floor is the
-          // archive's own (storage.ts) — somebody who starts a season and
-          // quits on the first tee is not a data point, they are a misclick.
-          if (log.actions.length >= 5) {
-            void postRun(
-              { version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] },
-              'abandoned', { abandoned: true },
-            )
-          }
+          // must never be able to trap somebody in a run. reportRun holds the
+          // floor (five actions — below that it is a misclick, not a season)
+          // and is anonymous, so quitting still never reaches the board.
+          reportRun(
+            { version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] },
+            'abandoned', log.runId,
+          )
           setArmed(false)
           dispatch({ type: 'RESTART', seed: (Date.now() % 100000) + 7, keep: false })
         }}>Yes — end the season</button>

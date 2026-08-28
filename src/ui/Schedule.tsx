@@ -36,7 +36,7 @@ export function Schedule({ s, dispatch, copyRun, copied, log }: {
   dispatch: (a: Action) => void
   copyRun(): void
   copied: boolean
-  log: { seed: number; actions: readonly Action[] }
+  log: { seed: number; actions: readonly Action[]; runId: string }
 }) {
   const ev = currentEvent(s)
   const gross = grossEarnings(s)

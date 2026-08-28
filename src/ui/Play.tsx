@@ -48,7 +48,7 @@ export function Play({ s, dispatch, copyRun, copied, log }: {
   dispatch: (a: Action) => void
   copyRun(): void
   copied: boolean
-  log: { seed: number; actions: readonly Action[] }
+  log: { seed: number; actions: readonly Action[]; runId: string }
 }) {
   const [showDeck, setShowDeck] = useState(false)
   const hole = currentHole(s)
@@ -401,7 +401,7 @@ function Scorecard({ s, holed }: { s: GameState; holed: boolean }) {
 function BagDrawer({ s, copyRun, copied, close, dispatch, log }: {
   s: GameState; copyRun(): void; copied: boolean; close(): void
   dispatch: (a: Action) => void
-  log: { seed: number; actions: readonly Action[] }
+  log: { seed: number; actions: readonly Action[]; runId: string }
 }) {
   const ids = deckList(s)
   const counts = new Map<string, number>()

@@ -13,11 +13,12 @@
  * REDUCER GAINS A PHASE, THE UI MUST GAIN A ROOM. A phase with no room is a
  * softlock that no test can see.
  */
-import { useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { reduce, type Action } from '../sim/reducer'
 import { initialState, toPar, type GameState } from '../sim/state'
 import { standings } from '../sim/resolve/field'
 import { SAVE_VERSION, archiveRun, loadArchive, loadSave, persistSave } from '../platform/storage'
+import { newRunId, reportRun } from '../platform/share'
 import { useGameAudio } from './sound'
 import { Intro } from './Intro'
 import { Schedule } from './Schedule'
@@ -46,7 +47,9 @@ function bootstrap(): { state: GameState; seed: number; actions: Action[] } {
 
 export function App() {
   const boot = useMemo(bootstrap, [])
-  const logRef = useRef({ seed: boot.seed, actions: boot.actions })
+  // runId is minted per run and travels on REPORTS only, never in the action
+  // log — replay is untouched by it. See newRunId in platform/share.
+  const logRef = useRef({ seed: boot.seed, actions: boot.actions, runId: newRunId() })
   const [s, rawDispatch] = useReducer(
     (st: GameState, a: Action) => reduce(st, a),
     boot.state,
@@ -68,12 +71,51 @@ export function App() {
     const log = logRef.current
     if (a.type === 'RESTART') {
       if (a.keep !== false) archiveRun(log.seed, log.actions)
-      log.seed = a.seed; log.actions = [a]
+      log.seed = a.seed; log.actions = [a]; log.runId = newRunId()
     }
     else log.actions.push(a)
     persistSave(log.seed, log.actions)
   }
   useGameAudio(s)
+
+  /**
+   * THE TWO AUTOMATIC REPORTS (platform/share.ts) — anonymous, never ranked,
+   * and the only reason the instruments can answer "where does the game lose
+   * somebody". Both are deduped by reportRun, so a season is sent once.
+   *
+   * 1. The season ended. The finale screen's Share button is the BOARD, which
+   *    is named and opt-in and stays that way; this is the instrument copy,
+   *    and it fires whether or not anybody presses anything.
+   */
+  useEffect(() => {
+    if (s.phase !== 'over') return
+    const log = logRef.current
+    reportRun({ version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] },
+      'finished', log.runId)
+  }, [s.phase])
+
+  /**
+   * 2. The tab went away. This is the one that matters: nobody who bounces
+   *    three minutes in clicks "Give up the season", they close the window,
+   *    and until now that player left no trace at all. pagehide is the event
+   *    that actually fires on close (and on iOS, where unload does not), and
+   *    sendBeacon is what survives it. visibilitychange covers backgrounding
+   *    on mobile, where a hidden tab is often never resumed.
+   */
+  useEffect(() => {
+    const send = () => {
+      const log = logRef.current
+      reportRun({ version: SAVE_VERSION, seed: log.seed, actions: [...log.actions] },
+        'left', log.runId)
+    }
+    const onHide = () => { if (document.visibilityState === 'hidden') send() }
+    window.addEventListener('pagehide', send)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('pagehide', send)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [])
 
   // THE CLUBHOUSE BOARD (tools/board.ts): a run is shared as its replayable
   // action log — the board verifies by replaying, so this IS the submission.

@@ -761,6 +761,52 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
 .sndbtn.is-muted{color:var(--bad);border-color:var(--bad);opacity:.85}
 @media(hover:hover){.sndbtn:hover{opacity:1;border-color:var(--ink);color:var(--ink)}}
 
+/* ============================================================ help + notes */
+/* The door sits above the sound switch, and unlike the sound switch it stays
+   on a phone — "what does this mean" is asked from inside a hole, which is
+   exactly the screen the thumb bar owns. It clears the bar rather than hides. */
+.helpbtn{position:fixed;right:8px;bottom:calc(46px + env(safe-area-inset-bottom));
+  z-index:40;font-family:var(--fm);font-size:9.5px;letter-spacing:var(--ls-caps);
+  background:var(--panel);color:var(--faint);border:1px solid var(--hairline);
+  border-radius:var(--r-stamp);padding:8px 10px;opacity:.7;min-height:32px}
+@media(hover:hover){.helpbtn:hover{opacity:1;border-color:var(--ink);color:var(--ink)}}
+
+.helpwrap{position:fixed;inset:0;z-index:60;display:flex;align-items:center;
+  justify-content:center;padding:var(--s2);background:rgba(8,12,10,.72)}
+.helppanel{background:var(--paper);border:1px solid var(--ink);border-radius:var(--r);
+  max-width:640px;width:100%;max-height:86vh;max-height:86dvh;overflow-y:auto;
+  padding:var(--s3)}
+.helphead{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2);
+  border-bottom:2px solid var(--ink);padding-bottom:var(--s1);margin-bottom:var(--s2)}
+/* The heading wrapped to "How to / play" because the close button was taking
+   space from it. Pinning the BUTTON (flex:none) is the fix; forcing nowrap on
+   the heading instead just moved the overflow into the panel. */
+.helphead h2{font-family:var(--fd);font-size:var(--t-h2);margin:0}
+ /* .ghost is a full-width block button (width:100%, margin-top:var(--s4)) —
+    correct for the stacked choices it was written for, wrong for a Close
+    sitting on a heading rule. Undo the three properties that assume a column. */
+.helpclose{flex:none;width:auto;margin-top:0;padding:6px 12px;min-height:0;
+  font-family:var(--fm);font-size:10px;letter-spacing:var(--ls-caps)}
+.helplist{list-style:none;counter-reset:help;margin:0;padding:0}
+.helplist li{counter-increment:help;position:relative;padding:0 0 var(--s2) 30px}
+.helplist li::before{content:counter(help);position:absolute;left:0;top:1px;
+  font-family:var(--fm);font-size:10px;color:var(--faint)}
+/* DIRECT CHILD ONLY. The bodies use <b> inline for emphasis, and a bare
+   `.helplist b` rule broke every one of those onto a line of its own — the
+   topic headings and the words inside a sentence are not the same object. */
+.helplist > li > b{display:block;font-family:var(--fd);font-size:var(--t-lead);
+  letter-spacing:.01em;padding-bottom:2px}
+.helplist p{margin:0;font-size:var(--t-body);color:var(--soft);line-height:1.5}
+
+/* the report box on the finale screen */
+.noteblock{padding-top:var(--s2)}
+.notefield{width:100%;font-family:var(--fs);font-size:var(--t-body);
+  color:var(--ink);background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-stamp);padding:8px 10px;resize:vertical;min-height:64px}
+.notefield:focus{outline:none;border-color:var(--ink)}
+.notecount{flex:1;text-align:right;align-self:center}
+.notethanks{padding-top:4px}
+
 /* ============================================================================
    THE HOLE PICTURE — owned by the hole-art pass (HoleView.tsx, holeArt.ts).
    Everything from here to the mobile section is that agent's contract with
@@ -898,6 +944,9 @@ h1 .badge{font-size:10px;transform:translateY(-.15em)}
   .actionbar .big{margin-top:0;flex:1;padding:12px;min-height:44px}
   /* the sound switch must not sit on top of the thumb bar */
   .sndbtn{display:none}
+  /* help does NOT go away here — it moves above the bar. A player on a phone
+     is the player most likely to need it and least likely to find a menu. */
+  .helpbtn{bottom:calc(64px + env(safe-area-inset-bottom));right:6px;padding:6px 8px}
 }
 
 /* landscape phone (§2.4): figure left at full height, panel scrolls right,
