@@ -31,19 +31,38 @@ interface Row {
   readonly date: string | null
 }
 
-function replay(name: string, raw: string): Row | string {
+/**
+ * A file that did not become a row, and whether anybody should be TOLD.
+ *
+ * 'routine' is an expected exclusion — an anonymous instrument report, or a
+ * season played on an older build. Neither is a problem and neither is
+ * actionable, and since the telemetry pass every closed tab produces one.
+ * Printed under a public leaderboard they are just debris, and there is now a
+ * potentially unbounded supply of them.
+ *
+ * 'broken' is a file that should have replayed and did not: malformed, not
+ * JSON, or a log the engine refused. That is worth saying out loud, because it
+ * is the only visible sign of a hand-edited run.
+ */
+type Skip = { readonly kind: 'routine' | 'broken'; readonly text: string }
+
+function replay(name: string, raw: string): Row | Skip {
   let parsed: {
     version?: number; seed?: number; actions?: Action[]; postedAt?: string
     abandoned?: boolean
   }
-  try { parsed = JSON.parse(raw) } catch { return `${name}: not JSON` }
+  try { parsed = JSON.parse(raw) } catch { return { kind: 'broken', text: `${name}: not JSON` } }
   if (parsed.version !== SAVE_VERSION) {
-    return `${name}: save version ${parsed.version} (board is v${SAVE_VERSION}) — from an older build, skipped`
+    return { kind: 'routine',
+      text: `${name}: save version ${parsed.version} (board is v${SAVE_VERSION}) — older build` }
   }
-  if (typeof parsed.seed !== 'number' || !Array.isArray(parsed.actions)) return `${name}: malformed`
-  // The board ranks finished golf. A season somebody gave up on is data for
-  // runstats, not a line on a leaderboard.
-  if (parsed.abandoned) return `${name}: abandoned — kept for runstats, not ranked`
+  if (typeof parsed.seed !== 'number' || !Array.isArray(parsed.actions)) {
+    return { kind: 'broken', text: `${name}: malformed` }
+  }
+  // The board ranks finished golf. A season somebody gave up on — or one the
+  // game reported automatically — is data for runstats, not a line on a
+  // leaderboard, and not a line UNDER one either.
+  if (parsed.abandoned) return { kind: 'routine', text: `${name}: not a board submission` }
   let s = initialState(parsed.seed)
   let wins = 0
   let played = 0
@@ -57,7 +76,8 @@ function replay(name: string, raw: string): Row | string {
       }
     }
   } catch (e) {
-    return `${name}: replay failed (${e instanceof Error ? e.message : e}) — hand-edited or corrupt`
+    return { kind: 'broken',
+      text: `${name}: replay failed (${e instanceof Error ? e.message : e}) — hand-edited or corrupt` }
   }
   const gross = grossEarnings(s)
   return {
@@ -70,11 +90,17 @@ function replay(name: string, raw: string): Row | string {
 }
 
 const ROOT = join(import.meta.dirname ?? __dirname, '..', '..')
-const RUNS = join(ROOT, 'runs')
-const OUT = join(ROOT, 'public')
+// BOARD_RUNS_DIR / BOARD_OUT_DIR let the board be run against fixtures instead
+// of the real inbox. runs/ is frozen history; a check that has to write into it
+// to prove anything is a check nobody will run twice.
+const RUNS = process.env.BOARD_RUNS_DIR ?? join(ROOT, 'runs')
+const OUT = process.env.BOARD_OUT_DIR ?? join(ROOT, 'public')
 
 const rows: Row[] = []
+/** shown on the public page — 'broken' only */
 const notes: string[] = []
+/** counted for the deploy log, never rendered */
+let routine = 0
 
 // THE FROZEN LEDGER (runs/verified.json): rows verified by replay at the
 // version they were PLAYED, then frozen. A save-version bump must never
@@ -106,8 +132,9 @@ if (existsSync(RUNS)) {
     const each = Array.isArray(bundle) ? bundle : [parsed]
     each.forEach((run, i) => {
       const r = replay(i ? `${name}-${i + 1}` : name, JSON.stringify(run))
-      if (typeof r === 'string') notes.push(r)
-      else rows.push(r)
+      if (!('kind' in r)) rows.push(r)
+      else if (r.kind === 'broken') notes.push(r.text)
+      else routine++
     })
   }
 }
@@ -160,4 +187,4 @@ ${notes.length ? `<div class="notes">${notes.map(n => `· ${n}`).join('<br>')}</
 
 mkdirSync(OUT, { recursive: true })
 writeFileSync(join(OUT, 'board.html'), html)
-console.log(`board: ${board.length} player(s), ${rows.length} run(s) verified, ${notes.length} skipped → public/board.html`)
+console.log(`board: ${board.length} player(s), ${rows.length} run(s) verified, ${routine} routine exclusion(s), ${notes.length} broken → public/board.html`)
