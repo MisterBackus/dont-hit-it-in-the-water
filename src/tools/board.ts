@@ -153,7 +153,7 @@ const html = `<!doctype html>
 <div class="sub">every line verified by replay — a score that didn't happen won't post<br>
 season gross earnings · playtest, ${new Date().toISOString().slice(0, 10)}</div>
 ${board.length ? `<table><tr><th></th><th>player</th><th>earned</th><th>wins</th><th>events</th><th>status</th><th>when</th></tr>${rowsHtml}</table>`
-    : `<div class="empty">Nobody has posted a round yet. In the game: Copy this run, and send it in.</div>`}
+    : `<div class="empty">No seasons yet. Play one to the end, then press <b>Post this season to the board</b> on the last screen — it takes a name and a click.</div>`}
 ${notes.length ? `<div class="notes">${notes.map(n => `· ${n}`).join('<br>')}</div>` : ''}
 <a href="./">← back to the course</a>
 </body></html>`
