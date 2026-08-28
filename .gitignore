@@ -4,3 +4,5 @@ dist/
 .claude/
 vite.config.ts.timestamp-*.mjs
 public/board.html
+# wrangler's local state, written by `wrangler deploy` — never the repo's
+.wrangler/

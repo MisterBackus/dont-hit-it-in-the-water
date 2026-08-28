@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- A tab icon is read at 16px, so it gets ONE idea: a pin, in Chyron Gold
+       on the tape's ground. The cone is the game's real signature but at this
+       size a pale wedge is just a play button; a flag is unmistakably golf. -->
+  <rect width="32" height="32" rx="7" fill="#0E1613"/>
+  <rect x="4" y="23" width="24" height="5" rx="2.5" fill="#1C5680"/>
+  <path d="M15 25V7" stroke="#F5F8EE" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M16 6.5l9 4-9 4z" fill="#E3BC5F"/>
+  <circle cx="15" cy="25" r="2.6" fill="#F5F8EE"/>
+</svg>
