@@ -1,5 +1,9 @@
 # Don't Hit It In The Water — v0.1 prototype
 
+> © 2026 Andrew Backus. **All rights reserved** — see [LICENSE](LICENSE).
+> Public so the game can be read and verified, not so it can be reused.
+> Play it, stream it, review it. Do not ship it.
+
 A golf season roguelike deckbuilder. This is the vertical slice: **eight holes at
 Pine Hollow, one cut, no season layer.** It exists to answer one question —
 *is the hole-level decision fun?*

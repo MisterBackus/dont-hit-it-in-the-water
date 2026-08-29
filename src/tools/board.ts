@@ -175,6 +175,7 @@ const html = `<!doctype html>
   .empty{color:#6C7D74;padding:40px 0;font-size:13px}
   .notes{color:#6C7D74;font-size:11px;margin-top:24px;max-width:640px}
   a{color:#9AD8F5;text-decoration:none;font-size:12px;margin-top:28px}
+  .copyline{color:#4A5A52;font-size:10px;margin-top:18px;letter-spacing:.08em}
 </style></head><body>
 <h1>The Clubhouse Board</h1>
 <div class="sub">every line verified by replay — a score that didn't happen won't post<br>
@@ -183,6 +184,7 @@ ${board.length ? `<table><tr><th></th><th>player</th><th>earned</th><th>wins</th
     : `<div class="empty">No seasons yet. Play one to the end, then press <b>Post this season to the board</b> on the last screen — it takes a name and a click.</div>`}
 ${notes.length ? `<div class="notes">${notes.map(n => `· ${n}`).join('<br>')}</div>` : ''}
 <a href="./">← back to the course</a>
+<div class="copyline">© 2026 Andrew Backus. All rights reserved.</div>
 </body></html>`
 
 mkdirSync(OUT, { recursive: true })

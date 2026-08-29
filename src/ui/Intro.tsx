@@ -77,6 +77,10 @@ export function Intro({ dispatch }: { dispatch: (a: Action) => void }) {
         your moves, nothing else — so the game can be balanced against how it
         is actually played.
       </p>
+      {/* The claim, made where players see it rather than only in a file
+          nobody opens. Copyright exists without this line; saying it out loud
+          removes the "I assumed it was free to use" defence. */}
+      <p className="datanote copyline">© 2026 Andrew Backus. All rights reserved.</p>
     </div>
   )
 }
